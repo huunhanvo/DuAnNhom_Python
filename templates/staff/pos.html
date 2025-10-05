@@ -1,0 +1,667 @@
+{% extends 'base.html' %}
+
+{% block title %}POS - Thanh toán - Nhân viên{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pos-container {
+        height: calc(100vh - 100px);
+        display: flex;
+        gap: 20px;
+    }
+
+    .pos-left {
+        flex: 1;
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        overflow-y: auto;
+    }
+
+    .pos-right {
+        width: 400px;
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .customer-tabs .nav-link {
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        margin-right: 5px;
+        color: #6c757d;
+    }
+
+    .customer-tabs .nav-link.active {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+
+    .service-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 10px;
+        margin-top: 15px;
+    }
+
+    .service-item {
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .service-item:hover {
+        border-color: var(--primary-color);
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(139, 69, 19, 0.2);
+    }
+
+    .service-item.selected {
+        border-color: var(--primary-color);
+        background: rgba(139, 69, 19, 0.1);
+    }
+
+    .service-item i {
+        font-size: 28px;
+        color: var(--primary-color);
+        margin-bottom: 8px;
+    }
+
+    .service-item .service-name {
+        font-weight: 600;
+        margin-bottom: 5px;
+    }
+
+    .service-item .service-price {
+        color: var(--primary-color);
+        font-weight: bold;
+    }
+
+    .cart-item {
+        border-bottom: 1px solid #e9ecef;
+        padding: 10px 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .cart-item:last-child {
+        border-bottom: none;
+    }
+
+    .quantity-control {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .quantity-control button {
+        width: 25px;
+        height: 25px;
+        padding: 0;
+        border-radius: 50%;
+        font-size: 12px;
+    }
+
+    .total-section {
+        border-top: 2px solid var(--primary-color);
+        padding-top: 15px;
+        margin-top: 15px;
+    }
+
+    .total-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+
+    .total-row.final {
+        font-size: 20px;
+        font-weight: bold;
+        color: var(--primary-color);
+    }
+
+    .payment-btn {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 15px;
+        border-radius: 10px;
+        font-size: 18px;
+        font-weight: bold;
+        width: 100%;
+        margin-top: auto;
+    }
+
+    .payment-btn:hover {
+        background: var(--secondary-color);
+    }
+
+    .customer-info-box {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+
+    .payment-method-radio {
+        display: flex;
+        gap: 10px;
+        margin: 10px 0;
+    }
+
+    .payment-method-radio input[type="radio"] {
+        display: none;
+    }
+
+    .payment-method-radio label {
+        flex: 1;
+        text-align: center;
+        padding: 12px;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .payment-method-radio input[type="radio"]:checked + label {
+        border-color: var(--primary-color);
+        background: rgba(139, 69, 19, 0.1);
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Staff Sidebar -->
+<nav class="sidebar">
+    <div class="text-center py-4 border-bottom border-secondary">
+        <h4 class="text-white mb-0">
+            <i class="fas fa-cut"></i> Staff Panel
+        </h4>
+        <small class="text-white-50">Trần Minh Hoàng</small>
+    </div>
+    
+    <div class="sidebar-sticky">
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link" href="/staff/dashboard">
+                    <i class="fas fa-tachometer-alt"></i> Tổng quan
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link active" href="/staff/pos">
+                    <i class="fas fa-cash-register"></i> POS - Thanh toán
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/staff/schedule">
+                    <i class="fas fa-calendar-alt"></i> Lịch làm việc
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/staff/today-bookings">
+                    <i class="fas fa-calendar-check"></i> Lịch hẹn hôm nay
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/staff/my-customers">
+                    <i class="fas fa-users"></i> Khách hàng của tôi
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/staff/revenue">
+                    <i class="fas fa-chart-line"></i> Doanh thu cá nhân
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/staff/profile">
+                    <i class="fas fa-user-circle"></i> Thông tin cá nhân
+                </a>
+            </li>
+            <li class="nav-item mt-4 pt-3 border-top border-secondary">
+                <a class="nav-link" href="/logout">
+                    <i class="fas fa-sign-out-alt"></i> Đăng xuất
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+<main class="main-content">
+    <!-- Top Navbar -->
+    <div class="top-navbar d-flex justify-content-between align-items-center">
+        <div>
+            <h3 class="mb-0">
+                <i class="fas fa-cash-register"></i> POS - Thanh toán tại quầy
+            </h3>
+            <small class="text-muted">Xử lý thanh toán nhanh chóng</small>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary btn-sm" onclick="viewHistory()">
+                <i class="fas fa-history"></i> Lịch sử giao dịch
+            </button>
+            <button class="btn btn-outline-danger btn-sm" onclick="clearAll()">
+                <i class="fas fa-eraser"></i> Làm mới
+            </button>
+        </div>
+    </div>
+
+    <!-- POS Container -->
+    <div class="pos-container">
+        <!-- Left Side - Customer & Services -->
+        <div class="pos-left">
+            <!-- Customer Selection Tabs -->
+            <ul class="nav customer-tabs mb-3">
+                <li class="nav-item">
+                    <a class="nav-link active" data-bs-toggle="tab" href="#walk-in">
+                        <i class="fas fa-walking"></i> Khách vãng lai
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#registered">
+                        <i class="fas fa-user-check"></i> Khách có tài khoản
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#booking">
+                        <i class="fas fa-calendar"></i> Từ booking
+                    </a>
+                </li>
+            </ul>
+
+            <!-- Tab Contents -->
+            <div class="tab-content">
+                <!-- Walk-in Tab -->
+                <div class="tab-pane fade show active" id="walk-in">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Tên khách hàng</label>
+                            <input type="text" class="form-control" placeholder="Nhập tên khách" id="customer-name">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Số điện thoại</label>
+                            <input type="tel" class="form-control" placeholder="Nhập SĐT" id="customer-phone">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Registered Customer Tab -->
+                <div class="tab-pane fade" id="registered">
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" placeholder="Nhập SĐT hoặc tên khách hàng..." id="search-customer">
+                        <button class="btn btn-primary" onclick="searchCustomer()">
+                            <i class="fas fa-search"></i> Tìm
+                        </button>
+                    </div>
+                    
+                    <!-- Customer Info (sau khi tìm) -->
+                    <div id="customer-info" class="customer-info-box" style="display: none;">
+                        <div class="d-flex align-items-center mb-2">
+                            <img src="https://ui-avatars.com/api/?name=Nguyen+Van+A&background=8b4513&color=fff" 
+                                 class="rounded-circle me-3" width="50" height="50">
+                            <div>
+                                <h6 class="mb-0">Nguyễn Văn A</h6>
+                                <small class="text-muted">0123456789</small>
+                            </div>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <small class="text-muted">Điểm hiện có:</small>
+                                <div class="fw-bold text-primary">1,250 điểm</div>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted">Lượt đến:</small>
+                                <div class="fw-bold">15 lần</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- From Booking Tab -->
+                <div class="tab-pane fade" id="booking">
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" placeholder="Nhập mã booking..." id="booking-code">
+                        <button class="btn btn-primary" onclick="loadBooking()">
+                            <i class="fas fa-search"></i> Tìm
+                        </button>
+                    </div>
+                    
+                    <!-- Hoặc chọn từ danh sách -->
+                    <div class="mb-3">
+                        <label class="form-label">Hoặc chọn booking hôm nay:</label>
+                        <select class="form-select" id="today-bookings" onchange="selectBooking(this.value)">
+                            <option value="">-- Chọn booking --</option>
+                            <option value="BK20251001001">BK20251001001 - Nguyễn Văn B - 09:00</option>
+                            <option value="BK20251001002">BK20251001002 - Trần Thị C - 14:00</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Services Section -->
+            <div class="mt-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">Chọn dịch vụ</h5>
+                    <input type="text" class="form-control w-50" placeholder="Tìm dịch vụ...">
+                </div>
+                
+                <div class="service-grid" id="services-grid">
+                    <div class="service-item" onclick="addService(1, 'Cắt tóc Basic', 100000)">
+                        <i class="fas fa-cut"></i>
+                        <div class="service-name">Cắt tóc Basic</div>
+                        <div class="service-price">100,000đ</div>
+                    </div>
+                    <div class="service-item" onclick="addService(2, 'Cắt tóc Premium', 150000)">
+                        <i class="fas fa-scissors"></i>
+                        <div class="service-name">Cắt tóc Premium</div>
+                        <div class="service-price">150,000đ</div>
+                    </div>
+                    <div class="service-item" onclick="addService(3, 'Cắt tóc VIP', 250000)">
+                        <i class="fas fa-crown"></i>
+                        <div class="service-name">Cắt tóc VIP</div>
+                        <div class="service-price">250,000đ</div>
+                    </div>
+                    <div class="service-item" onclick="addService(11, 'Gội đầu', 50000)">
+                        <i class="fas fa-shower"></i>
+                        <div class="service-name">Gội đầu</div>
+                        <div class="service-price">50,000đ</div>
+                    </div>
+                    <div class="service-item" onclick="addService(12, 'Gội dưỡng sinh', 100000)">
+                        <i class="fas fa-spa"></i>
+                        <div class="service-name">Gội dưỡng sinh</div>
+                        <div class="service-price">100,000đ</div>
+                    </div>
+                    <div class="service-item" onclick="addService(5, 'Nhuộm toàn bộ', 300000)">
+                        <i class="fas fa-palette"></i>
+                        <div class="service-name">Nhuộm toàn bộ</div>
+                        <div class="service-price">300,000đ</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stylist Selection -->
+            <div class="mt-4">
+                <label class="form-label">Stylist thực hiện</label>
+                <select class="form-select" id="stylist">
+                    <option value="2" selected>Trần Minh Hoàng (Tôi)</option>
+                    <option value="3">Lê Văn Tuấn</option>
+                    <option value="4">Phạm Đức Anh</option>
+                    <option value="5">Hoàng Minh Tuấn</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Right Side - Cart & Payment -->
+        <div class="pos-right">
+            <h5 class="mb-3">Chi tiết đơn hàng</h5>
+            
+            <!-- Cart Items -->
+            <div id="cart" style="flex: 1; overflow-y: auto;">
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-shopping-cart fa-3x mb-3"></i>
+                    <div>Chưa có dịch vụ nào</div>
+                </div>
+            </div>
+
+            <!-- Discount Section -->
+            <div class="mt-3">
+                <button class="btn btn-sm btn-outline-primary w-100 mb-2" data-bs-toggle="collapse" data-bs-target="#discountSection">
+                    <i class="fas fa-tag"></i> Áp dụng giảm giá
+                </button>
+                
+                <div class="collapse" id="discountSection">
+                    <div class="mb-2">
+                        <label class="form-label small">Voucher</label>
+                        <select class="form-select form-select-sm" id="voucher">
+                            <option value="">-- Chọn voucher --</option>
+                            <option value="1">GIAM20K - Giảm 20,000đ</option>
+                            <option value="2">GIAM10 - Giảm 10%</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label small">Dùng điểm (có 1,250 điểm)</label>
+                        <input type="number" class="form-control form-control-sm" placeholder="Nhập số điểm" max="1250" id="points-use">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Section -->
+            <div class="total-section">
+                <div class="total-row">
+                    <span>Tạm tính:</span>
+                    <span id="subtotal">0đ</span>
+                </div>
+                <div class="total-row">
+                    <span>Giảm giá:</span>
+                    <span class="text-danger" id="discount">-0đ</span>
+                </div>
+                <div class="total-row final">
+                    <span>Tổng cộng:</span>
+                    <span id="total">0đ</span>
+                </div>
+            </div>
+
+            <!-- Payment Method -->
+            <div class="mt-3">
+                <label class="form-label">Phương thức thanh toán</label>
+                <div class="payment-method-radio">
+                    <input type="radio" name="payment-method" id="cash" value="tien_mat" checked>
+                    <label for="cash">
+                        <i class="fas fa-money-bill-wave"></i><br>
+                        Tiền mặt
+                    </label>
+                    
+                    <input type="radio" name="payment-method" id="transfer" value="chuyen_khoan">
+                    <label for="transfer">
+                        <i class="fas fa-exchange-alt"></i><br>
+                        Chuyển khoản
+                    </label>
+                    
+                    <input type="radio" name="payment-method" id="ewallet" value="vi_dien_tu">
+                    <label for="ewallet">
+                        <i class="fas fa-wallet"></i><br>
+                        Ví điện tử
+                    </label>
+                </div>
+
+                <!-- Cash Input (only show when cash selected) -->
+                <div id="cash-input" class="row g-2 mt-2">
+                    <div class="col-6">
+                        <label class="form-label small">Khách đưa</label>
+                        <input type="number" class="form-control" id="cash-given" onchange="calculateChange()">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small">Tiền thừa</label>
+                        <input type="text" class="form-control" id="change" readonly>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="mt-3">
+                <button class="payment-btn" onclick="processPayment()">
+                    <i class="fas fa-check-circle"></i> THANH TOÁN
+                </button>
+                <div class="d-flex gap-2 mt-2">
+                    <button class="btn btn-outline-secondary flex-fill" onclick="saveDraft()">
+                        <i class="fas fa-save"></i> Lưu tạm
+                    </button>
+                    <button class="btn btn-outline-danger flex-fill" onclick="clearAll()">
+                        <i class="fas fa-times"></i> Hủy
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let cart = [];
+    let subtotal = 0;
+    let discount = 0;
+
+    function addService(id, name, price) {
+        const existingItem = cart.find(item => item.id === id);
+        
+        if (existingItem) {
+            existingItem.quantity += 1;
+        } else {
+            cart.push({ id, name, price, quantity: 1 });
+        }
+        
+        updateCart();
+    }
+
+    function updateCart() {
+        const cartEl = document.getElementById('cart');
+        
+        if (cart.length === 0) {
+            cartEl.innerHTML = `
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-shopping-cart fa-3x mb-3"></i>
+                    <div>Chưa có dịch vụ nào</div>
+                </div>
+            `;
+            subtotal = 0;
+        } else {
+            let html = '';
+            subtotal = 0;
+            
+            cart.forEach(item => {
+                const itemTotal = item.price * item.quantity;
+                subtotal += itemTotal;
+                
+                html += `
+                    <div class="cart-item">
+                        <div>
+                            <div class="fw-bold">${item.name}</div>
+                            <small class="text-muted">${item.price.toLocaleString('vi-VN')}đ</small>
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="quantity-control">
+                                <button class="btn btn-sm btn-outline-secondary" onclick="decreaseQty(${item.id})">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                                <span class="fw-bold">${item.quantity}</span>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="increaseQty(${item.id})">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            <div class="fw-bold">${itemTotal.toLocaleString('vi-VN')}đ</div>
+                            <button class="btn btn-sm btn-outline-danger" onclick="removeItem(${item.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            cartEl.innerHTML = html;
+        }
+        
+        updateTotals();
+    }
+
+    function increaseQty(id) {
+        const item = cart.find(i => i.id === id);
+        if (item) {
+            item.quantity += 1;
+            updateCart();
+        }
+    }
+
+    function decreaseQty(id) {
+        const item = cart.find(i => i.id === id);
+        if (item && item.quantity > 1) {
+            item.quantity -= 1;
+            updateCart();
+        }
+    }
+
+    function removeItem(id) {
+        cart = cart.filter(i => i.id !== id);
+        updateCart();
+    }
+
+    function updateTotals() {
+        document.getElementById('subtotal').textContent = subtotal.toLocaleString('vi-VN') + 'đ';
+        document.getElementById('discount').textContent = '-' + discount.toLocaleString('vi-VN') + 'đ';
+        document.getElementById('total').textContent = (subtotal - discount).toLocaleString('vi-VN') + 'đ';
+    }
+
+    function calculateChange() {
+        const total = subtotal - discount;
+        const given = parseInt(document.getElementById('cash-given').value) || 0;
+        const change = given - total;
+        
+        document.getElementById('change').value = change > 0 ? change.toLocaleString('vi-VN') + 'đ' : '0đ';
+    }
+
+    function processPayment() {
+        if (cart.length === 0) {
+            alert('Vui lòng chọn ít nhất một dịch vụ!');
+            return;
+        }
+
+        // Validate customer info based on active tab
+        // ... validation logic ...
+
+        if (confirm('Xác nhận thanh toán ' + (subtotal - discount).toLocaleString('vi-VN') + 'đ?')) {
+            // Process payment
+            alert('Thanh toán thành công! Đang in hóa đơn...');
+            // Clear cart and reset
+            clearAll();
+        }
+    }
+
+    function clearAll() {
+        cart = [];
+        subtotal = 0;
+        discount = 0;
+        updateCart();
+        document.getElementById('customer-name').value = '';
+        document.getElementById('customer-phone').value = '';
+    }
+
+    function searchCustomer() {
+        // AJAX search customer
+        document.getElementById('customer-info').style.display = 'block';
+    }
+
+    function loadBooking() {
+        // AJAX load booking
+        alert('Tính năng đang phát triển');
+    }
+
+    function viewHistory() {
+        window.location.href = '/staff/pos/history';
+    }
+
+    // Show/hide cash input
+    document.querySelectorAll('input[name="payment-method"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            document.getElementById('cash-input').style.display = 
+                this.value === 'tien_mat' ? 'block' : 'none';
+        });
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'F9') {
+            e.preventDefault();
+            processPayment();
+        } else if (e.key === 'Escape') {
+            clearAll();
+        }
+    });
+</script>
+{% endblock %}

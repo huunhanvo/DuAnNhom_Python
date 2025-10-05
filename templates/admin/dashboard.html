@@ -1,0 +1,462 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard Admin - Barbershop Hoàng Gia{% endblock %}
+
+{% block content %}
+<!-- Sidebar -->
+<nav class="sidebar">
+    <div class="text-center py-4 border-bottom border-secondary">
+        <h4 class="text-white mb-0">
+            <i class="fas fa-cut"></i> Admin Panel
+        </h4>
+        <small class="text-white-50">Barbershop Hoàng Gia</small>
+    </div>
+    
+    <div class="sidebar-sticky">
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link active" href="/admin/dashboard">
+                    <i class="fas fa-tachometer-alt"></i> Tổng quan
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/admin/staff">
+                    <i class="fas fa-users-cog"></i> Quản lý Nhân viên
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/admin/customers">
+                    <i class="fas fa-users"></i> Quản lý Khách hàng
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/admin/services">
+                    <i class="fas fa-cut"></i> Quản lý Dịch vụ
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/admin/bookings">
+                    <i class="fas fa-calendar-check"></i> Quản lý Booking
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/admin/invoices">
+                    <i class="fas fa-file-invoice-dollar"></i> Quản lý Hóa đơn
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/admin/promotions">
+                    <i class="fas fa-tags"></i> Khuyến mãi
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/admin/reports">
+                    <i class="fas fa-chart-line"></i> Báo cáo Thống kê
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/admin/pos-report">
+                    <i class="fas fa-cash-register"></i> Báo cáo POS
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/admin/work-schedule">
+                    <i class="fas fa-calendar-alt"></i> Lịch làm việc
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/admin/reviews">
+                    <i class="fas fa-star"></i> Quản lý Đánh giá
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/admin/content">
+                    <i class="fas fa-images"></i> Nội dung Website
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/admin/settings">
+                    <i class="fas fa-cog"></i> Cài đặt Hệ thống
+                </a>
+            </li>
+            <li class="nav-item mt-4 pt-3 border-top border-secondary">
+                <a class="nav-link" href="/logout">
+                    <i class="fas fa-sign-out-alt"></i> Đăng xuất
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+<!-- Main Content -->
+<main class="main-content">
+    <!-- Top Navbar -->
+    <div class="top-navbar d-flex justify-content-between align-items-center">
+        <div>
+            <h3 class="mb-0">Dashboard</h3>
+            <small class="text-muted">Chào mừng trở lại, Nguyễn Văn An</small>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <div class="position-relative">
+                <i class="fas fa-bell fs-5 text-muted"></i>
+                <span class="notification-badge">5</span>
+            </div>
+            <div class="user-info">
+                <div class="user-avatar">AN</div>
+                <div>
+                    <div class="fw-bold">Nguyễn Văn An</div>
+                    <small class="text-muted">Quản lý</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card revenue">
+                <div class="icon">
+                    <i class="fas fa-dollar-sign"></i>
+                </div>
+                <h6 class="text-muted mb-2">Doanh thu hôm nay</h6>
+                <h3 class="mb-0">4,500,000đ</h3>
+                <small class="text-success">
+                    <i class="fas fa-arrow-up"></i> +12% so với hôm qua
+                </small>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card bookings">
+                <div class="icon">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <h6 class="text-muted mb-2">Booking hôm nay</h6>
+                <h3 class="mb-0">24</h3>
+                <small class="text-info">
+                    <i class="fas fa-clock"></i> 8 đang chờ xác nhận
+                </small>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card customers">
+                <div class="icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <h6 class="text-muted mb-2">Khách hàng mới tháng này</h6>
+                <h3 class="mb-0">142</h3>
+                <small class="text-success">
+                    <i class="fas fa-arrow-up"></i> +8% so với tháng trước
+                </small>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card staff">
+                <div class="icon">
+                    <i class="fas fa-user-tie"></i>
+                </div>
+                <h6 class="text-muted mb-2">Nhân viên đang làm</h6>
+                <h3 class="mb-0">4/4</h3>
+                <small class="text-success">
+                    <i class="fas fa-check-circle"></i> Tất cả có mặt
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-8">
+            <div class="stat-card">
+                <h5 class="mb-3">Doanh thu 7 ngày gần nhất</h5>
+                <canvas id="revenueChart" height="100"></canvas>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="stat-card">
+                <h5 class="mb-3">Top 3 Dịch vụ</h5>
+                <canvas id="servicesChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Actions -->
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">Booking chờ xác nhận</h5>
+                    <span class="badge bg-warning">{{ pending_bookings_list|length }}</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table custom-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Mã</th>
+                                <th>Khách hàng</th>
+                                <th>Thời gian</th>
+                                <th>Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for booking in pending_bookings_list %}
+                            <tr>
+                                <td><strong>BK{{ booking.id|stringformat:"03d" }}</strong></td>
+                                <td>{{ booking.khach_hang.ho_ten }}</td>
+                                <td>{{ booking.ngay_hen|date:"d/m" }} - {{ booking.gio_hen|time:"H:i" }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-success" onclick="approveBooking({{ booking.id }})">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" onclick="rejectBooking({{ booking.id }})">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">Không có booking chờ xác nhận</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-center mt-3">
+                    <a href="/admin/bookings?status=pending" class="btn btn-outline-primary btn-sm">
+                        Xem tất cả <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">Yêu cầu nghỉ phép</h5>
+                    <span class="badge bg-info">{{ pending_leave_requests|length }}</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table custom-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Nhân viên</th>
+                                <th>Ngày nghỉ</th>
+                                <th>Lý do</th>
+                                <th>Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for leave in pending_leave_requests %}
+                            <tr>
+                                <td>{{ leave.nhan_vien.ho_ten }}</td>
+                                <td>{{ leave.tu_ngay|date:"d/m" }}{% if leave.den_ngay != leave.tu_ngay %}-{{ leave.den_ngay|date:"d/m" }}{% endif %}</td>
+                                <td>{{ leave.ly_do|truncatechars:20 }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-success" onclick="approveLeave({{ leave.id }})">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" onclick="rejectLeave({{ leave.id }})">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">Không có yêu cầu nghỉ phép</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-center mt-3">
+                    <a href="/admin/work-schedule?tab=leave-requests" class="btn btn-outline-primary btn-sm">
+                        Xem tất cả <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Revenue Chart
+    const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+    new Chart(revenueCtx, {
+        type: 'line',
+        data: {
+            labels: ['25/09', '26/09', '27/09', '28/09', '29/09', '30/09', '01/10'],
+            datasets: [{
+                label: 'Doanh thu (VNĐ)',
+                data: [3200000, 3800000, 4100000, 3600000, 4200000, 3900000, 4500000],
+                borderColor: '#8b4513',
+                backgroundColor: 'rgba(139, 69, 19, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return value.toLocaleString('vi-VN') + 'đ';
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Services Chart
+    const servicesCtx = document.getElementById('servicesChart').getContext('2d');
+    new Chart(servicesCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Cắt tóc Premium', 'Cắt tóc VIP', 'Nhuộm tóc'],
+            datasets: [{
+                data: [45, 30, 25],
+                backgroundColor: [
+                    '#667eea',
+                    '#f093fb',
+                    '#4facfe'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // Dashboard action functions
+    function approveBooking(bookingId) {
+        if (confirm('Xác nhận booking này?')) {
+            $.ajax({
+                url: `/admin/booking-approve/${bookingId}/`,
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        alert('Đã xác nhận booking thành công!');
+                        location.reload();
+                    } else {
+                        alert('Có lỗi: ' + (response.message || 'Không thể xác nhận booking'));
+                    }
+                },
+                error: function() {
+                    alert('Có lỗi xảy ra khi xác nhận booking');
+                }
+            });
+        }
+    }
+
+    function rejectBooking(bookingId) {
+        if (confirm('Hủy booking này?')) {
+            $.ajax({
+                url: `/admin/booking-reject/${bookingId}/`,
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        alert('Đã hủy booking thành công!');
+                        location.reload();
+                    } else {
+                        alert('Có lỗi: ' + (response.message || 'Không thể hủy booking'));
+                    }
+                },
+                error: function() {
+                    alert('Có lỗi xảy ra khi hủy booking');
+                }
+            });
+        }
+    }
+
+    function approveLeave(leaveId) {
+        if (confirm('Phê duyệt yêu cầu nghỉ phép này?')) {
+            $.ajax({
+                url: `/admin/leave-approve/${leaveId}/`,
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        alert('Đã phê duyệt yêu cầu nghỉ phép!');
+                        location.reload();
+                    } else {
+                        alert('Có lỗi: ' + (response.message || 'Không thể phê duyệt'));
+                    }
+                },
+                error: function() {
+                    alert('Có lỗi xảy ra khi phê duyệt');
+                }
+            });
+        }
+    }
+
+    function rejectLeave(leaveId) {
+        if (confirm('Từ chối yêu cầu nghỉ phép này?')) {
+            $.ajax({
+                url: `/admin/leave-reject/${leaveId}/`,
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        alert('Đã từ chối yêu cầu nghỉ phép!');
+                        location.reload();
+                    } else {
+                        alert('Có lỗi: ' + (response.message || 'Không thể từ chối'));
+                    }
+                },
+                error: function() {
+                    alert('Có lỗi xảy ra khi từ chối');
+                }
+            });
+        }
+    }
+
+    // CSRF token helper
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}

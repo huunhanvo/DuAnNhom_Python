@@ -1,0 +1,643 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Báo cáo & Thống kê{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .report-card {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        margin-bottom: 25px;
+        border-left: 5px solid #8b4513;
+    }
+    
+    .metric-card {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(139, 69, 19, 0.15);
+    }
+    
+    .metric-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+        margin: 0 auto 15px;
+    }
+    
+    .metric-value {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    
+    .metric-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    
+    .trend-up {
+        color: #28a745;
+    }
+    
+    .trend-down {
+        color: #dc3545;
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 400px;
+    }
+    
+    .report-filters {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+    }
+    
+    .quick-date-buttons {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 15px;
+    }
+    
+    .quick-date-btn {
+        padding: 8px 20px;
+        border-radius: 20px;
+        border: 2px solid #dee2e6;
+        background: white;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .quick-date-btn.active {
+        background: #8b4513;
+        color: white;
+        border-color: #8b4513;
+    }
+    
+    .top-list {
+        list-style: none;
+        padding: 0;
+    }
+    
+    .top-list-item {
+        display: flex;
+        align-items: center;
+        padding: 15px;
+        border-bottom: 1px solid #dee2e6;
+        transition: background 0.2s ease;
+    }
+    
+    .top-list-item:hover {
+        background: #f8f9fa;
+    }
+    
+    .rank-badge {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 1.2rem;
+        margin-right: 15px;
+    }
+    
+    .rank-1 { background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); }
+    .rank-2 { background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%); }
+    .rank-3 { background: linear-gradient(135deg, #cd7f32 0%, #d4914e 100%); }
+    .rank-other { background: #e9ecef; }
+    
+    .comparison-table {
+        width: 100%;
+    }
+    
+    .comparison-table td {
+        padding: 12px;
+        border-bottom: 1px solid #dee2e6;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h2><i class="fas fa-chart-line"></i> Báo cáo & Thống kê</h2>
+            <p class="text-muted mb-0">Phân tích dữ liệu kinh doanh tổng thể</p>
+        </div>
+        <div class="col-md-6 text-end">
+            <button class="btn btn-outline-primary" onclick="printReport()">
+                <i class="fas fa-print"></i> In báo cáo
+            </button>
+            <button class="btn btn-success" onclick="exportExcel()">
+                <i class="fas fa-file-excel"></i> Xuất Excel
+            </button>
+            <button class="btn btn-danger" onclick="exportPDF()">
+                <i class="fas fa-file-pdf"></i> Xuất PDF
+            </button>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="report-filters">
+        <div class="quick-date-buttons">
+            <button class="quick-date-btn" onclick="setDateRange('today', this)">Hôm nay</button>
+            <button class="quick-date-btn" onclick="setDateRange('yesterday', this)">Hôm qua</button>
+            <button class="quick-date-btn active" onclick="setDateRange('week', this)">7 ngày qua</button>
+            <button class="quick-date-btn" onclick="setDateRange('month', this)">Tháng này</button>
+            <button class="quick-date-btn" onclick="setDateRange('lastmonth', this)">Tháng trước</button>
+            <button class="quick-date-btn" onclick="setDateRange('year', this)">Năm nay</button>
+        </div>
+        
+        <form method="GET" id="filterForm">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Từ ngày:</label>
+                    <input type="date" class="form-control" id="fromDate" name="from_date" value="{{ from_date }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Đến ngày:</label>
+                    <input type="date" class="form-control" id="toDate" name="to_date" value="{{ to_date }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">So sánh với:</label>
+                    <select class="form-select" id="compareWith" name="compare_with">
+                        <option value="none" {% if compare_with == 'none' %}selected{% endif %}>Không so sánh</option>
+                        <option value="previous" {% if compare_with == 'previous' %}selected{% endif %}>Kỳ trước</option>
+                        <option value="lastyear" {% if compare_with == 'lastyear' %}selected{% endif %}>Cùng kỳ năm trước</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-sync"></i> Cập nhật
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-icon bg-primary bg-opacity-10 text-primary">
+                    <i class="fas fa-dollar-sign"></i>
+                </div>
+                <div class="metric-value text-primary">{{ total_revenue|floatformat:0 }}đ</div>
+                <div class="metric-label">Tổng doanh thu</div>
+                <div class="trend-up mt-2">
+                    <i class="fas fa-arrow-up"></i> +{{ revenue_growth }}% so với kỳ trước
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-icon bg-success bg-opacity-10 text-success">
+                    <i class="fas fa-receipt"></i>
+                </div>
+                <div class="metric-value text-success">{{ total_invoices }}</div>
+                <div class="metric-label">Hóa đơn</div>
+                <div class="trend-up mt-2">
+                    <i class="fas fa-arrow-up"></i> +{{ invoice_growth }}%
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-icon bg-info bg-opacity-10 text-info">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <div class="metric-value text-info">{{ total_bookings }}</div>
+                <div class="metric-label">Lượt đặt lịch</div>
+                <div class="trend-up mt-2">
+                    <i class="fas fa-arrow-up"></i> +{{ booking_growth }}%
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-icon bg-warning bg-opacity-10 text-warning">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="metric-value text-warning">{{ new_customers }}</div>
+                <div class="metric-label">Khách hàng mới</div>
+                <div class="trend-up mt-2">
+                    <i class="fas fa-arrow-up"></i> +{{ customer_growth }}%
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Metrics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-value text-secondary">{{ avg_invoice|floatformat:0 }}đ</div>
+                <div class="metric-label">Giá trị trung bình/hóa đơn</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-value text-secondary">{{ service_completion_rate }}%</div>
+                <div class="metric-label">Tỷ lệ hoàn thành dịch vụ</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-value text-secondary">{{ customer_retention }}%</div>
+                <div class="metric-label">Tỷ lệ khách quay lại</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-value text-secondary">{{ avg_rating|floatformat:1 }}/5</div>
+                <div class="metric-label">Đánh giá trung bình</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="report-card">
+                <h5 class="mb-4"><i class="fas fa-chart-area"></i> Biểu đồ doanh thu</h5>
+                <div class="chart-container">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="report-card">
+                <h5 class="mb-4"><i class="fas fa-chart-pie"></i> Phương thức thanh toán</h5>
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="paymentMethodChart"></canvas>
+                </div>
+                <div class="mt-3">
+                    <table class="table table-sm">
+                        <tr>
+                            <td><i class="fas fa-money-bill-wave text-success"></i> Tiền mặt</td>
+                            <td class="text-end"><strong>{{ cash_percent }}%</strong></td>
+                        </tr>
+                        <tr>
+                            <td><i class="fas fa-exchange-alt text-primary"></i> Chuyển khoản</td>
+                            <td class="text-end"><strong>{{ transfer_percent }}%</strong></td>
+                        </tr>
+                        <tr>
+                            <td><i class="fas fa-wallet text-warning"></i> Ví điện tử</td>
+                            <td class="text-end"><strong>{{ ewallet_percent }}%</strong></td>
+                        </tr>
+                        <tr>
+                            <td><i class="fas fa-credit-card text-info"></i> Thẻ</td>
+                            <td class="text-end"><strong>{{ card_percent }}%</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="report-card">
+                <h5 class="mb-4"><i class="fas fa-chart-bar"></i> Top dịch vụ phổ biến</h5>
+                <ul class="top-list">
+                    {% for service in top_services %}
+                    <li class="top-list-item">
+                        <div class="rank-badge rank-{{ forloop.counter }}">{{ forloop.counter }}</div>
+                        <div class="flex-grow-1">
+                            <strong>{{ service.ten_dich_vu }}</strong>
+                            <br>
+                            <small class="text-muted">{{ service.so_luot }} lượt - {{ service.doanh_thu|floatformat:0 }}đ</small>
+                        </div>
+                        <div class="text-end">
+                            <div class="progress" style="width: 100px; height: 8px;">
+                                <div class="progress-bar bg-success" style="width: {{ service.percent }}%"></div>
+                            </div>
+                            <small class="text-muted">{{ service.percent }}%</small>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="report-card">
+                <h5 class="mb-4"><i class="fas fa-trophy"></i> Top nhân viên xuất sắc</h5>
+                <ul class="top-list">
+                    {% for staff in top_staff %}
+                    <li class="top-list-item">
+                        <div class="rank-badge rank-{{ forloop.counter }}">{{ forloop.counter }}</div>
+                        <img src="{{ staff.anh_dai_dien }}" 
+                             style="width: 40px; height: 40px; border-radius: 50%; margin-right: 15px;">
+                        <div class="flex-grow-1">
+                            <strong>{{ staff.ho_ten }}</strong>
+                            <br>
+                            <small class="text-muted">{{ staff.so_luot }} lượt phục vụ</small>
+                        </div>
+                        <div class="text-end">
+                            <h5 class="text-primary mb-0">{{ staff.doanh_thu|floatformat:0 }}đ</h5>
+                            <small class="text-muted">
+                                <i class="fas fa-star text-warning"></i> {{ staff.rating|floatformat:1 }}
+                            </small>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Time Analysis -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="report-card">
+                <h5 class="mb-4"><i class="fas fa-clock"></i> Phân tích theo khung giờ</h5>
+                <div class="chart-container">
+                    <canvas id="hourlyChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer Analysis -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="report-card">
+                <h5 class="mb-4"><i class="fas fa-user-friends"></i> Phân tích khách hàng</h5>
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="customerTierChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="report-card">
+                <h5 class="mb-4"><i class="fas fa-calendar-alt"></i> Lịch đặt theo ngày trong tuần</h5>
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="weekdayChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comparison Table -->
+    {% if show_comparison %}
+    <div class="row">
+        <div class="col-md-12">
+            <div class="report-card">
+                <h5 class="mb-4"><i class="fas fa-exchange-alt"></i> So sánh với kỳ trước</h5>
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Chỉ số</th>
+                            <th class="text-center">Kỳ này</th>
+                            <th class="text-center">Kỳ trước</th>
+                            <th class="text-center">Thay đổi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Doanh thu</td>
+                            <td class="text-center">{{ current_revenue|floatformat:0 }}đ</td>
+                            <td class="text-center">{{ previous_revenue|floatformat:0 }}đ</td>
+                            <td class="text-center">
+                                <span class="{% if revenue_change > 0 %}trend-up{% else %}trend-down{% endif %}">
+                                    <i class="fas fa-arrow-{% if revenue_change > 0 %}up{% else %}down{% endif %}"></i>
+                                    {{ revenue_change }}%
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Số hóa đơn</td>
+                            <td class="text-center">{{ current_invoices }}</td>
+                            <td class="text-center">{{ previous_invoices }}</td>
+                            <td class="text-center">
+                                <span class="{% if invoice_change > 0 %}trend-up{% else %}trend-down{% endif %}">
+                                    <i class="fas fa-arrow-{% if invoice_change > 0 %}up{% else %}down{% endif %}"></i>
+                                    {{ invoice_change }}%
+                                </span>
+                            </td>
+                        </tr>
+                        <!-- More comparison rows -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Revenue Chart
+const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+const revenueChart = new Chart(revenueCtx, {
+    type: 'line',
+    data: {
+        labels: {{ revenue_labels|safe }},
+        datasets: [{
+            label: 'Doanh thu',
+            data: {{ revenue_data|safe }},
+            borderColor: '#8b4513',
+            backgroundColor: 'rgba(139, 69, 19, 0.1)',
+            fill: true,
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: true }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return new Intl.NumberFormat('vi-VN').format(value) + 'đ';
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Payment Method Chart
+const paymentCtx = document.getElementById('paymentMethodChart').getContext('2d');
+const paymentChart = new Chart(paymentCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Tiền mặt', 'Chuyển khoản', 'Ví điện tử', 'Thẻ'],
+        datasets: [{
+            data: {{ payment_method_data|safe }},
+            backgroundColor: ['#28a745', '#007bff', '#ffc107', '#17a2b8']
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false
+    }
+});
+
+// Hourly Chart
+const hourlyCtx = document.getElementById('hourlyChart').getContext('2d');
+const hourlyChart = new Chart(hourlyCtx, {
+    type: 'bar',
+    data: {
+        labels: ['8h', '9h', '10h', '11h', '12h', '13h', '14h', '15h', '16h', '17h', '18h', '19h', '20h', '21h'],
+        datasets: [{
+            label: 'Số lượt khách',
+            data: {{ hourly_data|safe }},
+            backgroundColor: '#8b4513'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false
+    }
+});
+
+// Customer Tier Chart
+const customerCtx = document.getElementById('customerTierChart').getContext('2d');
+const customerChart = new Chart(customerCtx, {
+    type: 'pie',
+    data: {
+        labels: ['Đồng', 'Bạc', 'Vàng', 'Bạch kim'],
+        datasets: [{
+            data: {{ customer_tier_data|safe }},
+            backgroundColor: ['#cd7f32', '#c0c0c0', '#ffd700', '#e5e4e2']
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false
+    }
+});
+
+// Weekday Chart
+const weekdayCtx = document.getElementById('weekdayChart').getContext('2d');
+const weekdayChart = new Chart(weekdayCtx, {
+    type: 'bar',
+    data: {
+        labels: ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'],
+        datasets: [{
+            label: 'Lượt đặt',
+            data: {{ weekday_data|safe }},
+            backgroundColor: '#d2691e'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false
+    }
+});
+
+function setDateRange(range, clickedBtn) {
+    console.log('setDateRange called with:', range);
+    
+    try {
+        // Remove active class from all buttons
+        document.querySelectorAll('.quick-date-btn').forEach(btn => btn.classList.remove('active'));
+        
+        // Add active class to clicked button
+        if (clickedBtn) {
+            clickedBtn.classList.add('active');
+        }
+        
+        const today = new Date();
+        let fromDate, toDate;
+    
+    switch(range) {
+        case 'today':
+            fromDate = new Date(today);
+            toDate = new Date(today);
+            break;
+        case 'yesterday':
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            fromDate = yesterday;
+            toDate = new Date(yesterday);
+            break;
+        case 'week':
+            toDate = new Date(today);
+            fromDate = new Date(today);
+            fromDate.setDate(fromDate.getDate() - 6);
+            break;
+        case 'month':
+            toDate = new Date(today);
+            fromDate = new Date(today.getFullYear(), today.getMonth(), 1);
+            break;
+        case 'lastmonth':
+            const firstDayThisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            const lastDayLastMonth = new Date(firstDayThisMonth);
+            lastDayLastMonth.setDate(0);
+            const firstDayLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            
+            fromDate = firstDayLastMonth;
+            toDate = lastDayLastMonth;
+            break;
+        case 'year':
+            toDate = new Date(today);
+            fromDate = new Date(today.getFullYear(), 0, 1);
+            break;
+    }
+    
+    document.getElementById('fromDate').value = formatDate(fromDate);
+    document.getElementById('toDate').value = formatDate(toDate);
+    
+    console.log('Form values set:', formatDate(fromDate), 'to', formatDate(toDate));
+    document.getElementById('filterForm').submit();
+    
+    } catch (error) {
+        console.error('Error in setDateRange:', error);
+    }
+}
+
+function formatDate(date) {
+    return date.toISOString().split('T')[0];
+}
+
+function exportExcel() {
+    window.location.href = '/admin/reports/export/excel/?from=' + $('#fromDate').val() + '&to=' + $('#toDate').val();
+}
+
+function exportPDF() {
+    window.location.href = '/admin/reports/export/pdf/?from=' + $('#fromDate').val() + '&to=' + $('#toDate').val();
+}
+
+function printReport() {
+    window.print();
+}
+</script>
+{% endblock %}

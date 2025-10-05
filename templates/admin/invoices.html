@@ -1,0 +1,666 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Quản lý hóa đơn{% endblock %}
+
+{% block extra_css %}
+<style>
+    .invoice-filters {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+    }
+    
+    .invoice-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 25px;
+    }
+    
+    .stat-card {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        border-left: 4px solid #8b4513;
+        transition: transform 0.3s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 20px rgba(139, 69, 19, 0.15);
+    }
+    
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 10px;
+    }
+    
+    .invoice-table {
+        background: white;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    
+    .invoice-row {
+        cursor: pointer;
+        transition: background 0.2s ease;
+    }
+    
+    .invoice-row:hover {
+        background: #f8f9fa;
+    }
+    
+    .payment-method-badge {
+        padding: 5px 12px;
+        border-radius: 15px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .invoice-actions {
+        display: flex;
+        gap: 5px;
+        justify-content: flex-end;
+    }
+    
+    .print-preview {
+        background: white;
+        padding: 40px;
+        max-width: 800px;
+        margin: 0 auto;
+        box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    }
+    
+    .invoice-header {
+        border-bottom: 3px solid #8b4513;
+        padding-bottom: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .invoice-logo {
+        max-width: 150px;
+    }
+    
+    .invoice-detail-table {
+        width: 100%;
+        margin-bottom: 30px;
+    }
+    
+    .invoice-detail-table th {
+        background: #f8f9fa;
+        padding: 10px;
+        text-align: left;
+    }
+    
+    .invoice-detail-table td {
+        padding: 10px;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .invoice-total {
+        background: #8b4513;
+        color: white;
+        padding: 15px;
+        border-radius: 5px;
+        font-size: 1.2rem;
+        font-weight: bold;
+    }
+    
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+        
+        .print-preview, .print-preview * {
+            visibility: visible;
+        }
+        
+        .print-preview {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            box-shadow: none;
+        }
+        
+        .no-print {
+            display: none !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h2><i class="fas fa-file-invoice-dollar"></i> Quản lý hóa đơn</h2>
+            <p class="text-muted mb-0">Quản lý tất cả hóa đơn thanh toán</p>
+        </div>
+        <div class="col-md-6 text-end">
+            <button class="btn btn-success" onclick="exportExcel()">
+                <i class="fas fa-file-excel"></i> Xuất Excel
+            </button>
+            <button class="btn btn-danger" onclick="exportPDF()">
+                <i class="fas fa-file-pdf"></i> Xuất PDF
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="invoice-stats">
+        <div class="stat-card">
+            <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+                <i class="fas fa-receipt"></i>
+            </div>
+            <h4 class="mb-1">{{ total_invoices }}</h4>
+            <small class="text-muted">Tổng hóa đơn</small>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon bg-success bg-opacity-10 text-success">
+                <i class="fas fa-money-bill-wave"></i>
+            </div>
+            <h4 class="mb-1">{{ total_revenue|floatformat:0 }}đ</h4>
+            <small class="text-muted">Tổng doanh thu</small>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon bg-info bg-opacity-10 text-info">
+                <i class="fas fa-calendar-day"></i>
+            </div>
+            <h4 class="mb-1">{{ today_invoices }}</h4>
+            <small class="text-muted">Hóa đơn hôm nay</small>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon bg-warning bg-opacity-10 text-warning">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <h4 class="mb-1">{{ today_revenue|floatformat:0 }}đ</h4>
+            <small class="text-muted">Doanh thu hôm nay</small>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon bg-secondary bg-opacity-10 text-secondary">
+                <i class="fas fa-calculator"></i>
+            </div>
+            <h4 class="mb-1">{{ average_invoice|floatformat:0 }}đ</h4>
+            <small class="text-muted">Trung bình/hóa đơn</small>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="invoice-filters">
+        <form method="GET" id="filterForm">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Từ ngày:</label>
+                    <input type="date" class="form-control" name="from_date" value="{{ from_date }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Đến ngày:</label>
+                    <input type="date" class="form-control" name="to_date" value="{{ to_date }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Phương thức:</label>
+                    <select class="form-select" name="payment_method">
+                        <option value="">Tất cả</option>
+                        <option value="tien_mat" {% if payment_method == 'tien_mat' %}selected{% endif %}>Tiền mặt</option>
+                        <option value="chuyen_khoan" {% if payment_method == 'chuyen_khoan' %}selected{% endif %}>Chuyển khoản</option>
+                        <option value="vi_dien_tu" {% if payment_method == 'vi_dien_tu' %}selected{% endif %}>Ví điện tử</option>
+                        <option value="the" {% if payment_method == 'the' %}selected{% endif %}>Thẻ</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Nhân viên:</label>
+                    <select class="form-select" name="staff_id">
+                        <option value="">Tất cả</option>
+                        {% for staff in staff_list %}
+                        <option value="{{ staff.id }}" {% if staff.id|stringformat:"s" == staff_id %}selected{% endif %}>
+                            {{ staff.ho_ten }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Khách hàng:</label>
+                    <select class="form-select" name="customer_type">
+                        <option value="">Tất cả</option>
+                        <option value="registered" {% if customer_type == 'registered' %}selected{% endif %}>Đã đăng ký</option>
+                        <option value="walk-in" {% if customer_type == 'walk-in' %}selected{% endif %}>Khách vãng lai</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Tìm kiếm:</label>
+                    <input type="text" class="form-control" name="search" 
+                           placeholder="Mã HĐ, SĐT..." value="{{ search }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Sắp xếp:</label>
+                    <select class="form-select" name="sort_by">
+                        <option value="-ngay_thanh_toan" {% if sort_by == '-ngay_thanh_toan' %}selected{% endif %}>Mới nhất</option>
+                        <option value="ngay_thanh_toan" {% if sort_by == 'ngay_thanh_toan' %}selected{% endif %}>Cũ nhất</option>
+                        <option value="-thanh_tien" {% if sort_by == '-thanh_tien' %}selected{% endif %}>Giá cao</option>
+                        <option value="thanh_tien" {% if sort_by == 'thanh_tien' %}selected{% endif %}>Giá thấp</option>
+                        <option value="ma_hoa_don" {% if sort_by == 'ma_hoa_don' %}selected{% endif %}>Mã hóa đơn A-Z</option>
+                        <option value="-ma_hoa_don" {% if sort_by == '-ma_hoa_don' %}selected{% endif %}>Mã hóa đơn Z-A</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">&nbsp;</label>
+                    <div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter"></i> Lọc
+                        </button>
+                        <a href="{% url 'admin_invoices' %}" class="btn btn-secondary">
+                            <i class="fas fa-redo"></i> Đặt lại
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Invoices Table -->
+    <div class="card invoice-table">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Mã hóa đơn</th>
+                            <th>Ngày giờ</th>
+                            <th>Khách hàng</th>
+                            <th>Nhân viên</th>
+                            <th>Dịch vụ</th>
+                            <th>Phương thức</th>
+                            <th>Tổng tiền</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for invoice in invoices %}
+                        <tr class="invoice-row" onclick="viewInvoice({{ invoice.id }})">
+                            <td>
+                                <strong class="text-primary">#{{ invoice.ma_hoa_don }}</strong>
+                                <br>
+                                {% if invoice.dat_lich %}
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar-check"></i> Từ booking
+                                </small>
+                                {% else %}
+                                <small class="text-info">
+                                    <i class="fas fa-walking"></i> Walk-in
+                                </small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <i class="fas fa-calendar"></i> {{ invoice.ngay_thanh_toan|date:"d/m/Y" }}
+                                <br>
+                                <i class="fas fa-clock"></i> {{ invoice.ngay_thanh_toan|date:"H:i" }}
+                            </td>
+                            <td>
+                                <strong>{{ invoice.ten_khach_hang }}</strong>
+                                <br>
+                                <small class="text-muted">{{ invoice.so_dien_thoai_khach }}</small>
+                            </td>
+                            <td>
+                                {% if invoice.nhan_vien %}
+                                <strong>{{ invoice.nhan_vien.ho_ten }}</strong>
+                                <br>
+                                <small class="text-muted">{{ invoice.nhan_vien.vai_tro }}</small>
+                                {% else %}
+                                <span class="text-muted">Chưa xác định</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div style="max-width: 250px;">
+                                    {% for detail in invoice.chi_tiet.all %}
+                                    <div class="mb-1">
+                                        <i class="fas fa-cut text-muted"></i> {{ detail.ten_dich_vu }}
+                                        <small class="text-primary">({{ detail.gia|floatformat:0 }}đ)</small>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                            <td>
+                                {% if invoice.phuong_thuc_thanh_toan == 'tien_mat' %}
+                                <span class="payment-method-badge bg-success bg-opacity-10 text-success">
+                                    <i class="fas fa-money-bill-wave"></i> Tiền mặt
+                                </span>
+                                {% elif invoice.phuong_thuc_thanh_toan == 'chuyen_khoan' %}
+                                <span class="payment-method-badge bg-primary bg-opacity-10 text-primary">
+                                    <i class="fas fa-exchange-alt"></i> Chuyển khoản
+                                </span>
+                                {% elif invoice.phuong_thuc_thanh_toan == 'vi_dien_tu' %}
+                                <span class="payment-method-badge bg-warning bg-opacity-10 text-warning">
+                                    <i class="fas fa-wallet"></i> Ví điện tử
+                                </span>
+                                {% elif invoice.phuong_thuc_thanh_toan == 'the' %}
+                                <span class="payment-method-badge bg-info bg-opacity-10 text-info">
+                                    <i class="fas fa-credit-card"></i> Thẻ
+                                </span>
+                                {% else %}
+                                <span class="payment-method-badge bg-secondary bg-opacity-10 text-secondary">
+                                    {{ invoice.phuong_thuc_thanh_toan }}
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="text-end">
+                                    {% if invoice.tien_giam_gia > 0 %}
+                                    <small class="text-muted text-decoration-line-through">
+                                        {{ invoice.tam_tinh|floatformat:0 }}đ
+                                    </small>
+                                    <br>
+                                    {% endif %}
+                                    <strong class="text-success fs-5">{{ invoice.thanh_tien|floatformat:0 }}đ</strong>
+                                    {% if invoice.tien_giam_gia > 0 %}
+                                    <br>
+                                    <small class="text-danger">
+                                        <i class="fas fa-tag"></i> -{{ invoice.tien_giam_gia|floatformat:0 }}đ
+                                    </small>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="invoice-actions" onclick="event.stopPropagation()">
+                                    <button class="btn btn-sm btn-outline-primary" 
+                                            onclick="viewInvoice({{ invoice.id }})"
+                                            title="Xem chi tiết">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success" 
+                                            onclick="printInvoice({{ invoice.id }})"
+                                            title="In hóa đơn">
+                                        <i class="fas fa-print"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" 
+                                            onclick="sendInvoiceEmail({{ invoice.id }})"
+                                            title="Gửi email">
+                                        <i class="fas fa-envelope"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5">
+                                <i class="fas fa-file-invoice fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">Không có hóa đơn nào</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-light">
+                        <tr>
+                            <th colspan="6" class="text-end">Tổng trang này:</th>
+                            <th class="text-end">
+                                <span class="text-success fs-5">{{ page_total|floatformat:0 }}đ</span>
+                            </th>
+                            <th></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if invoices.has_other_pages %}
+            <nav aria-label="Phân trang" class="mt-4">
+                <ul class="pagination justify-content-center mb-0">
+                    {% if invoices.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ invoices.previous_page_number }}">Trước</a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in invoices.paginator.page_range %}
+                    <li class="page-item {% if invoices.number == num %}active{% endif %}">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                    {% endfor %}
+
+                    {% if invoices.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ invoices.next_page_number }}">Sau</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Invoice Detail Modal -->
+<div class="modal fade" id="invoiceDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header no-print">
+                <h5 class="modal-title">
+                    <i class="fas fa-file-invoice"></i> Chi tiết hóa đơn
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="print-preview" id="printContent">
+                    <!-- Content loaded via AJAX -->
+                </div>
+            </div>
+            <div class="modal-footer no-print">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-success" onclick="window.print()">
+                    <i class="fas fa-print"></i> In hóa đơn
+                </button>
+                <button type="button" class="btn btn-primary" onclick="downloadPDF()">
+                    <i class="fas fa-download"></i> Tải PDF
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function viewInvoice(invoiceId) {
+    $('#invoiceDetailModal').modal('show');
+    
+    $.ajax({
+        url: `/api/invoices/${invoiceId}/`,
+        method: 'GET',
+        success: function(invoice) {
+            let servicesHtml = '';
+            let subtotal = 0;
+            
+            invoice.chi_tiet_hoa_don.forEach(function(detail) {
+                subtotal += parseFloat(detail.gia);
+                servicesHtml += `
+                    <tr>
+                        <td>${detail.dich_vu.ten_dich_vu}</td>
+                        <td class="text-center">1</td>
+                        <td class="text-end">${formatCurrency(detail.gia)}</td>
+                        <td class="text-end">${formatCurrency(detail.gia)}</td>
+                    </tr>
+                `;
+            });
+            
+            const html = `
+                <div class="invoice-header">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <img src="/static/img/logo.png" alt="Logo" class="invoice-logo mb-3">
+                            <h3>BARBERSHOP</h3>
+                            <p class="mb-1">Địa chỉ: 123 Đường ABC, Quận XYZ</p>
+                            <p class="mb-1">Điện thoại: 0123 456 789</p>
+                            <p class="mb-0">Email: contact@barbershop.com</p>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <h2 class="text-primary">HÓA ĐƠN</h2>
+                            <p class="mb-1"><strong>Mã HĐ:</strong> #${invoice.ma_hoa_don}</p>
+                            <p class="mb-1"><strong>Ngày:</strong> ${invoice.ngay_tao}</p>
+                            <p class="mb-0"><strong>Nhân viên:</strong> ${invoice.nhan_vien.ho_ten}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6>Thông tin khách hàng</h6>
+                        ${invoice.khach_hang ? `
+                            <p class="mb-1"><strong>Họ tên:</strong> ${invoice.khach_hang.ho_ten}</p>
+                            <p class="mb-1"><strong>SĐT:</strong> ${invoice.khach_hang.so_dien_thoai}</p>
+                            <p class="mb-0"><strong>Email:</strong> ${invoice.khach_hang.email || 'N/A'}</p>
+                        ` : '<p class="text-muted">Khách vãng lai</p>'}
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Phương thức thanh toán</h6>
+                        <p class="mb-0">${getPaymentMethodText(invoice.phuong_thuc_thanh_toan)}</p>
+                    </div>
+                </div>
+                
+                <table class="invoice-detail-table">
+                    <thead>
+                        <tr>
+                            <th>Dịch vụ</th>
+                            <th class="text-center">SL</th>
+                            <th class="text-end">Đơn giá</th>
+                            <th class="text-end">Thành tiền</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${servicesHtml}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3" class="text-end"><strong>Tạm tính:</strong></td>
+                            <td class="text-end"><strong>${formatCurrency(subtotal)}</strong></td>
+                        </tr>
+                        ${invoice.voucher ? `
+                            <tr>
+                                <td colspan="3" class="text-end">
+                                    Voucher (${invoice.voucher.ma_voucher}):
+                                </td>
+                                <td class="text-end text-danger">-${formatCurrency(invoice.tien_giam_voucher)}</td>
+                            </tr>
+                        ` : ''}
+                        ${invoice.diem_su_dung > 0 ? `
+                            <tr>
+                                <td colspan="3" class="text-end">
+                                    Điểm tích lũy (${invoice.diem_su_dung} điểm):
+                                </td>
+                                <td class="text-end text-danger">-${formatCurrency(invoice.tien_giam_diem)}</td>
+                            </tr>
+                        ` : ''}
+                    </tfoot>
+                </table>
+                
+                <div class="invoice-total text-center">
+                    TỔNG CỘNG: ${formatCurrency(invoice.tong_tien_sau_giam)}
+                </div>
+                
+                ${invoice.diem_tich_luy > 0 ? `
+                    <div class="alert alert-success mt-3">
+                        <i class="fas fa-gift"></i> Khách hàng được cộng <strong>${invoice.diem_tich_luy}</strong> điểm tích lũy
+                    </div>
+                ` : ''}
+                
+                <div class="text-center mt-4">
+                    <p class="mb-1">Cảm ơn quý khách đã sử dụng dịch vụ!</p>
+                    <p class="mb-0"><em>Hẹn gặp lại quý khách!</em></p>
+                </div>
+            `;
+            
+            $('#printContent').html(html);
+        },
+        error: function() {
+            $('#printContent').html('<p class="text-danger text-center">Không thể tải thông tin hóa đơn</p>');
+        }
+    });
+}
+
+function printInvoice(invoiceId) {
+    viewInvoice(invoiceId);
+    setTimeout(function() {
+        window.print();
+    }, 500);
+}
+
+function sendInvoiceEmail(invoiceId) {
+    if (confirm('Gửi hóa đơn qua email cho khách hàng?')) {
+        $.ajax({
+            url: `/api/invoices/${invoiceId}/send-email/`,
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            success: function(response) {
+                alert('Đã gửi email thành công!');
+            },
+            error: function(xhr) {
+                alert('Có lỗi xảy ra: ' + xhr.responseJSON.message);
+            }
+        });
+    }
+}
+
+function exportExcel() {
+    const form = $('#filterForm');
+    const params = form.serialize();
+    window.location.href = '/admin/invoices/export/excel/?' + params;
+}
+
+function exportPDF() {
+    const form = $('#filterForm');
+    const params = form.serialize();
+    window.location.href = '/admin/invoices/export/pdf/?' + params;
+}
+
+function downloadPDF() {
+    alert('Chức năng tải PDF đang được phát triển');
+}
+
+function getPaymentMethodText(method) {
+    const methods = {
+        'cash': '<i class="fas fa-money-bill-wave"></i> Tiền mặt',
+        'transfer': '<i class="fas fa-exchange-alt"></i> Chuyển khoản',
+        'e-wallet': '<i class="fas fa-wallet"></i> Ví điện tử',
+        'card': '<i class="fas fa-credit-card"></i> Thẻ'
+    };
+    return methods[method] || method;
+}
+
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('vi-VN', { 
+        style: 'currency', 
+        currency: 'VND' 
+    }).format(amount);
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

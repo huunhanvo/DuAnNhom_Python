@@ -1,0 +1,757 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lịch làm việc{% endblock %}
+
+{% block extra_css %}
+<style>
+    .schedule-calendar {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    
+    .calendar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #8b4513;
+    }
+    
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: 120px repeat(7, 1fr);
+        gap: 1px;
+        background: #dee2e6;
+        border: 1px solid #dee2e6;
+    }
+    
+    .calendar-cell {
+        background: white;
+        padding: 10px;
+        min-height: 100px;
+        position: relative;
+    }
+    
+    .calendar-header-cell {
+        background: linear-gradient(135deg, #8b4513 0%, #d2691e 100%);
+        color: white;
+        font-weight: bold;
+        text-align: center;
+        padding: 15px 10px;
+    }
+    
+    .time-cell {
+        background: #f8f9fa;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+    }
+    
+    .shift-block {
+        padding: 8px;
+        border-radius: 8px;
+        margin-bottom: 5px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 0.85rem;
+        position: relative;
+    }
+    
+    .shift-block:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .shift-morning {
+        background: linear-gradient(135deg, #fff3cd 0%, #ffc107 100%);
+        color: #856404;
+        border-left: 4px solid #ffc107;
+    }
+    
+    .shift-afternoon {
+        background: linear-gradient(135deg, #d1ecf1 0%, #17a2b8 100%);
+        color: #0c5460;
+        border-left: 4px solid #17a2b8;
+    }
+    
+    .shift-evening {
+        background: linear-gradient(135deg, #e2e3e5 0%, #6c757d 100%);
+        color: #383d41;
+        border-left: 4px solid #6c757d;
+    }
+    
+    .shift-fullday {
+        background: linear-gradient(135deg, #d4edda 0%, #28a745 100%);
+        color: #155724;
+        border-left: 4px solid #28a745;
+    }
+    
+    .staff-avatar-sm {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 5px;
+    }
+    
+    .shift-count {
+        font-size: 0.75rem;
+        padding: 2px 6px;
+        background: rgba(0,0,0,0.1);
+        border-radius: 10px;
+        margin-left: 5px;
+    }
+    
+    .leave-request {
+        background: #f8d7da;
+        border: 1px dashed #dc3545;
+        border-radius: 5px;
+        padding: 5px;
+        margin-top: 5px;
+        font-size: 0.75rem;
+        color: #721c24;
+    }
+    
+    .stats-card {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .view-tabs {
+        border-bottom: 2px solid #dee2e6;
+        margin-bottom: 20px;
+    }
+    
+    .view-tabs .nav-link {
+        color: #6c757d;
+        border: none;
+        border-bottom: 3px solid transparent;
+        padding: 10px 20px;
+        font-weight: 600;
+    }
+    
+    .view-tabs .nav-link.active {
+        color: #8b4513;
+        border-bottom-color: #8b4513;
+        background: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h2><i class="fas fa-calendar-alt"></i> Quản lý lịch làm việc</h2>
+            <p class="text-muted mb-0">Phân ca & quản lý lịch nhân viên</p>
+        </div>
+        <div class="col-md-6 text-end">
+            <button class="btn btn-outline-primary" onclick="exportSchedule()">
+                <i class="fas fa-file-excel"></i> Xuất lịch
+            </button>
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#assignShiftModal">
+                <i class="fas fa-user-clock"></i> Gán ca làm
+            </button>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#leaveRequestsModal">
+                <i class="fas fa-calendar-times"></i> Đơn xin nghỉ
+                {% if pending_leaves > 0 %}
+                <span class="badge bg-danger">{{ pending_leaves }}</span>
+                {% endif %}
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-card">
+        <div class="row">
+            <div class="col-md-2">
+                <div class="text-center">
+                    <h4 class="text-primary mb-0">{{ total_staff }}</h4>
+                    <small class="text-muted">Tổng nhân viên</small>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="text-center">
+                    <h4 class="text-success mb-0">{{ working_today }}</h4>
+                    <small class="text-muted">Làm việc hôm nay</small>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="text-center">
+                    <h4 class="text-warning mb-0">{{ off_today }}</h4>
+                    <small class="text-muted">Nghỉ hôm nay</small>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="text-center">
+                    <h4 class="text-info mb-0">{{ total_shifts_week }}</h4>
+                    <small class="text-muted">Ca trong tuần</small>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="text-center">
+                    <h4 class="text-danger mb-0">{{ pending_leaves }}</h4>
+                    <small class="text-muted">Đơn chờ duyệt</small>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="text-center">
+                    <h4 class="text-secondary mb-0">{{ avg_hours|floatformat:1 }}h</h4>
+                    <small class="text-muted">TB giờ/tuần</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" id="filterForm">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Từ ngày:</label>
+                        <input type="date" class="form-control" name="from_date" value="{{ from_date }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Đến ngày:</label>
+                        <input type="date" class="form-control" name="to_date" value="{{ to_date }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Nhân viên:</label>
+                        <select class="form-select" name="staff_id">
+                            <option value="">Tất cả nhân viên</option>
+                            {% for staff_member in staff %}
+                            <option value="{{ staff_member.id }}" {% if staff_member.id|stringformat:"s" == staff_id %}selected{% endif %}>
+                                {{ staff_member.ho_ten }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Loại xem:</label>
+                        <select class="form-select" name="view">
+                            <option value="week" {% if view_type == 'week' %}selected{% endif %}>Tuần</option>
+                            <option value="month" {% if view_type == 'month' %}selected{% endif %}>Tháng</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter"></i> Lọc
+                        </button>
+                        <a href="{% url 'admin_work_schedule' %}" class="btn btn-secondary">
+                            <i class="fas fa-redo"></i> Đặt lại
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- View Tabs -->
+    <ul class="nav view-tabs">
+        <li class="nav-item">
+            <a class="nav-link {% if view_type == 'week' %}active{% endif %}" href="#" data-view="week">
+                <i class="fas fa-calendar-week"></i> Tuần
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if view_type == 'month' %}active{% endif %}" href="#" data-view="month">
+                <i class="fas fa-calendar"></i> Tháng
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="#" data-view="staff">
+                <i class="fas fa-users"></i> Theo nhân viên
+            </a>
+        </li>
+    </ul>
+
+    <!-- Calendar -->
+    <div class="schedule-calendar">
+        <div class="calendar-header">
+            <button class="btn btn-outline-secondary" onclick="previousPeriod()">
+                <i class="fas fa-chevron-left"></i> 
+                {% if view_type == 'month' %}Tháng trước{% else %}Tuần trước{% endif %}
+            </button>
+            <h4 class="mb-0" id="currentPeriod">
+                {% if view_type == 'month' %}
+                    Tháng {{ week_start|date:"m/Y" }}
+                {% else %}
+                    Tuần {{ week_start|date:"d/m" }} - {{ week_end|date:"d/m/Y" }}
+                {% endif %}
+            </h4>
+            <button class="btn btn-outline-secondary" onclick="nextPeriod()">
+                {% if view_type == 'month' %}Tháng sau{% else %}Tuần sau{% endif %}
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+
+        <!-- Week View -->
+        <div id="weekView">
+            <div class="calendar-grid">
+                <!-- Header Row -->
+                <div class="calendar-header-cell">Giờ</div>
+                <div class="calendar-header-cell">Thứ 2<br><small>20/05</small></div>
+                <div class="calendar-header-cell">Thứ 3<br><small>21/05</small></div>
+                <div class="calendar-header-cell">Thứ 4<br><small>22/05</small></div>
+                <div class="calendar-header-cell">Thứ 5<br><small>23/05</small></div>
+                <div class="calendar-header-cell">Thứ 6<br><small>24/05</small></div>
+                <div class="calendar-header-cell">Thứ 7<br><small>25/05</small></div>
+                <div class="calendar-header-cell">Chủ nhật<br><small>26/05</small></div>
+
+                <!-- Morning Shift 8:00-12:00 -->
+                <div class="time-cell">08:00<br>12:00</div>
+                {% for day in week_days %}
+                <div class="calendar-cell">
+                    {% for shift in day.morning_shifts %}
+                    <div class="shift-block shift-morning" onclick="viewShift({{ shift.id }})">
+                        <img src="{{ shift.nhan_vien.anh_dai_dien }}" class="staff-avatar-sm">
+                        {{ shift.nhan_vien.ho_ten|truncatewords:2 }}
+                        {% if shift.count > 1 %}
+                        <span class="shift-count">+{{ shift.count|add:"-1" }}</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    {% for leave in day.morning_leaves %}
+                    <div class="leave-request">
+                        <i class="fas fa-user-times"></i> {{ leave.nhan_vien.ho_ten|truncatewords:2 }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+
+                <!-- Afternoon Shift 13:00-17:00 -->
+                <div class="time-cell">13:00<br>17:00</div>
+                {% for day in week_days %}
+                <div class="calendar-cell">
+                    {% for shift in day.afternoon_shifts %}
+                    <div class="shift-block shift-afternoon" onclick="viewShift({{ shift.id }})">
+                        <img src="{{ shift.nhan_vien.anh_dai_dien }}" class="staff-avatar-sm">
+                        {{ shift.nhan_vien.ho_ten|truncatewords:2 }}
+                        {% if shift.count > 1 %}
+                        <span class="shift-count">+{{ shift.count|add:"-1" }}</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+
+                <!-- Evening Shift 17:00-21:00 -->
+                <div class="time-cell">17:00<br>21:00</div>
+                {% for day in week_days %}
+                <div class="calendar-cell">
+                    {% for shift in day.evening_shifts %}
+                    <div class="shift-block shift-evening" onclick="viewShift({{ shift.id }})">
+                        <img src="{{ shift.nhan_vien.anh_dai_dien }}" class="staff-avatar-sm">
+                        {{ shift.nhan_vien.ho_ten|truncatewords:2 }}
+                        {% if shift.count > 1 %}
+                        <span class="shift-count">+{{ shift.count|add:"-1" }}</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+
+                <!-- Full Day Shift -->
+                <div class="time-cell">Cả ngày<br>8-21h</div>
+                {% for day in week_days %}
+                <div class="calendar-cell">
+                    {% for shift in day.fullday_shifts %}
+                    <div class="shift-block shift-fullday" onclick="viewShift({{ shift.id }})">
+                        <img src="{{ shift.nhan_vien.anh_dai_dien }}" class="staff-avatar-sm">
+                        {{ shift.nhan_vien.ho_ten|truncatewords:2 }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Staff View -->
+        <div id="staffView" style="display: none;">
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Nhân viên</th>
+                            <th>T2</th>
+                            <th>T3</th>
+                            <th>T4</th>
+                            <th>T5</th>
+                            <th>T6</th>
+                            <th>T7</th>
+                            <th>CN</th>
+                            <th>Tổng giờ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for staff in staff_list %}
+                        <tr>
+                            <td>
+                                <img src="{{ staff.anh_dai_dien }}" class="staff-avatar-sm">
+                                {{ staff.ho_ten }}
+                            </td>
+                            {% for day in staff.week_schedule %}
+                            <td>
+                                {% if day.shifts %}
+                                {% for shift in day.shifts %}
+                                <div class="shift-block shift-{{ shift.type }}">
+                                    {{ shift.label }}
+                                </div>
+                                {% endfor %}
+                                {% else %}
+                                <span class="text-muted">Nghỉ</span>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                            <td><strong>{{ staff.total_hours }}h</strong></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assign Shift Modal -->
+<div class="modal fade" id="assignShiftModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-clock"></i> Gán ca làm việc
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="assignShiftForm">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nhân viên: <span class="text-danger">*</span></label>
+                            <select class="form-select" id="staffSelect" multiple size="8" required>
+                                {% for staff in staff_list %}
+                                <option value="{{ staff.id }}">{{ staff.ho_ten }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">Giữ Ctrl để chọn nhiều nhân viên</small>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Ngày: <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" id="shiftDate" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Ca làm: <span class="text-danger">*</span></label>
+                                <select class="form-select" id="shiftType" required>
+                                    <option value="morning">Sáng (8:00 - 12:00)</option>
+                                    <option value="afternoon">Chiều (13:00 - 17:00)</option>
+                                    <option value="evening">Tối (17:00 - 21:00)</option>
+                                    <option value="fullday">Cả ngày (8:00 - 21:00)</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Lặp lại:</label>
+                                <select class="form-select" id="repeatType">
+                                    <option value="none">Không lặp</option>
+                                    <option value="daily">Hàng ngày</option>
+                                    <option value="weekly">Hàng tuần</option>
+                                    <option value="monthly">Hàng tháng</option>
+                                </select>
+                            </div>
+                            <div class="mb-3" id="repeatUntilDiv" style="display: none;">
+                                <label class="form-label">Lặp đến:</label>
+                                <input type="date" class="form-control" id="repeatUntil">
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Ghi chú:</label>
+                            <textarea class="form-control" id="shiftNote" rows="2"></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary" onclick="saveShift()">
+                    <i class="fas fa-save"></i> Lưu ca làm
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Leave Requests Modal -->
+<div class="modal fade" id="leaveRequestsModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-calendar-times"></i> Đơn xin nghỉ phép
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Nhân viên</th>
+                            <th>Ngày nghỉ</th>
+                            <th>Lý do</th>
+                            <th>Ngày gửi</th>
+                            <th>Trạng thái</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for leave in leave_requests %}
+                        <tr>
+                            <td>{{ leave.nhan_vien.ho_ten }}</td>
+                            <td>{{ leave.tu_ngay|date:"d/m/Y" }} - {{ leave.den_ngay|date:"d/m/Y" }}</td>
+                            <td>{{ leave.ly_do }}</td>
+                            <td>{{ leave.ngay_tao|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                {% if leave.trang_thai == 'cho_duyet' %}
+                                <span class="badge bg-warning">Chờ duyệt</span>
+                                {% elif leave.trang_thai == 'da_duyet' %}
+                                <span class="badge bg-success">Đã duyệt</span>
+                                {% elif leave.trang_thai == 'tu_choi' %}
+                                <span class="badge bg-danger">Từ chối</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ leave.trang_thai }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if leave.trang_thai == 'cho_duyet' %}
+                                <button class="btn btn-sm btn-success" onclick="approveLeave({{ leave.id }})">
+                                    <i class="fas fa-check"></i> Duyệt
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="rejectLeave({{ leave.id }})">
+                                    <i class="fas fa-times"></i> Từ chối
+                                </button>
+                                {% elif leave.trang_thai == 'da_duyet' %}
+                                <span class="text-success"><i class="fas fa-check"></i> Đã duyệt</span>
+                                {% elif leave.trang_thai == 'tu_choi' %}
+                                <span class="text-danger"><i class="fas fa-times"></i> Đã từ chối</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // View tabs
+    $('.view-tabs .nav-link').click(function(e) {
+        e.preventDefault();
+        $('.view-tabs .nav-link').removeClass('active');
+        $(this).addClass('active');
+        
+        const view = $(this).data('view');
+        if (view === 'week') {
+            $('#weekView').show();
+            $('#staffView').hide();
+        } else if (view === 'staff') {
+            $('#weekView').hide();
+            $('#staffView').show();
+        }
+    });
+    
+    // Repeat type change
+    $('#repeatType').change(function() {
+        if ($(this).val() !== 'none') {
+            $('#repeatUntilDiv').show();
+        } else {
+            $('#repeatUntilDiv').hide();
+        }
+    });
+});
+
+function previousPeriod() {
+    const form = $('#filterForm');
+    const currentFromDate = $('input[name="from_date"]').val();
+    const viewType = $('select[name="view"]').val();
+    
+    if (currentFromDate) {
+        const date = new Date(currentFromDate);
+        if (viewType === 'month') {
+            date.setMonth(date.getMonth() - 1);
+        } else {
+            date.setDate(date.getDate() - 7);
+        }
+        $('input[name="from_date"]').val(date.toISOString().split('T')[0]);
+    }
+    
+    form.submit();
+}
+
+function nextPeriod() {
+    const form = $('#filterForm');
+    const currentFromDate = $('input[name="from_date"]').val();
+    const viewType = $('select[name="view"]').val();
+    
+    if (currentFromDate) {
+        const date = new Date(currentFromDate);
+        if (viewType === 'month') {
+            date.setMonth(date.getMonth() + 1);
+        } else {
+            date.setDate(date.getDate() + 7);
+        }
+        $('input[name="from_date"]').val(date.toISOString().split('T')[0]);
+    }
+    
+    form.submit();
+}
+
+function viewShift(shiftId) {
+    // View shift details
+}
+
+function saveShift() {
+    const form = $('#assignShiftForm');
+    const staffIds = $('#staffSelect').val();
+    const shiftDate = $('#shiftDate').val();
+    const shiftType = $('#shiftType').val();
+    const repeatType = $('#repeatType').val();
+    const repeatUntil = $('#repeatUntil').val();
+    const shiftNote = $('#shiftNote').val();
+    
+    if (!staffIds || staffIds.length === 0) {
+        alert('Vui lòng chọn nhân viên!');
+        return;
+    }
+    
+    if (!shiftDate) {
+        alert('Vui lòng chọn ngày!');
+        return;
+    }
+    
+    if (!shiftType) {
+        alert('Vui lòng chọn ca làm!');
+        return;
+    }
+    
+    // Show loading
+    const saveBtn = event.target;
+    const originalText = saveBtn.innerHTML;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...';
+    saveBtn.disabled = true;
+    
+    $.ajax({
+        url: '{% url "admin_work_schedule" %}',
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        data: {
+            action: 'create',
+            staff_ids: staffIds,
+            ngay_lam: shiftDate,
+            ca_lam: shiftType,
+            repeat_type: repeatType,
+            repeat_until: repeatUntil,
+            ghi_chu: shiftNote
+        },
+        success: function(response) {
+            if (response.success) {
+                alert('Đã gán ca làm thành công!');
+                $('#assignShiftModal').modal('hide');
+                location.reload();
+            } else {
+                alert('Lỗi: ' + response.message);
+            }
+        },
+        error: function() {
+            alert('Có lỗi xảy ra khi gán ca!');
+        },
+        complete: function() {
+            saveBtn.innerHTML = originalText;
+            saveBtn.disabled = false;
+        }
+    });
+}
+
+function approveLeave(leaveId) {
+    if (confirm('Duyệt đơn xin nghỉ này?')) {
+        $.ajax({
+            url: `/admin/leave-requests/${leaveId}/approve/`,
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            success: function(response) {
+                if (response.success) {
+                    alert('Đã duyệt đơn!');
+                    location.reload();
+                } else {
+                    alert('Lỗi: ' + response.message);
+                }
+            },
+            error: function() {
+                alert('Có lỗi xảy ra!');
+            }
+        });
+    }
+}
+
+function rejectLeave(leaveId) {
+    const reason = prompt('Lý do từ chối:');
+    if (reason) {
+        $.ajax({
+            url: `/admin/leave-requests/${leaveId}/reject/`,
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            data: { reason: reason },
+            success: function(response) {
+                if (response.success) {
+                    alert('Đã từ chối đơn!');
+                    location.reload();
+                } else {
+                    alert('Lỗi: ' + response.message);
+                }
+            },
+            error: function() {
+                alert('Có lỗi xảy ra!');
+            }
+        });
+    }
+}
+
+function exportSchedule() {
+    window.location.href = '/admin/schedule/export/';
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

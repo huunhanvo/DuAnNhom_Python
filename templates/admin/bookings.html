@@ -1,0 +1,971 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Quản lý đặt lịch{% endblock %}
+{% block page_title %}Quản lý đặt lịch{% endblock %}
+
+{% block extra_css %}
+<style>
+    .status-tabs {
+        border-bottom: 2px solid #dee2e6;
+        margin-bottom: 25px;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+    
+    .status-tabs .nav-link {
+        color: #6c757d;
+        border: none;
+        border-bottom: 3px solid transparent;
+        padding: 12px 20px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .status-tabs .nav-link:hover {
+        color: #8b4513;
+    }
+    
+    .status-tabs .nav-link.active {
+        color: #8b4513;
+        border-bottom-color: #8b4513;
+        background: none;
+    }
+    
+    .status-tabs .badge {
+        margin-left: 5px;
+        padding: 3px 8px;
+    }
+    
+    .booking-filters {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .table-actions {
+        display: flex;
+        gap: 5px;
+        justify-content: flex-end;
+    }
+    
+    .customer-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .customer-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+    
+    .service-list {
+        max-width: 300px;
+    }
+    
+    .service-item {
+        font-size: 0.85rem;
+        padding: 2px 0;
+    }
+    
+    .timeline-badge {
+        font-size: 0.75rem;
+        padding: 2px 8px;
+        border-radius: 10px;
+    }
+    
+    .calendar-view {
+        display: none;
+    }
+    
+    .calendar-view.active {
+        display: block;
+    }
+    
+    .calendar-day {
+        border: 1px solid #dee2e6;
+        min-height: 120px;
+        padding: 5px;
+        background: #fff;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .calendar-day:hover {
+        background: #f8f9fa;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .calendar-day-header {
+        font-weight: bold;
+        padding: 5px;
+        border-bottom: 1px solid #dee2e6;
+        margin-bottom: 5px;
+    }
+    
+    .calendar-booking {
+        font-size: 0.75rem;
+        padding: 3px 5px;
+        margin: 2px 0;
+        border-radius: 3px;
+        cursor: pointer;
+    }
+    
+    .calendar-booking:hover {
+        opacity: 0.8;
+    }
+
+    /* Filter improvements */
+    .filter-quick-btn {
+        margin-right: 5px;
+        margin-bottom: 5px;
+    }
+
+    .booking-filters.border-primary {
+        border: 2px solid #0d6efd !important;
+        border-radius: 10px;
+    }
+
+    .bg-light-primary {
+        background-color: rgba(13, 110, 253, 0.1) !important;
+    }
+
+    /* Status tabs improvements */
+    .status-tabs .nav-link.active {
+        background: linear-gradient(135deg, #8b4513, #a0522d);
+        color: white !important;
+        border-radius: 5px 5px 0 0;
+        transform: translateY(-2px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    /* Empty state styling */
+    .no-results td {
+        background: #f8f9fa !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h2><i class="fas fa-calendar-check"></i> Quản lý đặt lịch</h2>
+            <p class="text-muted mb-0">Quản lý tất cả lịch hẹn của khách hàng</p>
+            {% if from_date or to_date or staff_id or search %}
+            <div class="alert alert-info mt-2">
+                <small>
+                    <strong>Bộ lọc đang áp dụng:</strong>
+                    {% if from_date %}Từ: {{ from_date }}{% endif %}
+                    {% if to_date %}{% if from_date %} | {% endif %}Đến: {{ to_date }}{% endif %}
+                    {% if staff_id %}{% if from_date or to_date %} | {% endif %}Nhân viên: {{ staff_id }}{% endif %}
+                    {% if search %}{% if from_date or to_date or staff_id %} | {% endif %}Tìm kiếm: "{{ search }}"{% endif %}
+                </small>
+            </div>
+            {% endif %}
+        </div>
+        <div class="col-md-6 text-end">
+            <div class="btn-group me-2">
+                <button class="btn btn-outline-primary active" id="listViewBtn">
+                    <i class="fas fa-list"></i> Danh sách
+                </button>
+                <button class="btn btn-outline-primary" id="calendarViewBtn">
+                    <i class="fas fa-calendar"></i> Lịch
+                </button>
+            </div>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createBookingModal">
+                <i class="fas fa-plus"></i> Tạo lịch hẹn mới
+            </button>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body py-2">
+                    <h5 class="mb-0 text-primary">{{ total_bookings }}</h5>
+                    <small class="text-muted">Tổng số</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body py-2">
+                    <h5 class="mb-0 text-warning">{{ pending_count }}</h5>
+                    <small class="text-muted">Chờ xác nhận</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body py-2">
+                    <h5 class="mb-0 text-success">{{ confirmed_count }}</h5>
+                    <small class="text-muted">Đã xác nhận</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body py-2">
+                    <h5 class="mb-0 text-info">{{ in_progress_count }}</h5>
+                    <small class="text-muted">Đang phục vụ</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body py-2">
+                    <h5 class="mb-0 text-primary">{{ completed_count }}</h5>
+                    <small class="text-muted">Hoàn thành</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body py-2">
+                    <h5 class="mb-0 text-danger">{{ cancelled_count }}</h5>
+                    <small class="text-muted">Đã hủy</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- List View -->
+    <div id="listView">
+        <!-- Filters -->
+        <div class="booking-filters">
+            <form method="GET" id="filterForm">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Từ ngày:</label>
+                        <input type="date" class="form-control" name="from_date" value="{{ from_date }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Đến ngày:</label>
+                        <input type="date" class="form-control" name="to_date" value="{{ to_date }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Nhân viên:</label>
+                        <select class="form-select" name="staff_id">
+                            <option value="">Tất cả nhân viên</option>
+                            {% for staff in staff_list %}
+                            <option value="{{ staff.id }}" {% if staff.id|stringformat:"s" == staff_id %}selected{% endif %}>
+                                {{ staff.ho_ten }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Tìm kiếm:</label>
+                        <input type="text" class="form-control" name="search" 
+                               placeholder="SĐT, tên khách hàng..." value="{% if search and search != 'None' %}{{ search }}{% endif %}">
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter"></i> Lọc
+                        </button>
+                        <a href="{% url 'admin_bookings' %}" class="btn btn-secondary">
+                            <i class="fas fa-redo"></i> Đặt lại
+                        </a>
+                        <button type="button" class="btn btn-info filter-quick-btn" data-filter="today">
+                            <i class="fas fa-calendar-day"></i> Hôm nay
+                        </button>
+                        <button type="button" class="btn btn-info filter-quick-btn" data-filter="week">
+                            <i class="fas fa-calendar-week"></i> Tuần này
+                        </button>
+                        <button type="button" class="btn btn-info filter-quick-btn" data-filter="month">
+                            <i class="fas fa-calendar-alt"></i> Tháng này
+                        </button>
+                        <button type="button" class="btn btn-success" onclick="exportExcel()">
+                            <i class="fas fa-file-excel"></i> Xuất Excel
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Status Tabs -->
+        <ul class="nav status-tabs">
+            <li class="nav-item">
+                <a class="nav-link active" href="#" data-status="all">
+                    Tất cả <span class="badge bg-secondary">{{ total_bookings }}</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" data-status="cho_xac_nhan">
+                    Chờ xác nhận <span class="badge bg-warning">{{ pending_count }}</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" data-status="da_xac_nhan">
+                    Đã xác nhận <span class="badge bg-success">{{ confirmed_count }}</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" data-status="da_checkin">
+                    Đang phục vụ <span class="badge bg-info">{{ in_progress_count }}</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" data-status="hoan_thanh">
+                    Hoàn thành <span class="badge bg-primary">{{ completed_count }}</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" data-status="da_huy">
+                    Đã hủy <span class="badge bg-danger">{{ cancelled_count }}</span>
+                </a>
+            </li>
+        </ul>
+
+        <!-- Bookings Table -->
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle" id="bookingsTable">
+                        <thead>
+                            <tr>
+                                <th>Mã đơn</th>
+                                <th>Khách hàng</th>
+                                <th>Ngày & Giờ</th>
+                                <th>Nhân viên</th>
+                                <th>Dịch vụ</th>
+                                <th>Tổng tiền</th>
+                                <th>Trạng thái</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for booking in bookings %}
+                            <tr data-status="{{ booking.trang_thai }}">
+                                <td>
+                                    <strong>#{{ booking.ma_dat_lich }}</strong>
+                                    <br>
+                                    <small class="text-muted">{{ booking.ngay_tao|date:"d/m/Y H:i" }}</small>
+                                </td>
+                                <td>
+                                    <div class="customer-info">
+                                        {% if booking.khach_hang.anh_dai_dien %}
+                                        <img src="{{ booking.khach_hang.anh_dai_dien }}" 
+                                             alt="{{ booking.ten_khach_hang }}" 
+                                             class="customer-avatar">
+                                        {% else %}
+                                        <div class="customer-avatar bg-secondary text-white d-flex align-items-center justify-content-center">
+                                            {{ booking.ten_khach_hang|first|upper }}
+                                        </div>
+                                        {% endif %}
+                                        <div>
+                                            <strong>{{ booking.ten_khach_hang }}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ booking.so_dien_thoai_khach }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <i class="fas fa-calendar text-primary"></i> {{ booking.ngay_hen|date:"d/m/Y" }}
+                                    <br>
+                                    <i class="fas fa-clock text-success"></i> {{ booking.gio_hen|time:"H:i" }}
+                                </td>
+                                <td>
+                                    <strong>{{ booking.nhan_vien.ho_ten }}</strong>
+                                    <br>
+                                    <small class="text-muted">{{ booking.nhan_vien.chuyen_mon }}</small>
+                                </td>
+                                <td>
+                                    <div class="service-list">
+                                        {% for service in booking.dich_vu_dat_lich.all %}
+                                        <div class="service-item">
+                                            <i class="fas fa-cut text-muted"></i> {{ service.ten_dich_vu }}
+                                            <small class="text-muted">({{ service.gia|floatformat:0 }}đ)</small>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <strong class="text-primary">{{ booking.thanh_tien|floatformat:0 }}đ</strong>
+                                    {% if booking.tien_giam_gia > 0 %}
+                                    <br><small class="text-success">-{{ booking.tien_giam_gia|floatformat:0 }}đ</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if booking.trang_thai == 'cho_xac_nhan' %}
+                                    <span class="badge bg-warning">Chờ xác nhận</span>
+                                    {% elif booking.trang_thai == 'da_xac_nhan' %}
+                                    <span class="badge bg-success">Đã xác nhận</span>
+                                    {% elif booking.trang_thai == 'da_checkin' %}
+                                    <span class="badge bg-info">Đang phục vụ</span>
+                                    {% elif booking.trang_thai == 'hoan_thanh' %}
+                                    <span class="badge bg-primary">Hoàn thành</span>
+                                    {% elif booking.trang_thai == 'da_huy' %}
+                                    <span class="badge bg-danger">Đã hủy</span>
+                                    {% elif booking.trang_thai == 'khong_den' %}
+                                    <span class="badge bg-secondary">Không đến</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="table-actions">
+                                        <button class="btn btn-sm btn-outline-primary" 
+                                                onclick="viewBooking({{ booking.id }})"
+                                                title="Xem chi tiết">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        {% if booking.trang_thai == 'cho_xac_nhan' or booking.trang_thai == 'da_xac_nhan' %}
+                                        <button class="btn btn-sm btn-outline-success" 
+                                                onclick="editBooking({{ booking.id }})"
+                                                title="Chỉnh sửa">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" 
+                                                onclick="cancelBooking({{ booking.id }})"
+                                                title="Hủy">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                        {% endif %}
+                                        {% if booking.trang_thai == 'da_xac_nhan' %}
+                                        <button class="btn btn-sm btn-outline-info" 
+                                                onclick="checkinBooking({{ booking.id }})"
+                                                title="Check-in">
+                                            <i class="fas fa-sign-in-alt"></i>
+                                        </button>
+                                        {% elif booking.trang_thai == 'da_checkin' %}
+                                        <button class="btn btn-sm btn-outline-primary" 
+                                                onclick="completeBooking({{ booking.id }})"
+                                                title="Hoàn thành">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center py-5">
+                                    <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                                    <p class="text-muted">Không có lịch hẹn nào</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if bookings.has_other_pages %}
+                <nav aria-label="Phân trang">
+                    <ul class="pagination justify-content-center mb-0">
+                        {% if bookings.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ bookings.previous_page_number }}">Trước</a>
+                        </li>
+                        {% endif %}
+
+                        {% for num in bookings.paginator.page_range %}
+                        <li class="page-item {% if bookings.number == num %}active{% endif %}">
+                            <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                        </li>
+                        {% endfor %}
+
+                        {% if bookings.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ bookings.next_page_number }}">Sau</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Calendar View -->
+    <div id="calendarView" class="calendar-view">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <button class="btn btn-outline-primary" onclick="changeMonth(-1)">
+                        <i class="fas fa-chevron-left"></i> Tháng trước
+                    </button>
+                    <h4 id="currentMonth"></h4>
+                    <button class="btn btn-outline-primary" onclick="changeMonth(1)">
+                        Tháng sau <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+                <div id="calendarGrid"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create/Edit Booking Modal -->
+<div class="modal fade" id="createBookingModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus-circle"></i> Tạo lịch hẹn mới
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="bookingForm">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Khách hàng: <span class="text-danger">*</span></label>
+                            <select class="form-select" id="customerId" required>
+                                <option value="">-- Chọn khách hàng --</option>
+                                {% for customer in customers %}
+                                <option value="{{ customer.id }}">
+                                    {{ customer.ho_ten }} - {{ customer.so_dien_thoai }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Nhân viên: <span class="text-danger">*</span></label>
+                            <select class="form-select" id="staffId" required>
+                                <option value="">-- Chọn nhân viên --</option>
+                                {% for staff in staff_list %}
+                                <option value="{{ staff.id }}">{{ staff.ho_ten }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Ngày: <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="bookingDate" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Giờ: <span class="text-danger">*</span></label>
+                            <input type="time" class="form-control" id="bookingTime" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Dịch vụ: <span class="text-danger">*</span></label>
+                            <select class="form-select" id="services" multiple size="5" required>
+                                {% for service in services %}
+                                <option value="{{ service.id }}" 
+                                        data-duration="{{ service.thoi_gian_thuc_hien }}"
+                                        data-price="{{ service.gia }}">
+                                    {{ service.ten_dich_vu }} - {{ service.thoi_gian_thuc_hien }}p - {{ service.gia|floatformat:0 }}đ
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">Giữ Ctrl để chọn nhiều dịch vụ</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Tổng thời lượng:</label>
+                            <input type="text" class="form-control" id="totalDuration" readonly>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Tổng tiền:</label>
+                            <input type="text" class="form-control" id="totalPrice" readonly>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Ghi chú:</label>
+                            <textarea class="form-control" id="notes" rows="3"></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary" onclick="saveBooking()">
+                    <i class="fas fa-save"></i> Lưu lịch hẹn
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Status filter tabs
+    $('.status-tabs .nav-link').click(function(e) {
+        e.preventDefault();
+        $('.status-tabs .nav-link').removeClass('active');
+        $(this).addClass('active');
+        
+        const status = $(this).data('status');
+        
+        // Apply client-side filter
+        if (status === 'all') {
+            $('#bookingsTable tbody tr').show();
+        } else {
+            $('#bookingsTable tbody tr').hide();
+            $(`#bookingsTable tbody tr[data-status="${status}"]`).show();
+        }
+        
+        // Update empty state
+        const visibleRows = $(`#bookingsTable tbody tr:visible`).length;
+        if (visibleRows === 0) {
+            if ($('#bookingsTable tbody .no-results').length === 0) {
+                $('#bookingsTable tbody').append(`
+                    <tr class="no-results">
+                        <td colspan="8" class="text-center py-5">
+                            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">Không có lịch hẹn nào với trạng thái này</p>
+                        </td>
+                    </tr>
+                `);
+            }
+        } else {
+            $('#bookingsTable tbody .no-results').remove();
+        }
+    });
+    
+    // View switcher
+    $('#listViewBtn').click(function() {
+        $(this).addClass('active');
+        $('#calendarViewBtn').removeClass('active');
+        $('#listView').show();
+        $('#calendarView').removeClass('active');
+    });
+    
+    $('#calendarViewBtn').click(function() {
+        $(this).addClass('active');
+        $('#listViewBtn').removeClass('active');
+        $('#listView').hide();
+        $('#calendarView').addClass('active');
+        loadCalendar();
+    });
+    
+    // Service selection calculation
+    $('#services').change(function() {
+        let totalDuration = 0;
+        let totalPrice = 0;
+        
+        $(this).find('option:selected').each(function() {
+            const duration = parseInt($(this).data('duration')) || 0;
+            const price = parseFloat($(this).data('price')) || 0;
+            totalDuration += duration;
+            totalPrice += price;
+        });
+        
+        $('#totalDuration').val(totalDuration + ' phút');
+        $('#totalPrice').val(formatCurrency(totalPrice));
+    });
+    
+    // Initialize calculation on modal show
+    $('#createBookingModal').on('shown.bs.modal', function() {
+        $('#services').trigger('change');
+        
+        // Set minimum date to today
+        const today = new Date().toISOString().split('T')[0];
+        $('#bookingDate').attr('min', today);
+        
+        // Clear form
+        $('#bookingForm')[0].reset();
+        $('#totalDuration').val('');
+        $('#totalPrice').val('');
+    });
+    
+    // Form filter - clean empty values before submit
+    $('#filterForm').on('submit', function(e) {
+        // Remove empty values to prevent sending 'None' or empty strings
+        $(this).find('input, select').each(function() {
+            if (!$(this).val() || $(this).val().trim() === '' || $(this).val() === 'None') {
+                $(this).removeAttr('name');
+            }
+        });
+        
+        console.log('Filter form submitted with cleaned data:', $(this).serialize());
+    });
+    
+    // Quick filter buttons
+    $('.filter-quick-btn').click(function() {
+        const filter = $(this).data('filter');
+        
+        // Reset form
+        $('#filterForm')[0].reset();
+        
+        // Apply quick filter
+        if (filter === 'today') {
+            const today = new Date().toISOString().split('T')[0];
+            $('input[name="from_date"]').val(today);
+            $('input[name="to_date"]').val(today);
+        } else if (filter === 'week') {
+            const today = new Date();
+            const weekStart = new Date(today.setDate(today.getDate() - today.getDay()));
+            const weekEnd = new Date(today.setDate(today.getDate() - today.getDay() + 6));
+            $('input[name="from_date"]').val(weekStart.toISOString().split('T')[0]);
+            $('input[name="to_date"]').val(weekEnd.toISOString().split('T')[0]);
+        } else if (filter === 'month') {
+            const today = new Date();
+            const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+            const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            $('input[name="from_date"]').val(monthStart.toISOString().split('T')[0]);
+            $('input[name="to_date"]').val(monthEnd.toISOString().split('T')[0]);
+        }
+        
+        // Submit form
+        $('#filterForm').submit();
+    });
+    
+    // Initialize filters on page load
+    initializeFilters();
+});
+
+function initializeFilters() {
+    // Check URL parameters to set active status tab
+    const urlParams = new URLSearchParams(window.location.search);
+    const statusFilter = urlParams.get('status');
+    
+    if (statusFilter && statusFilter !== 'all') {
+        $('.status-tabs .nav-link').removeClass('active');
+        $(`.status-tabs .nav-link[data-status="${statusFilter}"]`).addClass('active');
+        
+        // Apply client-side filter
+        $('#bookingsTable tbody tr').hide();
+        $(`#bookingsTable tbody tr[data-status="${statusFilter}"]`).show();
+    }
+    
+    // Highlight current filter values
+    highlightActiveFilters();
+}
+
+function highlightActiveFilters() {
+    const hasFilters = $('input[name="from_date"]').val() || 
+                      $('input[name="to_date"]').val() || 
+                      $('select[name="staff_id"]').val() || 
+                      $('input[name="search"]').val();
+    
+    if (hasFilters) {
+        $('.booking-filters').addClass('border-primary');
+    }
+}
+
+// Debug function to test filters
+function testFilter() {
+    console.log('Testing filter functionality...');
+    console.log('Total rows:', $('#bookingsTable tbody tr').length);
+    
+    const statuses = ['cho_xac_nhan', 'da_xac_nhan', 'da_checkin', 'hoan_thanh', 'da_huy'];
+    statuses.forEach(status => {
+        const count = $(`#bookingsTable tbody tr[data-status="${status}"]`).length;
+        console.log(`${status}: ${count} bookings`);
+    });
+}
+
+function viewBooking(id) {
+    window.location.href = `/admin/bookings/${id}/`;
+}
+
+function editBooking(id) {
+    // Load booking data and show modal
+    $.ajax({
+        url: `/api/bookings/${id}/`,
+        method: 'GET',
+        success: function(data) {
+            // Populate form with booking data
+            $('#createBookingModal').modal('show');
+        }
+    });
+}
+
+    function cancelBooking(id) {
+        if (confirm('Bạn có chắc muốn hủy lịch hẹn này?')) {
+            $.ajax({
+                url: `/admin/bookings/${id}/cancel/`,
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+                },
+                success: function(response) {
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        alert('Có lỗi xảy ra: ' + response.message);
+                    }
+                },
+                error: function() {
+                    alert('Có lỗi xảy ra khi hủy lịch hẹn!');
+                }
+            });
+        }
+    }
+
+    function checkinBooking(id) {
+        if (confirm('Check-in cho lịch hẹn này?')) {
+            $.ajax({
+                url: `/admin/bookings/${id}/checkin/`,
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+                },
+                success: function(response) {
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        alert('Có lỗi xảy ra: ' + response.message);
+                    }
+                }
+            });
+        }
+    }
+
+    function completeBooking(id) {
+        if (confirm('Đánh dấu lịch hẹn này đã hoàn thành?')) {
+            $.ajax({
+                url: `/admin/bookings/${id}/complete/`,
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+                },
+                success: function(response) {
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        alert('Có lỗi xảy ra: ' + response.message);
+                    }
+                }
+            });
+        }
+    }
+
+    function saveBooking() {
+        // Get form data
+        const formData = new FormData();
+        formData.append('customer_id', $('#customerId').val());
+        formData.append('staff_id', $('#staffId').val());
+        formData.append('booking_date', $('#bookingDate').val());
+        formData.append('booking_time', $('#bookingTime').val());
+        formData.append('notes', $('#notes').val());
+        formData.append('csrfmiddlewaretoken', $('[name=csrfmiddlewaretoken]').val());
+        
+        // Add services
+        const selectedServices = $('#services').val();
+        if (selectedServices) {
+            selectedServices.forEach(function(serviceId) {
+                formData.append('services[]', serviceId);
+            });
+        }
+
+        // Validate required fields
+        if (!$('#customerId').val() || !$('#staffId').val() || !$('#bookingDate').val() || 
+            !$('#bookingTime').val() || !selectedServices || selectedServices.length === 0) {
+            alert('Vui lòng điền đầy đủ thông tin bắt buộc!');
+            return;
+        }
+
+        $.ajax({
+            url: '/admin/bookings/create/',
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                $('#createBookingModal').modal('hide');
+                location.reload();
+            },
+            error: function(xhr) {
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    alert('Có lỗi xảy ra: ' + xhr.responseJSON.message);
+                } else {
+                    alert('Có lỗi xảy ra khi tạo lịch hẹn!');
+                }
+            }
+        });
+    }
+
+    function exportExcel() {
+        // Get current filter parameters
+        const params = new URLSearchParams();
+        if ($('input[name="from_date"]').val()) params.append('from_date', $('input[name="from_date"]').val());
+        if ($('input[name="to_date"]').val()) params.append('to_date', $('input[name="to_date"]').val());
+        if ($('select[name="staff_id"]').val()) params.append('staff_id', $('select[name="staff_id"]').val());
+        if ($('input[name="search"]').val()) params.append('search', $('input[name="search"]').val());
+        
+        window.location.href = '/admin/bookings/export/?' + params.toString();
+    }
+
+    function formatCurrency(amount) {
+        return new Intl.NumberFormat('vi-VN', { 
+            style: 'currency', 
+            currency: 'VND' 
+        }).format(amount);
+    }
+
+// Calendar functions
+let currentCalendarDate = new Date();
+
+function loadCalendar() {
+    const year = currentCalendarDate.getFullYear();
+    const month = currentCalendarDate.getMonth();
+    
+    // Update month display
+    const monthNames = [
+        'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
+        'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'
+    ];
+    $('#currentMonth').text(`${monthNames[month]} ${year}`);
+    
+    // Create calendar grid
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startDay = firstDay.getDay(); // 0 = Sunday
+    
+    let calendarHTML = '<div class="row g-2">';
+    
+    // Days of week header
+    const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+    dayNames.forEach(day => {
+        calendarHTML += `<div class="col"><div class="text-center fw-bold p-2 bg-light">${day}</div></div>`;
+    });
+    
+    // Calendar days
+    let dayCount = 1;
+    for (let week = 0; week < 6; week++) {
+        calendarHTML += '</div><div class="row g-2">';
+        
+        for (let day = 0; day < 7; day++) {
+            if ((week === 0 && day < startDay) || dayCount > daysInMonth) {
+                calendarHTML += '<div class="col"><div class="calendar-day" style="opacity: 0.3;"></div></div>';
+            } else {
+                const currentDate = new Date(year, month, dayCount);
+                const dateStr = currentDate.toISOString().split('T')[0];
+                
+                calendarHTML += `
+                    <div class="col">
+                        <div class="calendar-day" data-date="${dateStr}">
+                            <div class="calendar-day-header">${dayCount}</div>
+                            <div id="bookings-${dateStr}"></div>
+                        </div>
+                    </div>
+                `;
+                dayCount++;
+            }
+        }
+    }
+    calendarHTML += '</div>';
+    
+    $('#calendarGrid').html(calendarHTML);
+    
+    // Load bookings for this month (placeholder - would need API endpoint)
+    $('.calendar-day[data-date]').each(function() {
+        // Add sample booking for demonstration
+        if (Math.random() > 0.7) {
+            const statusColors = ['bg-warning', 'bg-success', 'bg-info', 'bg-primary'];
+            const randomStatus = statusColors[Math.floor(Math.random() * statusColors.length)];
+            $(this).find('[id^="bookings-"]').append(`
+                <div class="calendar-booking ${randomStatus} text-white">
+                    ${Math.floor(Math.random() * 12) + 8}:00 - Khách
+                </div>
+            `);
+        }
+    });
+}
+
+function changeMonth(offset) {
+    currentCalendarDate.setMonth(currentCalendarDate.getMonth() + offset);
+    loadCalendar();
+}
+</script>
+{% endblock %}

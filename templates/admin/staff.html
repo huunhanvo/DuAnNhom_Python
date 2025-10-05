@@ -1,0 +1,338 @@
+{% extends 'base.html' %}
+
+{% block title %}Quản lý Nhân viên - Admin{% endblock %}
+{% block page_title %}Quản lý Nhân viên{% endblock %}
+
+{% block content %}
+            <li class="nav-item">
+                <a class="nav-link active" href="/admin/staff">
+                    <i class="fas fa-users-cog"></i> Quản lý Nhân viên
+    <!-- Action Section -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <small class="text-muted">Tổng: <strong>{{ total_staff }}</strong> nhân viên | Đang làm: <strong>{{ active_staff }}</strong></small>
+        </div>
+        <div class="col-md-6 text-end">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addStaffModal">
+                <i class="fas fa-plus"></i> Thêm nhân viên mới
+            </button>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <input type="text" name="search" class="form-control" placeholder="Tìm kiếm theo tên, SĐT, email..." value="{{ search }}">
+            </div>
+            <div class="col-md-3">
+                <select name="status" class="form-select">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Đang làm việc</option>
+                    <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Nghỉ việc</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="sort" class="form-select">
+                    <option value="">Mới nhất</option>
+                    <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Tên A-Z</option>
+                    <option value="rating" {% if sort_by == 'rating' %}selected{% endif %}>Đánh giá cao nhất</option>
+                    <option value="revenue" {% if sort_by == 'revenue' %}selected{% endif %}>Lượt phục vụ nhiều nhất</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-outline-primary w-100">
+                    <i class="fas fa-search"></i> Tìm kiếm
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Staff Table -->
+    <div class="stat-card">
+        <div class="table-responsive">
+            <table class="table custom-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nhân viên</th>
+                        <th>Liên hệ</th>
+                        <th>Chuyên môn</th>
+                        <th>Kinh nghiệm</th>
+                        <th>Đánh giá</th>
+                        <th>Lượt phục vụ</th>
+                        <th>Trạng thái</th>
+                        <th>Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if staff_list %}
+                        {% for staff in staff_list %}
+                        <tr id="staff-row-{{ staff.id }}">
+                            <td><strong>{{ staff.id }}</strong></td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <img src="{% if staff.anh_dai_dien %}{{ staff.anh_dai_dien }}{% else %}https://ui-avatars.com/api/?name={{ staff.ho_ten|urlencode }}&background=8b4513&color=fff{% endif %}" 
+                                         class="rounded-circle me-2" width="40" height="40">
+                                    <div>
+                                        <div class="fw-bold">{{ staff.ho_ten }}</div>
+                                        <small class="text-muted">{{ staff.so_dien_thoai }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div>{{ staff.email|default:"Chưa có email" }}</div>
+                                <small class="text-muted">{{ staff.so_dien_thoai }}</small>
+                            </td>
+                            <td>
+                                {% if staff.thong_tin_nhan_vien %}
+                                    <small class="text-muted">{{ staff.thong_tin_nhan_vien.chuyen_mon|default:"Chưa cập nhật" }}</small>
+                                {% else %}
+                                    <small class="text-muted">Chưa cập nhật</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if staff.thong_tin_nhan_vien and staff.thong_tin_nhan_vien.kinh_nghiem_nam %}
+                                    <strong>{{ staff.thong_tin_nhan_vien.kinh_nghiem_nam }} năm</strong>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if staff.thong_tin_nhan_vien and staff.thong_tin_nhan_vien.danh_gia_trung_binh %}
+                                    <div class="text-warning">
+                                        <i class="fas fa-star"></i> {{ staff.thong_tin_nhan_vien.danh_gia_trung_binh }}
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">Chưa có</span>
+                                {% endif %}
+                            </td>
+                            <td><strong>{{ staff.booking_count }}</strong></td>
+                            <td>
+                                {% if staff.trang_thai %}
+                                    <span class="badge bg-success">Đang làm</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Nghỉ việc</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'admin_staff_detail' staff.id %}" class="btn btn-outline-primary" title="Xem chi tiết">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'admin_staff_edit' staff.id %}" class="btn btn-outline-warning" title="Chỉnh sửa">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button class="btn btn-outline-danger" onclick="deleteStaff({{ staff.id }}, '{{ staff.ho_ten }}')" title="Xóa">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="9" class="text-center py-5">
+                                <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">Không tìm thấy nhân viên nào</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <div>
+                Hiển thị <strong>{{ staff_list.start_index }}</strong> - <strong>{{ staff_list.end_index }}</strong> 
+                trong tổng <strong>{{ staff_list.paginator.count }}</strong> nhân viên
+            </div>
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    {% if staff_list.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ staff_list.previous_page_number }}&search={{ search }}&status={{ status_filter }}&sort={{ sort_by }}">Trước</a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">Trước</span>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in staff_list.paginator.page_range %}
+                        {% if staff_list.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                        {% elif num > staff_list.number|add:'-3' and num < staff_list.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}&search={{ search }}&status={{ status_filter }}&sort={{ sort_by }}">{{ num }}</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if staff_list.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ staff_list.next_page_number }}&search={{ search }}&status={{ status_filter }}&sort={{ sort_by }}">Sau</a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">Sau</span>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+</main>
+
+<!-- Add Staff Modal -->
+<div class="modal fade" id="addStaffModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background: var(--primary-color); color: white;">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-plus"></i> Thêm nhân viên mới
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addStaffForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="create">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Họ tên <span class="text-danger">*</span></label>
+                            <input type="text" name="ho_ten" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Số điện thoại <span class="text-danger">*</span></label>
+                            <input type="tel" name="so_dien_thoai" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Email</label>
+                            <input type="email" name="email" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Mật khẩu <span class="text-danger">*</span></label>
+                            <input type="password" name="password" class="form-control" value="123456" required>
+                            <small class="text-muted">Mặc định: 123456</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Ngày sinh</label>
+                            <input type="date" name="ngay_sinh" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Giới tính</label>
+                            <select name="gioi_tinh" class="form-select">
+                                <option value="nam">Nam</option>
+                                <option value="nu">Nữ</option>
+                                <option value="khac">Khác</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">CCCD</label>
+                            <input type="text" name="cccd" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Số năm kinh nghiệm</label>
+                            <input type="number" name="kinh_nghiem_nam" class="form-control" min="0" value="0">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Chuyên môn</label>
+                            <textarea name="chuyen_mon" class="form-control" rows="2" placeholder="VD: Cắt tóc Hàn Quốc, Undercut, Fade..."></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Chứng chỉ</label>
+                            <input type="text" name="chung_chi" class="form-control" placeholder="Nhập các chứng chỉ (cách nhau bởi dấu phẩy)">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Mô tả</label>
+                            <textarea name="mo_ta" class="form-control" rows="3"></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="submit" form="addStaffForm" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Lưu nhân viên
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Add staff form submission
+    document.getElementById('addStaffForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const submitBtn = document.querySelector('button[form="addStaffForm"]');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...';
+        
+        fetch('{% url "admin_staff" %}', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                window.location.reload();
+            } else {
+                alert('Lỗi: ' + data.message);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-save"></i> Lưu nhân viên';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Có lỗi xảy ra!');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-save"></i> Lưu nhân viên';
+        });
+    });
+
+    // Delete staff
+    function deleteStaff(id, name) {
+        if (!confirm(`Bạn có chắc chắn muốn xóa nhân viên "${name}"?\n\nLưu ý: Đây là xóa mềm, dữ liệu vẫn còn trong database.`)) {
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+        formData.append('action', 'delete');
+        formData.append('staff_id', id);
+        
+        fetch('{% url "admin_staff" %}', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                // Remove row from table
+                document.getElementById('staff-row-' + id).remove();
+                
+                // Reload page if no more staff
+                if (document.querySelectorAll('tbody tr').length === 0) {
+                    window.location.reload();
+                }
+            } else {
+                alert('Lỗi: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Có lỗi xảy ra!');
+        });
+    }
+</script>
+{% endblock %}

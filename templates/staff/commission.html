@@ -1,0 +1,517 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Báo cáo hoa hồng{% endblock %}
+
+{% block extra_css %}
+<style>
+    .commission-card {
+        border-radius: 15px;
+        background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+        border-left: 5px solid #28a745;
+        transition: all 0.3s;
+    }
+    
+    .commission-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    
+    .earning-badge {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        padding: 15px 25px;
+        border-radius: 15px;
+        display: inline-block;
+        font-size: 1.5rem;
+        font-weight: bold;
+        box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+    }
+    
+    .service-item {
+        padding: 12px;
+        border-bottom: 1px solid #dee2e6;
+        transition: background 0.2s;
+    }
+    
+    .service-item:hover {
+        background: #f8f9fa;
+    }
+    
+    .service-item:last-child {
+        border-bottom: none;
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 300px;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+    }
+    
+    .stat-box {
+        text-align: center;
+        padding: 20px;
+        border-radius: 12px;
+        background: white;
+        border: 2px solid #dee2e6;
+    }
+    
+    .stat-box h4 {
+        margin: 10px 0 5px 0;
+        color: #8b4513;
+    }
+    
+    .timeline {
+        position: relative;
+        padding: 20px 0;
+    }
+    
+    .timeline-item {
+        position: relative;
+        padding-left: 50px;
+        padding-bottom: 30px;
+    }
+    
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: 15px;
+        top: 0;
+        bottom: -30px;
+        width: 2px;
+        background: #dee2e6;
+    }
+    
+    .timeline-item:last-child::before {
+        display: none;
+    }
+    
+    .timeline-dot {
+        position: absolute;
+        left: 7px;
+        top: 8px;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #28a745;
+        border: 3px solid white;
+        box-shadow: 0 0 0 2px #28a745;
+    }
+    
+    .commission-breakdown {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+    }
+    
+    .breakdown-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px dashed #dee2e6;
+    }
+    
+    .breakdown-item:last-child {
+        border-bottom: none;
+        font-weight: bold;
+        font-size: 1.1rem;
+        color: #28a745;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h2><i class="fas fa-hand-holding-usd"></i> Báo cáo hoa hồng</h2>
+            <p class="text-muted mb-0">Thu nhập & hoa hồng của bạn</p>
+        </div>
+        <div class="col-md-6 text-end">
+            <button class="btn btn-outline-primary" onclick="exportCommissionReport()">
+                <i class="fas fa-file-pdf"></i> Xuất PDF
+            </button>
+            <button class="btn btn-success" onclick="requestWithdrawal()">
+                <i class="fas fa-money-bill-wave"></i> Yêu cầu rút tiền
+            </button>
+        </div>
+    </div>
+
+    <!-- Total Earnings -->
+    <div class="row mb-4">
+        <div class="col-md-12 text-center">
+            <div class="card commission-card">
+                <div class="card-body py-5">
+                    <h5 class="text-muted mb-3">Tổng hoa hồng tháng này</h5>
+                    <div class="earning-badge">
+                        <i class="fas fa-coins"></i> {{ total_commission|floatformat:0 }}đ
+                    </div>
+                    <p class="text-muted mt-3 mb-0">
+                        <i class="fas fa-arrow-up text-success"></i> 
+                        Tăng {{ commission_growth }}% so với tháng trước
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="stats-grid mb-4">
+        <div class="stat-box">
+            <i class="fas fa-cut fa-2x text-primary"></i>
+            <h4>{{ total_services }}</h4>
+            <small class="text-muted">Dịch vụ hoàn thành</small>
+        </div>
+        <div class="stat-box">
+            <i class="fas fa-dollar-sign fa-2x text-success"></i>
+            <h4>{{ total_revenue|floatformat:0 }}đ</h4>
+            <small class="text-muted">Doanh thu tạo ra</small>
+        </div>
+        <div class="stat-box">
+            <i class="fas fa-percentage fa-2x text-info"></i>
+            <h4>{{ commission_rate }}%</h4>
+            <small class="text-muted">Tỷ lệ hoa hồng</small>
+        </div>
+        <div class="stat-box">
+            <i class="fas fa-users fa-2x text-warning"></i>
+            <h4>{{ total_customers }}</h4>
+            <small class="text-muted">Khách hàng phục vụ</small>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Commission Chart -->
+        <div class="col-md-8 mb-4">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line"></i> Biểu đồ hoa hồng 6 tháng
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="commissionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Commission Breakdown -->
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-calculator"></i> Chi tiết tháng này
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="commission-breakdown">
+                        <div class="breakdown-item">
+                            <span>Hoa hồng cơ bản:</span>
+                            <strong>{{ base_commission|floatformat:0 }}đ</strong>
+                        </div>
+                        <div class="breakdown-item">
+                            <span>Thưởng KPI:</span>
+                            <strong class="text-success">+{{ kpi_bonus|floatformat:0 }}đ</strong>
+                        </div>
+                        <div class="breakdown-item">
+                            <span>Thưởng khách VIP:</span>
+                            <strong class="text-success">+{{ vip_bonus|floatformat:0 }}đ</strong>
+                        </div>
+                        <div class="breakdown-item">
+                            <span>Thưởng thêm:</span>
+                            <strong class="text-success">+{{ extra_bonus|floatformat:0 }}đ</strong>
+                        </div>
+                        <div class="breakdown-item">
+                            <span>Tổng cộng:</span>
+                            <span>{{ total_commission|floatformat:0 }}đ</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h6>Trạng thái thanh toán:</h6>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <span class="badge bg-success">Đã thanh toán</span>
+                            <strong>{{ paid_amount|floatformat:0 }}đ</strong>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <span class="badge bg-warning">Chờ thanh toán</span>
+                            <strong>{{ pending_amount|floatformat:0 }}đ</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Service List -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list"></i> Lịch sử dịch vụ & hoa hồng
+                    </h5>
+                    <div>
+                        <input type="month" class="form-control d-inline-block" 
+                               style="width: auto;" id="monthFilter" 
+                               value="{{ current_month }}">
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Ngày</th>
+                                    <th>Khách hàng</th>
+                                    <th>Dịch vụ</th>
+                                    <th>Giá</th>
+                                    <th>Tỷ lệ HH</th>
+                                    <th>Hoa hồng</th>
+                                    <th>Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for service in service_history %}
+                                <tr>
+                                    <td>{{ service.date }}</td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <img src="{{ service.customer.avatar|default:'/static/img/avatar-default.jpg' }}" 
+                                                 class="rounded-circle me-2" 
+                                                 style="width: 35px; height: 35px; object-fit: cover;">
+                                            <div>
+                                                <div>{{ service.customer.name }}</div>
+                                                <small class="text-muted">{{ service.customer.tier }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>{{ service.service_name }}</td>
+                                    <td>{{ service.price|floatformat:0 }}đ</td>
+                                    <td>
+                                        <span class="badge bg-info">{{ service.commission_rate }}%</span>
+                                    </td>
+                                    <td>
+                                        <strong class="text-success">{{ service.commission|floatformat:0 }}đ</strong>
+                                    </td>
+                                    <td>
+                                        {% if service.payment_status == 'paid' %}
+                                        <span class="badge bg-success">Đã TT</span>
+                                        {% else %}
+                                        <span class="badge bg-warning">Chờ TT</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted">
+                                        <i class="fas fa-info-circle"></i> Chưa có dữ liệu
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history"></i> Lịch sử thanh toán
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        {% for payment in payment_history %}
+                        <div class="timeline-item">
+                            <div class="timeline-dot"></div>
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="mb-1">
+                                                <i class="fas fa-check-circle text-success"></i> 
+                                                Đã thanh toán
+                                            </h6>
+                                            <p class="text-muted small mb-0">
+                                                {{ payment.date }} - {{ payment.method }}
+                                            </p>
+                                        </div>
+                                        <h5 class="text-success mb-0">
+                                            +{{ payment.amount|floatformat:0 }}đ
+                                        </h5>
+                                    </div>
+                                    {% if payment.note %}
+                                    <small class="text-muted d-block mt-2">
+                                        <i class="fas fa-sticky-note"></i> {{ payment.note }}
+                                    </small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="alert alert-info text-center">
+                            <i class="fas fa-info-circle"></i> Chưa có lịch sử thanh toán
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Withdrawal Request Modal -->
+<div class="modal fade" id="withdrawalModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-money-bill-wave"></i> Yêu cầu rút tiền
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> Số tiền khả dụng: <strong>{{ pending_amount|floatformat:0 }}đ</strong>
+                </div>
+                <form id="withdrawalForm">
+                    <div class="mb-3">
+                        <label class="form-label">Số tiền muốn rút (VNĐ):</label>
+                        <input type="number" class="form-control" id="withdrawAmount" 
+                               min="0" max="{{ pending_amount }}" step="10000" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Phương thức:</label>
+                        <select class="form-select" id="withdrawMethod" required>
+                            <option value="cash">Tiền mặt</option>
+                            <option value="bank">Chuyển khoản</option>
+                            <option value="momo">MoMo</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ghi chú:</label>
+                        <textarea class="form-control" id="withdrawNote" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-success" onclick="submitWithdrawal()">
+                    <i class="fas fa-paper-plane"></i> Gửi yêu cầu
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// Commission Chart
+const ctx = document.getElementById('commissionChart').getContext('2d');
+new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: {{ chart_labels|safe }},
+        datasets: [{
+            label: 'Hoa hồng',
+            data: {{ chart_data|safe }},
+            borderColor: '#28a745',
+            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+            tension: 0.4,
+            fill: true
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return value.toLocaleString('vi-VN') + 'đ';
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Filter by month
+$('#monthFilter').change(function() {
+    const month = $(this).val();
+    location.href = `?month=${month}`;
+});
+
+function requestWithdrawal() {
+    new bootstrap.Modal(document.getElementById('withdrawalModal')).show();
+}
+
+function submitWithdrawal() {
+    const amount = $('#withdrawAmount').val();
+    const method = $('#withdrawMethod').val();
+    const note = $('#withdrawNote').val();
+    
+    if (!amount) {
+        alert('Vui lòng nhập số tiền!');
+        return;
+    }
+    
+    $.ajax({
+        url: '/api/commission/withdrawal/',
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        data: JSON.stringify({
+            amount: amount,
+            method: method,
+            note: note
+        }),
+        contentType: 'application/json',
+        success: function() {
+            alert('Đã gửi yêu cầu rút tiền!');
+            location.reload();
+        }
+    });
+}
+
+function exportCommissionReport() {
+    alert('Xuất báo cáo hoa hồng - Cần API backend');
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

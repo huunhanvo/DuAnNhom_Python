@@ -1,0 +1,639 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lịch hẹn hôm nay{% endblock %}
+
+{% block extra_css %}
+<style>
+    .booking-timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+    
+    .booking-timeline::before {
+        content: '';
+        position: absolute;
+        left: 10px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: linear-gradient(180deg, #8b4513 0%, #d2691e 100%);
+    }
+    
+    .booking-card {
+        position: relative;
+        margin-bottom: 20px;
+        border-left: 4px solid #8b4513;
+        transition: all 0.3s ease;
+    }
+    
+    .booking-card:hover {
+        transform: translateX(5px);
+        box-shadow: 0 4px 15px rgba(139, 69, 19, 0.2);
+    }
+    
+    .booking-card::before {
+        content: '';
+        position: absolute;
+        left: -33px;
+        top: 20px;
+        width: 12px;
+        height: 12px;
+        background: #fff;
+        border: 3px solid #8b4513;
+        border-radius: 50%;
+        z-index: 1;
+    }
+    
+    .booking-card.pending::before { border-color: #ffc107; }
+    .booking-card.confirmed::before { border-color: #28a745; }
+    .booking-card.in-progress::before { 
+        border-color: #17a2b8;
+        animation: pulse 2s infinite;
+    }
+    .booking-card.completed::before { 
+        background: #28a745;
+        border-color: #28a745;
+    }
+    .booking-card.cancelled::before { 
+        background: #dc3545;
+        border-color: #dc3545;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.3); }
+    }
+    
+    .time-badge {
+        font-size: 1.1rem;
+        font-weight: bold;
+        padding: 8px 15px;
+        background: linear-gradient(135deg, #8b4513 0%, #d2691e 100%);
+        color: white;
+        border-radius: 8px;
+        display: inline-block;
+    }
+    
+    .customer-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid #8b4513;
+    }
+    
+    .service-tag {
+        display: inline-block;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        padding: 5px 10px;
+        border-radius: 15px;
+        font-size: 0.85rem;
+        margin: 2px;
+    }
+    
+    .status-badge {
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .quick-actions {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+    }
+    
+    .filter-tabs {
+        border-bottom: 2px solid #dee2e6;
+        margin-bottom: 20px;
+    }
+    
+    .filter-tabs .nav-link {
+        color: #6c757d;
+        border: none;
+        border-bottom: 3px solid transparent;
+        padding: 10px 20px;
+        font-weight: 600;
+    }
+    
+    .filter-tabs .nav-link.active {
+        color: #8b4513;
+        border-bottom-color: #8b4513;
+        background: none;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #6c757d;
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 20px;
+        opacity: 0.3;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="fas fa-calendar-day"></i> Lịch hẹn hôm nay</h2>
+            <p class="text-muted mb-0">
+                <i class="fas fa-calendar-alt"></i> {{ current_date|date:"l, d/m/Y" }}
+            </p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="stats-mini">
+                <h3 class="mb-0">{{ total_bookings }}</h3>
+                <small class="text-muted">Tổng lịch hẹn</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="text-warning mb-2">
+                        <i class="fas fa-clock fa-2x"></i>
+                    </div>
+                    <h4 class="mb-0">{{ pending_count }}</h4>
+                    <small class="text-muted">Chờ xác nhận</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="text-success mb-2">
+                        <i class="fas fa-check-circle fa-2x"></i>
+                    </div>
+                    <h4 class="mb-0">{{ confirmed_count }}</h4>
+                    <small class="text-muted">Đã xác nhận</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="text-info mb-2">
+                        <i class="fas fa-cut fa-2x"></i>
+                    </div>
+                    <h4 class="mb-0">{{ in_progress_count }}</h4>
+                    <small class="text-muted">Đang phục vụ</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="text-primary mb-2">
+                        <i class="fas fa-trophy fa-2x"></i>
+                    </div>
+                    <h4 class="mb-0">{{ completed_count }}</h4>
+                    <small class="text-muted">Hoàn thành</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Tabs -->
+    <ul class="nav filter-tabs">
+        <li class="nav-item">
+            <a class="nav-link active" href="#" data-filter="all">
+                Tất cả ({{ total_bookings }})
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="#" data-filter="pending">
+                Chờ xác nhận ({{ pending_count }})
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="#" data-filter="confirmed">
+                Đã xác nhận ({{ confirmed_count }})
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="#" data-filter="in-progress">
+                Đang phục vụ ({{ in_progress_count }})
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="#" data-filter="completed">
+                Hoàn thành ({{ completed_count }})
+            </a>
+        </li>
+    </ul>
+
+    <!-- Booking Timeline -->
+    <div class="row">
+        <div class="col-12">
+            <div class="booking-timeline" id="bookingTimeline">
+                {% for booking in bookings %}
+                <div class="booking-card card {{ booking.trang_thai }}" data-status="{{ booking.trang_thai }}">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <!-- Time -->
+                            <div class="col-md-2">
+                                <div class="time-badge">
+                                    <i class="fas fa-clock"></i> {{ booking.gio_bat_dau }}
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        Thời lượng: {{ booking.thoi_luong_du_kien }} phút
+                                    </small>
+                                </div>
+                            </div>
+
+                            <!-- Customer Info -->
+                            <div class="col-md-3">
+                                <div class="d-flex align-items-center">
+                                    <img src="{{ booking.khach_hang.anh_dai_dien|default:'/static/img/avatar-default.png' }}" 
+                                         alt="{{ booking.khach_hang.ho_ten }}" 
+                                         class="customer-avatar me-3">
+                                    <div>
+                                        <h6 class="mb-1">{{ booking.khach_hang.ho_ten }}</h6>
+                                        <small class="text-muted">
+                                            <i class="fas fa-phone"></i> {{ booking.khach_hang.so_dien_thoai }}
+                                        </small>
+                                        {% if booking.khach_hang.diem_tich_luy > 0 %}
+                                        <br>
+                                        <small class="text-warning">
+                                            <i class="fas fa-star"></i> {{ booking.khach_hang.diem_tich_luy }} điểm
+                                        </small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Services -->
+                            <div class="col-md-3">
+                                <h6 class="mb-2">Dịch vụ:</h6>
+                                {% for service in booking.dich_vu.all %}
+                                <span class="service-tag">
+                                    <i class="fas fa-cut"></i> {{ service.ten_dich_vu }}
+                                    <span class="text-primary">{{ service.gia|floatformat:0 }}đ</span>
+                                </span>
+                                {% endfor %}
+                            </div>
+
+                            <!-- Status & Actions -->
+                            <div class="col-md-4">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        {% if booking.trang_thai == 'pending' %}
+                                        <span class="status-badge bg-warning text-dark">
+                                            <i class="fas fa-clock"></i> Chờ xác nhận
+                                        </span>
+                                        {% elif booking.trang_thai == 'confirmed' %}
+                                        <span class="status-badge bg-success text-white">
+                                            <i class="fas fa-check"></i> Đã xác nhận
+                                        </span>
+                                        {% elif booking.trang_thai == 'in-progress' %}
+                                        <span class="status-badge bg-info text-white">
+                                            <i class="fas fa-cut"></i> Đang phục vụ
+                                        </span>
+                                        {% elif booking.trang_thai == 'completed' %}
+                                        <span class="status-badge bg-primary text-white">
+                                            <i class="fas fa-check-double"></i> Hoàn thành
+                                        </span>
+                                        {% elif booking.trang_thai == 'cancelled' %}
+                                        <span class="status-badge bg-danger text-white">
+                                            <i class="fas fa-times"></i> Đã hủy
+                                        </span>
+                                        {% endif %}
+                                        
+                                        {% if booking.ghi_chu %}
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                <i class="fas fa-sticky-note"></i> {{ booking.ghi_chu }}
+                                            </small>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="quick-actions">
+                                        {% if booking.trang_thai == 'pending' %}
+                                        <button class="btn btn-sm btn-success" 
+                                                onclick="confirmBooking({{ booking.id }})">
+                                            <i class="fas fa-check"></i> Xác nhận
+                                        </button>
+                                        <button class="btn btn-sm btn-danger" 
+                                                onclick="cancelBooking({{ booking.id }})">
+                                            <i class="fas fa-times"></i> Hủy
+                                        </button>
+                                        {% elif booking.trang_thai == 'confirmed' %}
+                                        <button class="btn btn-sm btn-info" 
+                                                onclick="checkInBooking({{ booking.id }})">
+                                            <i class="fas fa-sign-in-alt"></i> Check-in
+                                        </button>
+                                        {% elif booking.trang_thai == 'in-progress' %}
+                                        <button class="btn btn-sm btn-primary" 
+                                                onclick="completeBooking({{ booking.id }})">
+                                            <i class="fas fa-check-double"></i> Hoàn thành
+                                        </button>
+                                        {% elif booking.trang_thai == 'completed' %}
+                                        <a href="{% url 'staff_pos' %}?booking_id={{ booking.id }}" 
+                                           class="btn btn-sm btn-warning">
+                                            <i class="fas fa-cash-register"></i> Thanh toán
+                                        </a>
+                                        {% endif %}
+                                        
+                                        <button class="btn btn-sm btn-outline-secondary" 
+                                                onclick="viewBookingDetail({{ booking.id }})">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="empty-state">
+                    <i class="fas fa-calendar-times"></i>
+                    <h4>Không có lịch hẹn nào</h4>
+                    <p class="text-muted">Hôm nay bạn chưa có lịch hẹn nào được giao</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Booking Detail Modal -->
+<div class="modal fade" id="bookingDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-info-circle"></i> Chi tiết lịch hẹn
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="bookingDetailContent">
+                <!-- Content loaded via AJAX -->
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Đang tải...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cancel Booking Modal -->
+<div class="modal fade" id="cancelBookingModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle"></i> Hủy lịch hẹn
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="cancelForm">
+                    <input type="hidden" id="cancelBookingId">
+                    <div class="mb-3">
+                        <label class="form-label">Lý do hủy:</label>
+                        <textarea class="form-control" id="cancelReason" rows="3" required></textarea>
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle"></i> 
+                        Khách hàng sẽ nhận được thông báo về việc hủy lịch hẹn
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-danger" onclick="submitCancelBooking()">
+                    <i class="fas fa-times"></i> Xác nhận hủy
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Filter tabs
+    $('.filter-tabs .nav-link').click(function(e) {
+        e.preventDefault();
+        $('.filter-tabs .nav-link').removeClass('active');
+        $(this).addClass('active');
+        
+        const filter = $(this).data('filter');
+        
+        if (filter === 'all') {
+            $('.booking-card').show();
+        } else {
+            $('.booking-card').hide();
+            $(`.booking-card.${filter}`).show();
+        }
+    });
+    
+    // Auto refresh every 30 seconds
+    setInterval(function() {
+        location.reload();
+    }, 30000);
+});
+
+function confirmBooking(bookingId) {
+    if (confirm('Xác nhận lịch hẹn này?')) {
+        $.ajax({
+            url: `/api/bookings/${bookingId}/confirm/`,
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            success: function(response) {
+                showNotification('success', 'Đã xác nhận lịch hẹn');
+                location.reload();
+            },
+            error: function(xhr) {
+                showNotification('error', 'Có lỗi xảy ra: ' + xhr.responseJSON.message);
+            }
+        });
+    }
+}
+
+function checkInBooking(bookingId) {
+    if (confirm('Check-in khách hàng?')) {
+        $.ajax({
+            url: `/api/bookings/${bookingId}/check-in/`,
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            success: function(response) {
+                showNotification('success', 'Đã check-in. Bắt đầu phục vụ!');
+                location.reload();
+            },
+            error: function(xhr) {
+                showNotification('error', 'Có lỗi xảy ra: ' + xhr.responseJSON.message);
+            }
+        });
+    }
+}
+
+function completeBooking(bookingId) {
+    if (confirm('Đánh dấu hoàn thành dịch vụ?')) {
+        $.ajax({
+            url: `/api/bookings/${bookingId}/complete/`,
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            success: function(response) {
+                showNotification('success', 'Đã hoàn thành! Chuyển sang thanh toán?');
+                // Redirect to POS
+                setTimeout(function() {
+                    window.location.href = `/staff/pos/?booking_id=${bookingId}`;
+                }, 1500);
+            },
+            error: function(xhr) {
+                showNotification('error', 'Có lỗi xảy ra: ' + xhr.responseJSON.message);
+            }
+        });
+    }
+}
+
+function cancelBooking(bookingId) {
+    $('#cancelBookingId').val(bookingId);
+    $('#cancelBookingModal').modal('show');
+}
+
+function submitCancelBooking() {
+    const bookingId = $('#cancelBookingId').val();
+    const reason = $('#cancelReason').val();
+    
+    if (!reason) {
+        alert('Vui lòng nhập lý do hủy');
+        return;
+    }
+    
+    $.ajax({
+        url: `/api/bookings/${bookingId}/cancel/`,
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        data: {
+            ly_do_huy: reason
+        },
+        success: function(response) {
+            showNotification('success', 'Đã hủy lịch hẹn');
+            $('#cancelBookingModal').modal('hide');
+            location.reload();
+        },
+        error: function(xhr) {
+            showNotification('error', 'Có lỗi xảy ra: ' + xhr.responseJSON.message);
+        }
+    });
+}
+
+function viewBookingDetail(bookingId) {
+    $('#bookingDetailModal').modal('show');
+    
+    $.ajax({
+        url: `/api/bookings/${bookingId}/`,
+        method: 'GET',
+        success: function(booking) {
+            let servicesHtml = '';
+            booking.dich_vu.forEach(function(service) {
+                servicesHtml += `
+                    <tr>
+                        <td>${service.ten_dich_vu}</td>
+                        <td class="text-end">${service.thoi_luong} phút</td>
+                        <td class="text-end">${formatCurrency(service.gia)}</td>
+                    </tr>
+                `;
+            });
+            
+            const html = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Thông tin khách hàng</h6>
+                        <p><strong>Họ tên:</strong> ${booking.khach_hang.ho_ten}</p>
+                        <p><strong>SĐT:</strong> ${booking.khach_hang.so_dien_thoai}</p>
+                        <p><strong>Email:</strong> ${booking.khach_hang.email || 'N/A'}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Thông tin lịch hẹn</h6>
+                        <p><strong>Ngày:</strong> ${booking.ngay_hen}</p>
+                        <p><strong>Giờ:</strong> ${booking.gio_bat_dau}</p>
+                        <p><strong>Thời lượng:</strong> ${booking.thoi_luong_du_kien} phút</p>
+                    </div>
+                </div>
+                <hr>
+                <h6>Dịch vụ</h6>
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Dịch vụ</th>
+                            <th class="text-end">Thời lượng</th>
+                            <th class="text-end">Giá</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${servicesHtml}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th colspan="2">Tổng cộng:</th>
+                            <th class="text-end">${formatCurrency(booking.tong_tien)}</th>
+                        </tr>
+                    </tfoot>
+                </table>
+                ${booking.ghi_chu ? `<p><strong>Ghi chú:</strong> ${booking.ghi_chu}</p>` : ''}
+            `;
+            
+            $('#bookingDetailContent').html(html);
+        },
+        error: function() {
+            $('#bookingDetailContent').html('<p class="text-danger">Không thể tải thông tin lịch hẹn</p>');
+        }
+    });
+}
+
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('vi-VN', { 
+        style: 'currency', 
+        currency: 'VND' 
+    }).format(amount);
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function showNotification(type, message) {
+    // Implementation depends on your notification system
+    alert(message);
+}
+</script>
+{% endblock %}

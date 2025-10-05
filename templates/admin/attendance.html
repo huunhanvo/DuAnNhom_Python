@@ -1,0 +1,465 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Chấm công{% endblock %}
+
+{% block extra_css %}
+<style>
+    .calendar-container {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+    }
+    
+    .calendar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 10px;
+    }
+    
+    .calendar-day-header {
+        text-align: center;
+        font-weight: bold;
+        padding: 10px;
+        background: #8b4513;
+        color: white;
+        border-radius: 8px;
+    }
+    
+    .calendar-day {
+        aspect-ratio: 1;
+        border: 2px solid #dee2e6;
+        border-radius: 10px;
+        padding: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+        position: relative;
+    }
+    
+    .calendar-day:hover {
+        border-color: #8b4513;
+        transform: scale(1.05);
+    }
+    
+    .calendar-day.today {
+        border-color: #8b4513;
+        background: #fff3e0;
+    }
+    
+    .calendar-day.other-month {
+        opacity: 0.4;
+    }
+    
+    .day-number {
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    
+    .attendance-status {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2px;
+        margin-top: 5px;
+    }
+    
+    .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+    }
+    
+    .status-present { background: #28a745; }
+    .status-late { background: #ffc107; }
+    .status-absent { background: #dc3545; }
+    .status-off { background: #6c757d; }
+    
+    .staff-list {
+        max-height: 600px;
+        overflow-y: auto;
+    }
+    
+    .staff-attendance-card {
+        border-left: 5px solid #dee2e6;
+        transition: all 0.3s;
+    }
+    
+    .staff-attendance-card.present { border-left-color: #28a745; }
+    .staff-attendance-card.late { border-left-color: #ffc107; }
+    .staff-attendance-card.absent { border-left-color: #dc3545; }
+    
+    .time-badge {
+        padding: 5px 12px;
+        border-radius: 15px;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+    
+    .checkin-badge { background: #d4edda; color: #155724; }
+    .checkout-badge { background: #fff3cd; color: #856404; }
+    
+    .stats-card {
+        text-align: center;
+        padding: 15px;
+        border-radius: 10px;
+        border: 2px solid #dee2e6;
+    }
+    
+    .stats-card h3 {
+        margin: 10px 0 5px 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h2><i class="fas fa-calendar-check"></i> Chấm công</h2>
+            <p class="text-muted mb-0">Theo dõi giờ làm việc & điểm danh nhân viên</p>
+        </div>
+        <div class="col-md-6 text-end">
+            <button class="btn btn-outline-primary" onclick="exportAttendance()">
+                <i class="fas fa-file-excel"></i> Xuất Excel
+            </button>
+            <button class="btn btn-success" onclick="openCheckInModal()">
+                <i class="fas fa-user-check"></i> Chấm công
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats Today -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stats-card" style="border-color: #28a745;">
+                <i class="fas fa-check-circle fa-2x text-success"></i>
+                <h3 class="text-success">{{ today_present }}</h3>
+                <small class="text-muted">Đi làm</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card" style="border-color: #ffc107;">
+                <i class="fas fa-clock fa-2x text-warning"></i>
+                <h3 class="text-warning">{{ today_late }}</h3>
+                <small class="text-muted">Đi muộn</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card" style="border-color: #dc3545;">
+                <i class="fas fa-times-circle fa-2x text-danger"></i>
+                <h3 class="text-danger">{{ today_absent }}</h3>
+                <small class="text-muted">Vắng mặt</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card" style="border-color: #6c757d;">
+                <i class="fas fa-umbrella-beach fa-2x text-secondary"></i>
+                <h3 class="text-secondary">{{ today_off }}</h3>
+                <small class="text-muted">Nghỉ phép</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Calendar View -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-body calendar-container">
+                    <div class="calendar-header">
+                        <button class="btn btn-outline-primary" onclick="previousMonth()">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <h4 id="currentMonth">{{ current_month_name }} {{ current_year }}</h4>
+                        <button class="btn btn-outline-primary" onclick="nextMonth()">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="calendar-grid">
+                        <div class="calendar-day-header">CN</div>
+                        <div class="calendar-day-header">T2</div>
+                        <div class="calendar-day-header">T3</div>
+                        <div class="calendar-day-header">T4</div>
+                        <div class="calendar-day-header">T5</div>
+                        <div class="calendar-day-header">T6</div>
+                        <div class="calendar-day-header">T7</div>
+                        
+                        {% for day in calendar_days %}
+                        <div class="calendar-day {% if day.is_today %}today{% endif %} {% if day.is_other_month %}other-month{% endif %}"
+                             onclick="viewDayDetails('{{ day.date }}')">
+                            <div class="day-number">{{ day.day }}</div>
+                            <div class="attendance-status">
+                                {% for i in day.present_count|make_list %}
+                                <div class="status-dot status-present" title="Đi làm"></div>
+                                {% endfor %}
+                                {% for i in day.late_count|make_list %}
+                                <div class="status-dot status-late" title="Đi muộn"></div>
+                                {% endfor %}
+                                {% for i in day.absent_count|make_list %}
+                                <div class="status-dot status-absent" title="Vắng"></div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Today's Attendance List -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users"></i> Chấm công hôm nay
+                    </h5>
+                </div>
+                <div class="card-body staff-list">
+                    {% for attendance in today_attendance %}
+                    <div class="card staff-attendance-card {{ attendance.status }} mb-3">
+                        <div class="card-body p-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <img src="{{ attendance.staff.avatar|default:'/static/img/avatar-default.jpg' }}" 
+                                     class="rounded-circle me-2" 
+                                     style="width: 40px; height: 40px; object-fit: cover;">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-0">{{ attendance.staff.name }}</h6>
+                                    <small class="text-muted">{{ attendance.staff.position }}</small>
+                                </div>
+                                {% if attendance.status == 'present' %}
+                                <i class="fas fa-check-circle text-success"></i>
+                                {% elif attendance.status == 'late' %}
+                                <i class="fas fa-clock text-warning"></i>
+                                {% elif attendance.status == 'absent' %}
+                                <i class="fas fa-times-circle text-danger"></i>
+                                {% endif %}
+                            </div>
+                            
+                            {% if attendance.check_in %}
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="time-badge checkin-badge">
+                                    <i class="fas fa-sign-in-alt"></i> {{ attendance.check_in }}
+                                </span>
+                                {% if attendance.check_out %}
+                                <span class="time-badge checkout-badge">
+                                    <i class="fas fa-sign-out-alt"></i> {{ attendance.check_out }}
+                                </span>
+                                {% else %}
+                                <button class="btn btn-sm btn-outline-warning" 
+                                        onclick="checkOut({{ attendance.id }})">
+                                    Check out
+                                </button>
+                                {% endif %}
+                            </div>
+                            {% else %}
+                            <button class="btn btn-sm btn-outline-success w-100" 
+                                    onclick="checkIn({{ attendance.staff.id }})">
+                                <i class="fas fa-user-check"></i> Check in
+                            </button>
+                            {% endif %}
+                            
+                            {% if attendance.note %}
+                            <small class="text-muted d-block mt-2">
+                                <i class="fas fa-sticky-note"></i> {{ attendance.note }}
+                            </small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="alert alert-info text-center">
+                        <i class="fas fa-info-circle"></i> Chưa có dữ liệu
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Check In Modal -->
+<div class="modal fade" id="checkInModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-check"></i> Chấm công
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="checkInForm">
+                    <div class="mb-3">
+                        <label class="form-label">Nhân viên: <span class="text-danger">*</span></label>
+                        <select class="form-select" id="staffSelect" required>
+                            <option value="">-- Chọn nhân viên --</option>
+                            {% for staff in staff_list %}
+                            <option value="{{ staff.id }}">{{ staff.name }} - {{ staff.position }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Thời gian check-in:</label>
+                        <input type="time" class="form-control" id="checkInTime" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ghi chú:</label>
+                        <textarea class="form-control" id="checkInNote" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-success" onclick="submitCheckIn()">
+                    <i class="fas fa-save"></i> Lưu
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Day Details Modal -->
+<div class="modal fade" id="dayDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-calendar-day"></i> Chi tiết chấm công
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="dayDetailsContent">
+                    <!-- Loaded dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Set current time as default
+$(document).ready(function() {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    $('#checkInTime').val(`${hours}:${minutes}`);
+});
+
+function openCheckInModal() {
+    new bootstrap.Modal(document.getElementById('checkInModal')).show();
+}
+
+function submitCheckIn() {
+    const staffId = $('#staffSelect').val();
+    const checkInTime = $('#checkInTime').val();
+    const note = $('#checkInNote').val();
+    
+    if (!staffId || !checkInTime) {
+        alert('Vui lòng điền đầy đủ thông tin!');
+        return;
+    }
+    
+    $.ajax({
+        url: '/api/attendance/check-in/',
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        data: JSON.stringify({
+            staff_id: staffId,
+            check_in_time: checkInTime,
+            note: note
+        }),
+        contentType: 'application/json',
+        success: function() {
+            alert('Đã chấm công!');
+            location.reload();
+        },
+        error: function() {
+            alert('Có lỗi xảy ra!');
+        }
+    });
+}
+
+function checkIn(staffId) {
+    $('#staffSelect').val(staffId);
+    openCheckInModal();
+}
+
+function checkOut(attendanceId) {
+    if (confirm('Xác nhận check out?')) {
+        $.ajax({
+            url: `/api/attendance/${attendanceId}/check-out/`,
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+            success: function() {
+                alert('Đã check out!');
+                location.reload();
+            }
+        });
+    }
+}
+
+function viewDayDetails(date) {
+    $.ajax({
+        url: `/api/attendance/day/${date}/`,
+        method: 'GET',
+        success: function(data) {
+            let html = `<h5>${data.date_formatted}</h5><hr>`;
+            
+            data.attendance.forEach(function(item) {
+                html += `
+                    <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
+                        <div>
+                            <strong>${item.staff_name}</strong>
+                            <span class="badge bg-${item.status_color} ms-2">${item.status_text}</span>
+                        </div>
+                        <div>
+                            ${item.check_in ? `<span class="time-badge checkin-badge">${item.check_in}</span>` : ''}
+                            ${item.check_out ? `<span class="time-badge checkout-badge">${item.check_out}</span>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            $('#dayDetailsContent').html(html);
+            new bootstrap.Modal(document.getElementById('dayDetailsModal')).show();
+        }
+    });
+}
+
+function previousMonth() {
+    alert('Chức năng xem tháng trước - Cần API backend');
+}
+
+function nextMonth() {
+    alert('Chức năng xem tháng sau - Cần API backend');
+}
+
+function exportAttendance() {
+    alert('Xuất báo cáo chấm công - Cần API backend');
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

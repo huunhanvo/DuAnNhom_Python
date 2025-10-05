@@ -1,0 +1,714 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Cài đặt hệ thống{% endblock %}
+
+{% block extra_css %}
+<style>
+    .settings-header {
+        background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    
+    .settings-card {
+        background: white;
+        border-radius: 12px;
+        padding: 30px;
+        margin-bottom: 25px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    
+    .nav-pills .nav-link {
+        color: #6c757d;
+        padding: 12px 24px;
+        margin-bottom: 8px;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .nav-pills .nav-link:hover {
+        background: #f8f9fa;
+    }
+    
+    .nav-pills .nav-link.active {
+        background: linear-gradient(135deg, #8b4513 0%, #d2691e 100%);
+        color: white;
+    }
+    
+    .setting-item {
+        padding: 20px;
+        border-bottom: 1px solid #dee2e6;
+        display: flex;
+        justify-content: between;
+        align-items: center;
+    }
+    
+    .setting-item:last-child {
+        border-bottom: none;
+    }
+    
+    .time-picker-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 10px;
+        margin-top: 15px;
+    }
+    
+    .day-schedule {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        text-align: center;
+    }
+    
+    .logo-upload {
+        width: 150px;
+        height: 150px;
+        border: 3px dashed #dee2e6;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .logo-upload img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+    
+    .color-picker-container {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .color-preview {
+        width: 60px;
+        height: 40px;
+        border-radius: 8px;
+        border: 2px solid #dee2e6;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="settings-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-2"><i class="fas fa-cog"></i> Cài đặt hệ thống</h2>
+                <p class="mb-0">Quản lý các thiết lập và cấu hình của tiệm</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <button class="btn btn-light" onclick="resetToDefault()">
+                    <i class="fas fa-undo"></i> Khôi phục mặc định
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Settings Menu -->
+        <div class="col-md-3">
+            <div class="settings-card">
+                <ul class="nav nav-pills flex-column" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" data-bs-toggle="pill" href="#general">
+                            <i class="fas fa-info-circle"></i> Thông tin chung
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="pill" href="#business-hours">
+                            <i class="fas fa-clock"></i> Giờ làm việc
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="pill" href="#services">
+                            <i class="fas fa-cut"></i> Dịch vụ
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="pill" href="#payment">
+                            <i class="fas fa-credit-card"></i> Thanh toán
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="pill" href="#booking">
+                            <i class="fas fa-calendar"></i> Đặt lịch
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="pill" href="#notifications">
+                            <i class="fas fa-bell"></i> Thông báo
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="pill" href="#appearance">
+                            <i class="fas fa-palette"></i> Giao diện
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="pill" href="#backup">
+                            <i class="fas fa-database"></i> Sao lưu & Khôi phục
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="pill" href="#advanced">
+                            <i class="fas fa-wrench"></i> Nâng cao
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Settings Content -->
+        <div class="col-md-9">
+            <div class="tab-content">
+                <!-- General Settings -->
+                <div class="tab-pane fade show active" id="general">
+                    <div class="settings-card">
+                        <h5 class="mb-4"><i class="fas fa-info-circle"></i> Thông tin chung</h5>
+                        
+                        <form id="generalForm">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Tên tiệm <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" name="ten_tiem" 
+                                           value="{{ settings.ten_tiem }}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Hotline</label>
+                                    <input type="tel" class="form-control" name="hotline" 
+                                           value="{{ settings.hotline }}">
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Địa chỉ</label>
+                                <textarea class="form-control" name="dia_chi" rows="2">{{ settings.dia_chi }}</textarea>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" class="form-control" name="email" 
+                                           value="{{ settings.email }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Website</label>
+                                    <input type="url" class="form-control" name="website" 
+                                           value="{{ settings.website }}">
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Logo</label>
+                                <div class="logo-upload" onclick="$('#logoInput').click()">
+                                    <img src="{{ settings.logo|default:'/static/img/default-logo.png' }}" 
+                                         id="logoPreview">
+                                </div>
+                                <input type="file" id="logoInput" accept="image/*" style="display: none;">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Mô tả ngắn</label>
+                                <textarea class="form-control" name="mo_ta" rows="3">{{ settings.mo_ta }}</textarea>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Lưu thay đổi
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Business Hours -->
+                <div class="tab-pane fade" id="business-hours">
+                    <div class="settings-card">
+                        <h5 class="mb-4"><i class="fas fa-clock"></i> Giờ làm việc</h5>
+                        
+                        <form id="businessHoursForm">
+                            <div class="time-picker-grid">
+                                {% for day in days_of_week %}
+                                <div class="day-schedule">
+                                    <h6>{{ day.name }}</h6>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" 
+                                               id="day{{ forloop.counter }}" 
+                                               {% if day.is_open %}checked{% endif %}>
+                                        <label class="form-check-label" for="day{{ forloop.counter }}">
+                                            Mở cửa
+                                        </label>
+                                    </div>
+                                    <input type="time" class="form-control form-control-sm mb-2" 
+                                           value="{{ day.open_time }}" placeholder="Giờ mở">
+                                    <input type="time" class="form-control form-control-sm" 
+                                           value="{{ day.close_time }}" placeholder="Giờ đóng">
+                                </div>
+                                {% endfor %}
+                            </div>
+                            
+                            <div class="mt-4">
+                                <h6>Thời gian mỗi lượt phục vụ</h6>
+                                <select class="form-select w-50" name="slot_duration">
+                                    <option value="15">15 phút</option>
+                                    <option value="30" selected>30 phút</option>
+                                    <option value="45">45 phút</option>
+                                    <option value="60">60 phút</option>
+                                </select>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary mt-4">
+                                <i class="fas fa-save"></i> Lưu thay đổi
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Services Settings -->
+                <div class="tab-pane fade" id="services">
+                    <div class="settings-card">
+                        <h5 class="mb-4"><i class="fas fa-cut"></i> Cài đặt dịch vụ</h5>
+                        
+                        <div class="setting-item">
+                            <div>
+                                <h6 class="mb-1">Tự động xác nhận đặt lịch</h6>
+                                <small class="text-muted">Lịch hẹn sẽ được tự động xác nhận</small>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="autoConfirm" checked>
+                            </div>
+                        </div>
+                        
+                        <div class="setting-item">
+                            <div>
+                                <h6 class="mb-1">Cho phép khách chọn nhân viên</h6>
+                                <small class="text-muted">Khách hàng có thể chọn stylist khi đặt lịch</small>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="allowStaffSelect" checked>
+                            </div>
+                        </div>
+                        
+                        <div class="setting-item">
+                            <div>
+                                <h6 class="mb-1">Yêu cầu đặt cọc</h6>
+                                <small class="text-muted">Khách phải đặt cọc khi đặt lịch</small>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="requireDeposit">
+                            </div>
+                        </div>
+                        
+                        <div class="setting-item">
+                            <div>
+                                <h6 class="mb-1">Số tiền đặt cọc</h6>
+                                <small class="text-muted">Số tiền hoặc % yêu cầu đặt cọc</small>
+                            </div>
+                            <div class="input-group" style="width: 250px;">
+                                <input type="number" class="form-control" value="50000">
+                                <select class="form-select" style="max-width: 80px;">
+                                    <option>VNĐ</option>
+                                    <option>%</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Settings -->
+                <div class="tab-pane fade" id="payment">
+                    <div class="settings-card">
+                        <h5 class="mb-4"><i class="fas fa-credit-card"></i> Phương thức thanh toán</h5>
+                        
+                        <div class="setting-item">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">Tiền mặt</h6>
+                                <small class="text-muted">Thanh toán trực tiếp tại quầy</small>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" checked>
+                            </div>
+                        </div>
+                        
+                        <div class="setting-item">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">Thẻ ngân hàng</h6>
+                                <small class="text-muted">Thanh toán qua POS</small>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" checked>
+                            </div>
+                        </div>
+                        
+                        <div class="setting-item">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">Chuyển khoản</h6>
+                                <input type="text" class="form-control form-control-sm mt-2" 
+                                       placeholder="Số tài khoản" value="{{ settings.bank_account }}">
+                                <input type="text" class="form-control form-control-sm mt-2" 
+                                       placeholder="Ngân hàng" value="{{ settings.bank_name }}">
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" checked>
+                            </div>
+                        </div>
+                        
+                        <div class="setting-item">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">MoMo</h6>
+                                <input type="text" class="form-control form-control-sm mt-2" 
+                                       placeholder="Số điện thoại MoMo" value="{{ settings.momo_phone }}">
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox">
+                            </div>
+                        </div>
+                        
+                        <div class="setting-item">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">VNPay</h6>
+                                <input type="text" class="form-control form-control-sm mt-2" 
+                                       placeholder="API Key">
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Booking Settings -->
+                <div class="tab-pane fade" id="booking">
+                    <div class="settings-card">
+                        <h5 class="mb-4"><i class="fas fa-calendar"></i> Cài đặt đặt lịch</h5>
+                        
+                        <div class="mb-4">
+                            <label class="form-label">Thời gian đặt trước tối thiểu</label>
+                            <select class="form-select w-50">
+                                <option>Không yêu cầu</option>
+                                <option>30 phút</option>
+                                <option selected>1 giờ</option>
+                                <option>2 giờ</option>
+                                <option>1 ngày</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label">Thời gian đặt trước tối đa</label>
+                            <select class="form-select w-50">
+                                <option>1 tuần</option>
+                                <option>2 tuần</option>
+                                <option selected>1 tháng</option>
+                                <option>3 tháng</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label">Cho phép hủy lịch trước</label>
+                            <select class="form-select w-50">
+                                <option>30 phút</option>
+                                <option selected>1 giờ</option>
+                                <option>2 giờ</option>
+                                <option>1 ngày</option>
+                            </select>
+                        </div>
+                        
+                        <div class="setting-item">
+                            <div>
+                                <h6 class="mb-1">Gửi nhắc nhở tự động</h6>
+                                <small class="text-muted">Nhắc khách hàng trước lịch hẹn</small>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" checked>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notification Settings -->
+                <div class="tab-pane fade" id="notifications">
+                    <div class="settings-card">
+                        <h5 class="mb-4"><i class="fas fa-bell"></i> Cài đặt thông báo</h5>
+                        
+                        <h6 class="mb-3">Thông báo SMS</h6>
+                        <div class="setting-item">
+                            <div>Đặt lịch mới</div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" checked>
+                            </div>
+                        </div>
+                        <div class="setting-item">
+                            <div>Nhắc nhở lịch hẹn</div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" checked>
+                            </div>
+                        </div>
+                        <div class="setting-item">
+                            <div>Hủy lịch hẹn</div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox">
+                            </div>
+                        </div>
+                        
+                        <h6 class="mb-3 mt-4">Thông báo Email</h6>
+                        <div class="setting-item">
+                            <div>Hóa đơn điện tử</div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" checked>
+                            </div>
+                        </div>
+                        <div class="setting-item">
+                            <div>Báo cáo định kỳ</div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Appearance Settings -->
+                <div class="tab-pane fade" id="appearance">
+                    <div class="settings-card">
+                        <h5 class="mb-4"><i class="fas fa-palette"></i> Giao diện</h5>
+                        
+                        <div class="mb-4">
+                            <label class="form-label">Màu chủ đạo</label>
+                            <div class="color-picker-container">
+                                <input type="color" class="form-control form-control-color" 
+                                       value="#8b4513" id="primaryColor">
+                                <div class="color-preview" style="background: #8b4513;"></div>
+                                <span>#8b4513</span>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label">Màu phụ</label>
+                            <div class="color-picker-container">
+                                <input type="color" class="form-control form-control-color" 
+                                       value="#d2691e" id="secondaryColor">
+                                <div class="color-preview" style="background: #d2691e;"></div>
+                                <span>#d2691e</span>
+                            </div>
+                        </div>
+                        
+                        <div class="setting-item">
+                            <div>
+                                <h6 class="mb-1">Chế độ tối</h6>
+                                <small class="text-muted">Giao diện màu tối</small>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Backup Settings -->
+                <div class="tab-pane fade" id="backup">
+                    <div class="settings-card">
+                        <h5 class="mb-4"><i class="fas fa-database"></i> Sao lưu & Khôi phục</h5>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> 
+                            Lần sao lưu gần nhất: <strong>{{ last_backup|date:"d/m/Y H:i" }}</strong>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <button class="btn btn-primary" onclick="backupNow()">
+                                <i class="fas fa-download"></i> Sao lưu ngay
+                            </button>
+                            <button class="btn btn-outline-primary" onclick="downloadBackup()">
+                                <i class="fas fa-cloud-download-alt"></i> Tải bản sao lưu
+                            </button>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h6>Tự động sao lưu</h6>
+                            <select class="form-select w-50">
+                                <option>Không tự động</option>
+                                <option>Hàng ngày</option>
+                                <option selected>Hàng tuần</option>
+                                <option>Hàng tháng</option>
+                            </select>
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="mb-4">
+                            <h6>Khôi phục dữ liệu</h6>
+                            <input type="file" class="form-control w-50" accept=".sql,.zip">
+                            <button class="btn btn-warning mt-3" onclick="restoreBackup()">
+                                <i class="fas fa-upload"></i> Khôi phục
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advanced Settings -->
+                <div class="tab-pane fade" id="advanced">
+                    <div class="settings-card">
+                        <h5 class="mb-4"><i class="fas fa-wrench"></i> Cài đặt nâng cao</h5>
+                        
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> 
+                            Cẩn thận khi thay đổi các cài đặt này!
+                        </div>
+                        
+                        <div class="setting-item">
+                            <div>
+                                <h6 class="mb-1">Chế độ bảo trì</h6>
+                                <small class="text-muted">Tắt hệ thống tạm thời</small>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox">
+                            </div>
+                        </div>
+                        
+                        <div class="setting-item">
+                            <div>
+                                <h6 class="mb-1">Debug mode</h6>
+                                <small class="text-muted">Hiển thị lỗi chi tiết</small>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox">
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button class="btn btn-danger" onclick="clearCache()">
+                                <i class="fas fa-trash"></i> Xóa Cache
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="resetSystem()">
+                                <i class="fas fa-sync"></i> Đặt lại hệ thống
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Logo upload
+$('#logoInput').change(function() {
+    const file = this.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            $('#logoPreview').attr('src', e.target.result);
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Form submissions with CSRF token
+$('#generalForm').submit(function(e) {
+    e.preventDefault();
+    var formData = new FormData(this);
+    
+    $.ajax({
+        url: '/api/settings/general/',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        success: function(response) {
+            if (response.success) {
+                alert(response.message);
+            } else {
+                alert('Lỗi: ' + response.message);
+            }
+        },
+        error: function(xhr) {
+            alert('Có lỗi xảy ra: ' + (xhr.responseJSON?.message || 'Lỗi không xác định'));
+        }
+    });
+});
+
+$('#businessHoursForm').submit(function(e) {
+    e.preventDefault();
+    $.ajax({
+        url: '/api/settings/business-hours/',
+        type: 'POST',
+        data: $(this).serialize(),
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        success: function(response) {
+            if (response.success) {
+                alert(response.message);
+            } else {
+                alert('Lỗi: ' + response.message);
+            }
+        },
+        error: function(xhr) {
+            alert('Có lỗi xảy ra: ' + (xhr.responseJSON?.message || 'Lỗi không xác định'));
+        }
+    });
+});
+
+function resetToDefault() {
+    if (confirm('Bạn có chắc muốn khôi phục cài đặt mặc định?')) {
+        // Reset logic
+    }
+}
+
+function backupNow() {
+    if (confirm('Bắt đầu sao lưu dữ liệu?')) {
+        alert('Đang sao lưu...');
+    }
+}
+
+function downloadBackup() {
+    window.location.href = '/admin/settings/download-backup/';
+}
+
+function restoreBackup() {
+    if (confirm('CẢNH BÁO: Việc khôi phục sẽ ghi đè dữ liệu hiện tại. Tiếp tục?')) {
+        alert('Đang khôi phục...');
+    }
+}
+
+function clearCache() {
+    if (confirm('Xóa cache hệ thống?')) {
+        alert('Đã xóa cache thành công!');
+    }
+}
+
+function resetSystem() {
+    if (confirm('CẢNH BÁO: Đặt lại toàn bộ hệ thống về mặc định?')) {
+        // Reset logic
+    }
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Reviews JS</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <h2>Test JavaScript Functions</h2>
+    
+    <button onclick="testReplyFunction()">Test Reply Function</button>
+    <button onclick="testDeleteFunction()">Test Delete Function</button>
+    <button onclick="testShareFunction()">Test Share Function</button>
+    <button onclick="testExportFunction()">Test Export Function</button>
+    
+    <div id="results"></div>
+    
+    <script>
+        // Copy functions from the template
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        function replyReview(reviewId) {
+            console.log('Reply function called with ID:', reviewId);
+            // Test AJAX call
+            $.ajax({
+                url: `/api/reviews/${reviewId}/`,
+                method: 'GET',
+                success: function(data) {
+                    console.log('API call successful:', data);
+                    document.getElementById('results').innerHTML += `<p>✅ API call successful for review ${reviewId}</p>`;
+                },
+                error: function(xhr, status, error) {
+                    console.error('API call failed:', error);
+                    document.getElementById('results').innerHTML += `<p>❌ API call failed for review ${reviewId}: ${error}</p>`;
+                }
+            });
+        }
+
+        function deleteReview(reviewId) {
+            console.log('Delete function called with ID:', reviewId);
+            // Test AJAX call
+            $.ajax({
+                url: `/api/reviews/${reviewId}/delete/`,
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json'
+                },
+                success: function(data) {
+                    console.log('Delete API call successful:', data);
+                    document.getElementById('results').innerHTML += `<p>✅ Delete API successful for review ${reviewId}</p>`;
+                },
+                error: function(xhr, status, error) {
+                    console.error('Delete API call failed:', error);
+                    document.getElementById('results').innerHTML += `<p>❌ Delete API call failed for review ${reviewId}: ${error}</p>`;
+                }
+            });
+        }
+
+        function shareReview(reviewId) {
+            console.log('Share function called with ID:', reviewId);
+            // Test AJAX call
+            $.ajax({
+                url: `/api/reviews/${reviewId}/`,
+                method: 'GET',
+                success: function(data) {
+                    console.log('Share API call successful:', data);
+                    document.getElementById('results').innerHTML += `<p>✅ Share API successful for review ${reviewId}</p>`;
+                },
+                error: function(xhr, status, error) {
+                    console.error('Share API call failed:', error);
+                    document.getElementById('results').innerHTML += `<p>❌ Share API call failed for review ${reviewId}: ${error}</p>`;
+                }
+            });
+        }
+
+        function exportReviews() {
+            console.log('Export function called');
+            document.getElementById('results').innerHTML += `<p>🔗 Redirecting to: /admin/reviews/export/</p>`;
+            // window.location.href = '/admin/reviews/export/';
+        }
+
+        // Test functions
+        function testReplyFunction() {
+            replyReview(33); // Use a known review ID
+        }
+
+        function testDeleteFunction() {
+            deleteReview(33);
+        }
+
+        function testShareFunction() {
+            shareReview(33);
+        }
+
+        function testExportFunction() {
+            exportReviews();
+        }
+    </script>
+</body>
+</html>

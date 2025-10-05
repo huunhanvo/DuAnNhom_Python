@@ -1,0 +1,619 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Quản lý khách hàng{% endblock %}
+{% block page_title %}Quản lý khách hàng{% endblock %}
+
+{% block extra_css %}
+<style>
+    .customer-card {
+        transition: all 0.3s ease;
+        border-left: 4px solid #8b4513;
+    }
+    
+    .customer-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(139, 69, 19, 0.2);
+    }
+    
+    .customer-avatar-large {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid #8b4513;
+    }
+    
+    .tier-badge {
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+    
+    .tier-bronze { background: linear-gradient(135deg, #cd7f32 0%, #b87333 100%); color: white; }
+    .tier-silver { background: linear-gradient(135deg, #c0c0c0 0%, #a8a8a8 100%); color: white; }
+    .tier-gold { background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); color: #333; }
+    .tier-platinum { background: linear-gradient(135deg, #e5e4e2 0%, #b9b9b9 100%); color: #333; }
+    
+    .stats-box {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 10px;
+        text-align: center;
+        border: 2px solid #dee2e6;
+    }
+    
+    .stats-box h4 {
+        margin: 0;
+        color: #8b4513;
+    }
+    
+    .customer-tabs {
+        border-bottom: 2px solid #dee2e6;
+        margin-bottom: 20px;
+    }
+    
+    .customer-tabs .nav-link {
+        color: #6c757d;
+        border: none;
+        border-bottom: 3px solid transparent;
+        padding: 12px 20px;
+        font-weight: 600;
+    }
+    
+    .customer-tabs .nav-link.active {
+        color: #8b4513;
+        border-bottom-color: #8b4513;
+        background: none;
+    }
+    
+    .history-timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+    
+    .history-timeline::before {
+        content: '';
+        position: absolute;
+        left: 10px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #dee2e6;
+    }
+    
+    .history-item {
+        position: relative;
+        margin-bottom: 20px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+    
+    .history-item::before {
+        content: '';
+        position: absolute;
+        left: -23px;
+        top: 20px;
+        width: 10px;
+        height: 10px;
+        background: #8b4513;
+        border-radius: 50%;
+        border: 2px solid white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Action Buttons -->
+    <div class="row mb-4">
+        <div class="col-12 text-end">
+            <button class="btn btn-success" onclick="exportCustomers()">
+                <i class="fas fa-file-excel"></i> Xuất Excel
+            </button>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCustomerModal">
+                <i class="fas fa-user-plus"></i> Thêm khách hàng
+            </button>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="stats-box">
+                <h4>{{ total_customers }}</h4>
+                <small class="text-muted">Tổng khách hàng</small>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stats-box">
+                <h4>{{ new_customers_month }}</h4>
+                <small class="text-muted">Mới tháng này</small>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stats-box">
+                <h4>{{ vip_customers }}</h4>
+                <small class="text-muted">Khách VIP</small>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stats-box">
+                <h4>{{ active_customers }}</h4>
+                <small class="text-muted">Hoạt động</small>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stats-box">
+                <h4>{{ avg_visits|floatformat:1 }}</h4>
+                <small class="text-muted">TB lần cắt/KH</small>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stats-box">
+                <h4>{{ avg_spending|floatformat:0 }}đ</h4>
+                <small class="text-muted">TB chi tiêu/KH</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" id="filterForm">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Tìm kiếm:</label>
+                        <input type="text" class="form-control" name="search" 
+                               placeholder="Tên, SĐT, email..." value="{{ search }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Hạng:</label>
+                        <select class="form-select" name="tier">
+                            <option value="">Tất cả</option>
+                            <option value="bronze" {% if tier == 'bronze' %}selected{% endif %}>Đồng</option>
+                            <option value="silver" {% if tier == 'silver' %}selected{% endif %}>Bạc</option>
+                            <option value="gold" {% if tier == 'gold' %}selected{% endif %}>Vàng</option>
+                            <option value="platinum" {% if tier == 'platinum' %}selected{% endif %}>Bạch kim</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Trạng thái:</label>
+                        <select class="form-select" name="status">
+                            <option value="">Tất cả</option>
+                            <option value="active" {% if status == 'active' %}selected{% endif %}>Hoạt động</option>
+                            <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>Không hoạt động</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Sắp xếp:</label>
+                        <select class="form-select" name="sort">
+                            <option value="-created_at">Mới nhất</option>
+                            <option value="-points">Điểm cao nhất</option>
+                            <option value="-total_spending">Chi tiêu nhiều</option>
+                            <option value="-visit_count">Lần cắt nhiều</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">&nbsp;</label>
+                        <div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search"></i> Tìm
+                            </button>
+                            <a href="{% url 'admin_customers' %}" class="btn btn-secondary">
+                                <i class="fas fa-redo"></i> Đặt lại
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Customer Tabs -->
+    <ul class="nav customer-tabs">
+        <li class="nav-item">
+            <a class="nav-link active" href="#" data-view="grid">
+                <i class="fas fa-th"></i> Dạng lưới
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="#" data-view="list">
+                <i class="fas fa-list"></i> Dạng danh sách
+            </a>
+        </li>
+    </ul>
+
+    <!-- Grid View -->
+    <div id="gridView">
+        <div class="row">
+            {% for customer in customers %}
+            <div class="col-md-4 col-lg-3 mb-4">
+                <div class="card customer-card h-100">
+                    <div class="card-body text-center">
+                        <img src="{{ customer.anh_dai_dien|default:'/static/img/avatar-default.png' }}" 
+                             alt="{{ customer.ho_ten }}" 
+                             class="customer-avatar-large mb-3">
+                        
+                        <h5 class="mb-1">{{ customer.ho_ten }}</h5>
+                        <p class="text-muted mb-2">
+                            <small><i class="fas fa-phone"></i> {{ customer.so_dien_thoai }}</small>
+                        </p>
+                        
+                        <span class="tier-badge tier-{{ customer.hang_thanh_vien }}">
+                            {% if customer.hang_thanh_vien == 'bronze' %}
+                            <i class="fas fa-medal"></i> Đồng
+                            {% elif customer.hang_thanh_vien == 'silver' %}
+                            <i class="fas fa-medal"></i> Bạc
+                            {% elif customer.hang_thanh_vien == 'gold' %}
+                            <i class="fas fa-trophy"></i> Vàng
+                            {% elif customer.hang_thanh_vien == 'platinum' %}
+                            <i class="fas fa-crown"></i> Bạch kim
+                            {% endif %}
+                        </span>
+                        
+                        <div class="row mt-3">
+                            <div class="col-6 border-end">
+                                <h6 class="text-primary mb-0">{{ customer.diem_tich_luy }}</h6>
+                                <small class="text-muted">Điểm</small>
+                            </div>
+                            <div class="col-6">
+                                <h6 class="text-success mb-0">{{ customer.so_lan_cat }}</h6>
+                                <small class="text-muted">Lần cắt</small>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                Tổng chi: <strong class="text-primary">{{ customer.tong_chi_tieu|floatformat:0 }}đ</strong>
+                            </small>
+                        </div>
+                        
+                        <div class="mt-3 d-flex gap-2 justify-content-center">
+                            <button class="btn btn-sm btn-primary" 
+                                    onclick="viewCustomer({{ customer.id }})">
+                                <i class="fas fa-eye"></i> Xem
+                            </button>
+                            <button class="btn btn-sm btn-success" 
+                                    onclick="createBooking({{ customer.id }})">
+                                <i class="fas fa-calendar-plus"></i> Đặt lịch
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="alert alert-info text-center">
+                    <i class="fas fa-info-circle"></i> Không tìm thấy khách hàng nào
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- List View -->
+    <div id="listView" style="display: none;">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Khách hàng</th>
+                                <th>Liên hệ</th>
+                                <th>Hạng</th>
+                                <th>Điểm</th>
+                                <th>Số lần cắt</th>
+                                <th>Tổng chi tiêu</th>
+                                <th>Lần cuối</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for customer in customers %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <img src="{{ customer.anh_dai_dien|default:'/static/img/avatar-default.png' }}" 
+                                             alt="{{ customer.ho_ten }}" 
+                                             style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;"
+                                             class="me-2">
+                                        <strong>{{ customer.ho_ten }}</strong>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>{{ customer.so_dien_thoai }}</div>
+                                    <small class="text-muted">{{ customer.email|default:"N/A" }}</small>
+                                </td>
+                                <td>
+                                    <span class="tier-badge tier-{{ customer.hang_thanh_vien }}">
+                                        {{ customer.get_hang_thanh_vien_display }}
+                                    </span>
+                                </td>
+                                <td><strong class="text-warning">{{ customer.diem_tich_luy }}</strong></td>
+                                <td><strong class="text-info">{{ customer.so_lan_cat }}</strong></td>
+                                <td><strong class="text-primary">{{ customer.tong_chi_tieu|floatformat:0 }}đ</strong></td>
+                                <td>
+                                    {% if customer.lan_cuoi_cat %}
+                                    {{ customer.lan_cuoi_cat|date:"d/m/Y" }}
+                                    {% else %}
+                                    <span class="text-muted">Chưa có</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary" 
+                                            onclick="viewCustomer({{ customer.id }})">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success" 
+                                            onclick="createBooking({{ customer.id }})">
+                                        <i class="fas fa-calendar-plus"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if customers.has_other_pages %}
+    <nav aria-label="Phân trang" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if customers.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ customers.previous_page_number }}">Trước</a>
+            </li>
+            {% endif %}
+
+            {% for num in customers.paginator.page_range %}
+            <li class="page-item {% if customers.number == num %}active{% endif %}">
+                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+            </li>
+            {% endfor %}
+
+            {% if customers.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ customers.next_page_number }}">Sau</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+<!-- Customer Detail Modal -->
+<div class="modal fade" id="customerDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-circle"></i> Thông tin khách hàng
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="customerDetailContent">
+                <!-- Content loaded via AJAX -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Customer Modal -->
+<div class="modal fade" id="addCustomerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-plus"></i> Thêm khách hàng mới
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addCustomerForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Họ tên: <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="ho_ten" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Số điện thoại: <span class="text-danger">*</span></label>
+                        <input type="tel" class="form-control" name="so_dien_thoai" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email:</label>
+                        <input type="email" class="form-control" name="email">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ngày sinh:</label>
+                        <input type="date" class="form-control" name="ngay_sinh">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Địa chỉ:</label>
+                        <textarea class="form-control" name="dia_chi" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary" onclick="saveCustomer()">
+                    <i class="fas fa-save"></i> Lưu
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // View switcher
+    $('.customer-tabs .nav-link').click(function(e) {
+        e.preventDefault();
+        $('.customer-tabs .nav-link').removeClass('active');
+        $(this).addClass('active');
+        
+        const view = $(this).data('view');
+        if (view === 'grid') {
+            $('#gridView').show();
+            $('#listView').hide();
+        } else {
+            $('#gridView').hide();
+            $('#listView').show();
+        }
+    });
+});
+
+function viewCustomer(customerId) {
+    $('#customerDetailModal').modal('show');
+    $('#customerDetailContent').html('<div class="text-center py-5"><div class="spinner-border text-primary"></div></div>');
+    
+    $.ajax({
+        url: `/api/customers/${customerId}/`,
+        method: 'GET',
+        success: function(customer) {
+            const html = `
+                <div class="row">
+                    <div class="col-md-4 text-center border-end">
+                        <img src="${customer.anh_dai_dien || '/static/img/avatar-default.png'}" 
+                             class="customer-avatar-large mb-3">
+                        <h4>${customer.ho_ten}</h4>
+                        <span class="tier-badge tier-${customer.hang_thanh_vien}">
+                            ${customer.hang_thanh_vien_display}
+                        </span>
+                        
+                        <div class="row mt-4">
+                            <div class="col-6">
+                                <h4 class="text-warning">${customer.diem_tich_luy}</h4>
+                                <small>Điểm tích lũy</small>
+                            </div>
+                            <div class="col-6">
+                                <h4 class="text-info">${customer.so_lan_cat}</h4>
+                                <small>Lần cắt</small>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <h5 class="text-primary">${formatCurrency(customer.tong_chi_tieu)}</h5>
+                            <small>Tổng chi tiêu</small>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-8">
+                        <h6>Thông tin cá nhân</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <th width="150">Số điện thoại:</th>
+                                <td>${customer.so_dien_thoai}</td>
+                            </tr>
+                            <tr>
+                                <th>Email:</th>
+                                <td>${customer.email || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                                <th>Ngày sinh:</th>
+                                <td>${customer.ngay_sinh || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                                <th>Địa chỉ:</th>
+                                <td>${customer.dia_chi || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                                <th>Ngày đăng ký:</th>
+                                <td>${customer.ngay_tao}</td>
+                            </tr>
+                        </table>
+                        
+                        <h6 class="mt-4">Lịch sử booking & hóa đơn</h6>
+                        <div class="history-timeline">
+                            ${customer.history.map(item => `
+                                <div class="history-item">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <strong>${item.type === 'booking' ? 'Đặt lịch' : 'Hóa đơn'}</strong>
+                                            <br>
+                                            <small class="text-muted">${item.date}</small>
+                                        </div>
+                                        <strong class="text-primary">${formatCurrency(item.amount)}</strong>
+                                    </div>
+                                    <div class="mt-2">
+                                        ${item.services.join(', ')}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            $('#customerDetailContent').html(html);
+        }
+    });
+}
+
+function createBooking(customerId) {
+    window.location.href = `/admin/bookings/create/?customer_id=${customerId}`;
+}
+
+function saveCustomer() {
+    const form = document.getElementById('addCustomerForm');
+    const formData = new FormData(form);
+    const saveBtn = document.querySelector('#addCustomerModal .btn-primary');
+    
+    // Disable button and show loading
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...';
+    
+    fetch('{% url "admin_customers" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success message
+            alert(data.message);
+            
+            // Close modal and reset form
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addCustomerModal'));
+            modal.hide();
+            form.reset();
+            
+            // Reload page to show new customer
+            window.location.reload();
+        } else {
+            // Show error message
+            alert('Lỗi: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Có lỗi xảy ra khi thêm khách hàng!');
+    })
+    .finally(() => {
+        // Re-enable button
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fas fa-save"></i> Lưu';
+    });
+}
+
+function exportCustomers() {
+    window.location.href = '/admin/customers/export/';
+}
+
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('vi-VN', { 
+        style: 'currency', 
+        currency: 'VND' 
+    }).format(amount);
+}
+</script>
+{% endblock %}

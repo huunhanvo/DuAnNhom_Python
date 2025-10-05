@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Edit Button</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h2>Test Edit Button</h2>
+        
+        <!-- Test Button -->
+        <button class="btn btn-sm btn-outline-primary flex-fill" 
+                type="button"
+                data-promo-id="1"
+                data-promo-ma="TEST20"
+                data-promo-ten="Test Voucher"
+                data-promo-mota="Test description"
+                data-promo-loai="phan_tram"
+                data-promo-giatri="20"
+                data-promo-donhang="100000"
+                data-promo-giamtoida="50000"
+                data-promo-batdau="2025-01-01"
+                data-promo-ketthuc="2025-12-31"
+                data-promo-soluong="100"
+                data-promo-trangthai="active"
+                onclick="editPromotionFromButton(this); console.log('Edit button clicked');">
+            <i class="fas fa-edit"></i> Sửa
+        </button>
+
+        <!-- Create Button -->
+        <button class="btn btn-primary ms-2" data-bs-toggle="modal" data-bs-target="#promotionModal" 
+                onclick="console.log('Create button clicked'); resetForm();">
+            <i class="fas fa-plus"></i> Tạo khuyến mãi
+        </button>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="promotionModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="promotionModalLabel">
+                        <i class="fas fa-plus"></i> Tạo khuyến mãi mới
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="promotionForm">
+                    <input type="hidden" id="promotionId" name="voucher_id" value="">
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="ma_voucher" class="form-label">Mã voucher *</label>
+                                <input type="text" class="form-control" id="ma_voucher" name="ma_voucher" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="ten_voucher" class="form-label">Tên voucher *</label>
+                                <input type="text" class="form-control" id="ten_voucher" name="ten_voucher" required>
+                            </div>
+                            <div class="col-12">
+                                <label for="mo_ta" class="form-label">Mô tả</label>
+                                <textarea class="form-control" id="mo_ta" name="mo_ta" rows="3"></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="loai_giam" class="form-label">Loại giảm giá *</label>
+                                <select class="form-select" id="loai_giam" name="loai_giam" required onchange="toggleDiscountValue()">
+                                    <option value="">-- Chọn loại --</option>
+                                    <option value="phan_tram">Giảm theo phần trăm (%)</option>
+                                    <option value="tien_mat">Giảm tiền mặt (VNĐ)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="gia_tri_giam" class="form-label">Giá trị giảm *</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="gia_tri_giam" name="gia_tri_giam" required min="0" step="0.01">
+                                    <span class="input-group-text" id="discount-unit">%</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="gia_tri_don_hang_toi_thieu" class="form-label">Giá trị đơn hàng tối thiểu</label>
+                                <input type="number" class="form-control" id="gia_tri_don_hang_toi_thieu" name="gia_tri_don_hang_toi_thieu" min="0">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="gia_tri_giam_toi_da" class="form-label">Giá trị giảm tối đa</label>
+                                <input type="number" class="form-control" id="gia_tri_giam_toi_da" name="gia_tri_giam_toi_da" min="0">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="ngay_bat_dau" class="form-label">Ngày bắt đầu *</label>
+                                <input type="datetime-local" class="form-control" id="ngay_bat_dau" name="ngay_bat_dau" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="ngay_ket_thuc" class="form-label">Ngày kết thúc *</label>
+                                <input type="datetime-local" class="form-control" id="ngay_ket_thuc" name="ngay_ket_thuc" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="so_luong_toi_da" class="form-label">Số lượng tối đa</label>
+                                <input type="number" class="form-control" id="so_luong_toi_da" name="so_luong_toi_da" min="1">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="trang_thai" class="form-label">Trạng thái *</label>
+                                <select class="form-select" id="trang_thai" name="trang_thai" required>
+                                    <option value="active">Hoạt động</option>
+                                    <option value="inactive">Tạm dừng</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> <span id="submitButtonText">Tạo voucher</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleDiscountValue() {
+            const loaiGiam = document.getElementById('loai_giam').value;
+            const discountUnit = document.getElementById('discount-unit');
+            const giaTriGiam = document.getElementById('gia_tri_giam');
+            
+            if (loaiGiam === 'phan_tram') {
+                discountUnit.textContent = '%';
+                giaTriGiam.max = '100';
+                giaTriGiam.placeholder = 'Ví dụ: 20';
+            } else if (loaiGiam === 'tien_mat') {
+                discountUnit.textContent = 'VNĐ';
+                giaTriGiam.removeAttribute('max');
+                giaTriGiam.placeholder = 'Ví dụ: 50000';
+            }
+        }
+
+        function editPromotionFromButton(button) {
+            try {
+                console.log('editPromotionFromButton called');
+                
+                // Get data from button attributes
+                const voucher = {
+                    id: button.dataset.promoId,
+                    ma_voucher: button.dataset.promoMa,
+                    ten_voucher: button.dataset.promoTen,
+                    mo_ta: button.dataset.promoMota,
+                    loai_giam: button.dataset.promoLoai,
+                    gia_tri_giam: button.dataset.promoGiatri,
+                    gia_tri_don_hang_toi_thieu: button.dataset.promoDonhang,
+                    gia_tri_giam_toi_da: button.dataset.promoGiamtoida,
+                    ngay_bat_dau: button.dataset.promoBatdau + 'T09:00',
+                    ngay_ket_thuc: button.dataset.promoKetthuc + 'T23:59',
+                    so_luong_toi_da: button.dataset.promoSoluong,
+                    trang_thai: button.dataset.promoTrangthai
+                };
+                
+                console.log('Voucher data:', voucher);
+                editPromotion(voucher);
+            } catch (error) {
+                console.error('Error in editPromotionFromButton:', error);
+                alert('Có lỗi xảy ra khi mở form chỉnh sửa!');
+            }
+        }
+
+        function editPromotion(voucher) {
+            try {
+                console.log('editPromotion called with:', voucher);
+                
+                // Check if modal exists
+                const modal = document.getElementById('promotionModal');
+                if (!modal) {
+                    alert('Không tìm thấy form chỉnh sửa!');
+                    return;
+                }
+                
+                // Populate form for editing
+                document.getElementById('promotionModalLabel').innerHTML = '<i class="fas fa-edit"></i> Chỉnh sửa khuyến mãi';
+                document.getElementById('submitButtonText').textContent = 'Cập nhật voucher';
+                
+                // Set form values with error checking
+                const setFieldValue = (fieldId, value) => {
+                    const field = document.getElementById(fieldId);
+                    if (field) {
+                        field.value = value || '';
+                        console.log(`Set ${fieldId} = ${value}`);
+                    } else {
+                        console.warn(`Field not found: ${fieldId}`);
+                    }
+                };
+                
+                setFieldValue('promotionId', voucher.id);
+                setFieldValue('ma_voucher', voucher.ma_voucher);
+                setFieldValue('ten_voucher', voucher.ten_voucher);
+                setFieldValue('mo_ta', voucher.mo_ta);
+                setFieldValue('loai_giam', voucher.loai_giam);
+                setFieldValue('gia_tri_giam', voucher.gia_tri_giam);
+                setFieldValue('gia_tri_don_hang_toi_thieu', voucher.gia_tri_don_hang_toi_thieu);
+                setFieldValue('gia_tri_giam_toi_da', voucher.gia_tri_giam_toi_da);
+                setFieldValue('ngay_bat_dau', voucher.ngay_bat_dau);
+                setFieldValue('ngay_ket_thuc', voucher.ngay_ket_thuc);
+                setFieldValue('so_luong_toi_da', voucher.so_luong_toi_da);
+                setFieldValue('trang_thai', voucher.trang_thai);
+                
+                toggleDiscountValue();
+                
+                // Show modal
+                const bootstrapModal = new bootstrap.Modal(modal);
+                bootstrapModal.show();
+                
+            } catch (error) {
+                console.error('Error in editPromotion:', error);
+                alert('Có lỗi xảy ra khi hiển thị form chỉnh sửa!');
+            }
+        }
+
+        function resetForm() {
+            console.log('Resetting form');
+            document.getElementById('promotionForm').reset();
+            document.getElementById('promotionModalLabel').innerHTML = '<i class="fas fa-plus"></i> Tạo khuyến mãi mới';
+            document.getElementById('submitButtonText').textContent = 'Tạo voucher';
+            document.getElementById('promotionId').value = '';
+        }
+
+        // Reset form when modal is hidden
+        document.getElementById('promotionModal').addEventListener('hidden.bs.modal', function () {
+            resetForm();
+        });
+    </script>
+</body>
+</html>

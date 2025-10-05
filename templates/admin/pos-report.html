@@ -1,0 +1,469 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Báo cáo POS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pos-header {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    
+    .metric-card {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        border-left: 4px solid #28a745;
+        transition: all 0.3s ease;
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 20px rgba(40, 167, 69, 0.2);
+    }
+    
+    .payment-breakdown {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+        margin-top: 20px;
+    }
+    
+    .payment-method-card {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+    }
+    
+    .transaction-list {
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    
+    .transaction-item {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 12px;
+        border-left: 4px solid #28a745;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    
+    .time-badge {
+        background: #e3f2fd;
+        color: #1976d2;
+        padding: 5px 12px;
+        border-radius: 15px;
+        font-size: 0.85rem;
+    }
+    
+    .chart-container {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="pos-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-2"><i class="fas fa-cash-register"></i> Báo cáo POS</h2>
+                <p class="mb-0">Thống kê chi tiết giao dịch tại quầy</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="btn-group">
+                    <button class="btn btn-light" onclick="exportExcel()">
+                        <i class="fas fa-file-excel"></i> Excel
+                    </button>
+                    <button class="btn btn-light" onclick="exportPDF()">
+                        <i class="fas fa-file-pdf"></i> PDF
+                    </button>
+                    <button class="btn btn-light" onclick="printReport()">
+                        <i class="fas fa-print"></i> In
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Date Filter -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Từ ngày</label>
+                    <input type="date" class="form-control" id="fromDate" value="{{ from_date }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Đến ngày</label>
+                    <input type="date" class="form-control" id="toDate" value="{{ to_date }}">
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="staffFilter">
+                        <option value="">Tất cả nhân viên</option>
+                        {% for staff in all_staff %}
+                        <option value="{{ staff.id }}">{{ staff.ho_ten }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="paymentFilter">
+                        <option value="">Tất cả PT thanh toán</option>
+                        <option value="cash">Tiền mặt</option>
+                        <option value="card">Thẻ</option>
+                        <option value="transfer">Chuyển khoản</option>
+                        <option value="momo">MoMo</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100" onclick="applyFilters()">
+                        <i class="fas fa-filter"></i> Lọc
+                    </button>
+                </div>
+            </div>
+            <div class="mt-3">
+                <button class="btn btn-sm btn-outline-secondary me-2" onclick="setToday()">Hôm nay</button>
+                <button class="btn btn-sm btn-outline-secondary me-2" onclick="setYesterday()">Hôm qua</button>
+                <button class="btn btn-sm btn-outline-secondary me-2" onclick="setThisWeek()">Tuần này</button>
+                <button class="btn btn-sm btn-outline-secondary me-2" onclick="setThisMonth()">Tháng này</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Tổng doanh thu</h6>
+                        <h3 class="text-success mb-0">{{ total_revenue|floatformat:0 }}đ</h3>
+                        <small class="text-success">
+                            <i class="fas fa-arrow-up"></i> +{{ revenue_growth }}% so với kỳ trước
+                        </small>
+                    </div>
+                    <div class="text-success" style="font-size: 3rem;">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Số giao dịch</h6>
+                        <h3 class="text-primary mb-0">{{ total_transactions }}</h3>
+                        <small class="text-primary">
+                            <i class="fas fa-arrow-up"></i> +{{ transaction_growth }}%
+                        </small>
+                    </div>
+                    <div class="text-primary" style="font-size: 3rem;">
+                        <i class="fas fa-receipt"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Giá trị TB/giao dịch</h6>
+                        <h3 class="text-info mb-0">{{ avg_transaction|floatformat:0 }}đ</h3>
+                        <small class="text-muted">{{ services_per_transaction|floatformat:1 }} dịch vụ/GD</small>
+                    </div>
+                    <div class="text-info" style="font-size: 3rem;">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Giờ cao điểm</h6>
+                        <h3 class="text-warning mb-0">{{ peak_hour }}:00</h3>
+                        <small class="text-muted">{{ peak_transactions }} giao dịch</small>
+                    </div>
+                    <div class="text-warning" style="font-size: 3rem;">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Methods Breakdown -->
+    <div class="chart-container mb-4">
+        <h5 class="mb-4"><i class="fas fa-credit-card"></i> Phân bố theo phương thức thanh toán</h5>
+        <div class="payment-breakdown">
+            <div class="payment-method-card">
+                <i class="fas fa-money-bill-wave text-success" style="font-size: 2.5rem;"></i>
+                <h4 class="mt-3 mb-1">{{ cash_revenue|floatformat:0 }}đ</h4>
+                <p class="text-muted mb-2">Tiền mặt</p>
+                <strong class="text-success">{{ cash_percent }}%</strong>
+                <p class="small text-muted mb-0">{{ cash_count }} giao dịch</p>
+            </div>
+            
+            <div class="payment-method-card">
+                <i class="fas fa-credit-card text-primary" style="font-size: 2.5rem;"></i>
+                <h4 class="mt-3 mb-1">{{ card_revenue|floatformat:0 }}đ</h4>
+                <p class="text-muted mb-2">Thẻ ngân hàng</p>
+                <strong class="text-primary">{{ card_percent }}%</strong>
+                <p class="small text-muted mb-0">{{ card_count }} giao dịch</p>
+            </div>
+            
+            <div class="payment-method-card">
+                <i class="fas fa-mobile-alt text-info" style="font-size: 2.5rem;"></i>
+                <h4 class="mt-3 mb-1">{{ momo_revenue|floatformat:0 }}đ</h4>
+                <p class="text-muted mb-2">Ví điện tử</p>
+                <strong class="text-info">{{ momo_percent }}%</strong>
+                <p class="small text-muted mb-0">{{ momo_count }} giao dịch</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="chart-container">
+                <h5 class="mb-4"><i class="fas fa-chart-area"></i> Doanh thu theo giờ</h5>
+                <canvas id="hourlyChart" height="80"></canvas>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="chart-container">
+                <h5 class="mb-4"><i class="fas fa-chart-pie"></i> Tỷ lệ thanh toán</h5>
+                <canvas id="paymentPieChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Staff Performance -->
+    <div class="chart-container mb-4">
+        <h5 class="mb-4"><i class="fas fa-users"></i> Hiệu suất nhân viên</h5>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Hạng</th>
+                        <th>Nhân viên</th>
+                        <th>Số giao dịch</th>
+                        <th>Doanh thu</th>
+                        <th>Giá trị TB</th>
+                        <th>Đánh giá</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for staff in staff_performance %}
+                    <tr>
+                        <td>
+                            {% if forloop.counter <= 3 %}
+                            <span class="badge bg-warning">
+                                <i class="fas fa-trophy"></i> #{{ forloop.counter }}
+                            </span>
+                            {% else %}
+                            #{{ forloop.counter }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            <img src="{{ staff.anh_dai_dien|default:'/static/img/avatar-default.png' }}" 
+                                 style="width: 30px; height: 30px; border-radius: 50%;" 
+                                 class="me-2">
+                            <strong>{{ staff.ho_ten }}</strong>
+                        </td>
+                        <td>{{ staff.transaction_count }}</td>
+                        <td class="text-success">{{ staff.revenue|floatformat:0 }}đ</td>
+                        <td>{{ staff.avg_transaction|floatformat:0 }}đ</td>
+                        <td>{{ staff.rating|floatformat:1 }} ⭐</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Recent Transactions -->
+    <div class="chart-container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="mb-0"><i class="fas fa-list"></i> Giao dịch gần đây</h5>
+            <input type="text" class="form-control w-25" placeholder="Tìm kiếm..." id="searchTransaction">
+        </div>
+        
+        <div class="transaction-list">
+            {% for transaction in recent_transactions %}
+            <div class="transaction-item">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="time-badge me-2">{{ transaction.created_at|date:"H:i" }}</span>
+                            <strong>HD-{{ transaction.id }}</strong>
+                        </div>
+                        <p class="mb-1">
+                            <i class="fas fa-user"></i> {{ transaction.customer_name }}
+                        </p>
+                        <p class="mb-1 small text-muted">
+                            {% for service in transaction.services %}
+                            <span class="badge bg-light text-dark">{{ service }}</span>
+                            {% endfor %}
+                        </p>
+                        <p class="mb-0 small text-muted">
+                            <i class="fas fa-user-tie"></i> {{ transaction.staff_name }}
+                        </p>
+                    </div>
+                    
+                    <div class="text-end">
+                        <h5 class="text-success mb-2">{{ transaction.total_amount|floatformat:0 }}đ</h5>
+                        {% if transaction.payment_method == 'cash' %}
+                        <span class="badge bg-success">Tiền mặt</span>
+                        {% elif transaction.payment_method == 'card' %}
+                        <span class="badge bg-primary">Thẻ</span>
+                        {% elif transaction.payment_method == 'momo' %}
+                        <span class="badge bg-info">MoMo</span>
+                        {% else %}
+                        <span class="badge bg-secondary">{{ transaction.get_payment_method_display }}</span>
+                        {% endif %}
+                        
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-outline-primary" 
+                                    onclick="viewInvoice({{ transaction.id }})">
+                                <i class="fas fa-eye"></i> Xem
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Hourly Revenue Chart
+const hourlyCtx = document.getElementById('hourlyChart').getContext('2d');
+new Chart(hourlyCtx, {
+    type: 'bar',
+    data: {
+        labels: ['8h', '9h', '10h', '11h', '12h', '13h', '14h', '15h', '16h', '17h', '18h', '19h', '20h', '21h'],
+        datasets: [{
+            label: 'Doanh thu (VNĐ)',
+            data: {{ hourly_revenue|safe }},
+            backgroundColor: 'rgba(40, 167, 69, 0.7)',
+            borderColor: '#28a745',
+            borderWidth: 2
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return value.toLocaleString('vi-VN') + 'đ';
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Payment Pie Chart
+const paymentCtx = document.getElementById('paymentPieChart').getContext('2d');
+new Chart(paymentCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Tiền mặt', 'Thẻ', 'Ví điện tử'],
+        datasets: [{
+            data: [{{ cash_percent }}, {{ card_percent }}, {{ momo_percent }}],
+            backgroundColor: ['#28a745', '#007bff', '#17a2b8']
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Quick date filters
+function setToday() {
+    const today = new Date().toISOString().split('T')[0];
+    $('#fromDate, #toDate').val(today);
+}
+
+function setYesterday() {
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    $('#fromDate, #toDate').val(yesterday);
+}
+
+function setThisWeek() {
+    const today = new Date();
+    const firstDay = new Date(today.setDate(today.getDate() - today.getDay() + 1));
+    $('#fromDate').val(firstDay.toISOString().split('T')[0]);
+    $('#toDate').val(new Date().toISOString().split('T')[0]);
+}
+
+function setThisMonth() {
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    $('#fromDate').val(firstDay.toISOString().split('T')[0]);
+    $('#toDate').val(new Date().toISOString().split('T')[0]);
+}
+
+function applyFilters() {
+    // Reload page with filters
+    window.location.reload();
+}
+
+function viewInvoice(id) {
+    window.location.href = `/admin/invoices/${id}/`;
+}
+
+function exportExcel() {
+    window.location.href = '/admin/pos-report/export/excel/';
+}
+
+function exportPDF() {
+    window.location.href = '/admin/pos-report/export/pdf/';
+}
+
+function printReport() {
+    window.print();
+}
+
+// Search transactions
+$('#searchTransaction').on('input', function() {
+    const search = $(this).val().toLowerCase();
+    $('.transaction-item').each(function() {
+        const text = $(this).text().toLowerCase();
+        $(this).toggle(text.includes(search));
+    });
+});
+</script>
+{% endblock %}

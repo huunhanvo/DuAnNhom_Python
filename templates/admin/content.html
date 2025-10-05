@@ -1,0 +1,393 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Quản lý nội dung - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-file-alt me-2"></i>Quản lý nội dung</h2>
+            <p class="text-muted mb-0">Quản lý bài viết, trang, SEO và nội dung website</p>
+        </div>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newPostModal">
+            <i class="fas fa-plus me-1"></i>Thêm bài viết
+        </button>
+    </div>
+
+    <!-- Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">Tổng bài viết</h6>
+                            <h3 class="mb-0">{{ total_posts }}</h3>
+                        </div>
+                        <i class="fas fa-file-alt fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">Đã xuất bản</h6>
+                            <h3 class="mb-0">{{ published_posts }}</h3>
+                        </div>
+                        <i class="fas fa-check-circle fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">Bản nháp</h6>
+                            <h3 class="mb-0">{{ draft_posts }}</h3>
+                        </div>
+                        <i class="fas fa-edit fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">Trang</h6>
+                            <h3 class="mb-0">{{ total_pages }}</h3>
+                        </div>
+                        <i class="fas fa-file fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-3" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#posts-tab">
+                <i class="fas fa-newspaper me-1"></i>Bài viết
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#pages-tab">
+                <i class="fas fa-file me-1"></i>Trang
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#categories-tab">
+                <i class="fas fa-folder me-1"></i>Danh mục
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#seo-tab">
+                <i class="fas fa-search me-1"></i>SEO
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        <!-- Posts Tab -->
+        <div class="tab-pane fade show active" id="posts-tab">
+            <div class="card">
+                <div class="card-header">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <h5 class="mb-0">Danh sách bài viết</h5>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex gap-2">
+                                <input type="text" class="form-control form-control-sm" placeholder="Tìm kiếm..." id="searchPosts">
+                                <select class="form-select form-select-sm" style="width: auto;">
+                                    <option value="">Tất cả</option>
+                                    <option value="published">Đã xuất bản</option>
+                                    <option value="draft">Bản nháp</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;">#</th>
+                                    <th>Tiêu đề</th>
+                                    <th style="width: 120px;">Danh mục</th>
+                                    <th style="width: 100px;">Trạng thái</th>
+                                    <th style="width: 100px;">Lượt xem</th>
+                                    <th style="width: 120px;">Ngày đăng</th>
+                                    <th style="width: 100px;">Tác giả</th>
+                                    <th style="width: 120px;" class="text-end">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for post in posts %}
+                                <tr>
+                                    <td>{{ post.id }}</td>
+                                    <td>
+                                        <div>
+                                            <strong>{{ post.title }}</strong>
+                                            <div class="text-muted small">/{{ post.slug }}</div>
+                                        </div>
+                                    </td>
+                                    <td><span class="badge bg-secondary">{{ post.category }}</span></td>
+                                    <td>
+                                        <span class="badge {% if post.status == 'published' %}bg-success{% else %}bg-warning{% endif %}">
+                                            {% if post.status == 'published' %}Đã đăng{% else %}Nháp{% endif %}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <i class="fas fa-eye text-muted me-1"></i>{{ post.views }}
+                                    </td>
+                                    <td>{{ post.published_date|default:"--" }}</td>
+                                    <td>{{ post.author }}</td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-outline-primary" title="Chỉnh sửa">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" title="Xóa">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pages Tab -->
+        <div class="tab-pane fade" id="pages-tab">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Danh sách trang</h5>
+                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#newPageModal">
+                        <i class="fas fa-plus me-1"></i>Thêm trang
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;">#</th>
+                                    <th>Tiêu đề</th>
+                                    <th>Slug</th>
+                                    <th style="width: 120px;">Trạng thái</th>
+                                    <th style="width: 120px;" class="text-end">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for page in pages %}
+                                <tr>
+                                    <td>{{ page.id }}</td>
+                                    <td><strong>{{ page.title }}</strong></td>
+                                    <td class="text-muted">/{{ page.slug }}</td>
+                                    <td>
+                                        <span class="badge {% if page.status == 'published' %}bg-success{% else %}bg-warning{% endif %}">
+                                            {% if page.status == 'published' %}Đã đăng{% else %}Nháp{% endif %}
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-outline-primary" title="Chỉnh sửa">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" title="Xóa">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Categories Tab -->
+        <div class="tab-pane fade" id="categories-tab">
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Danh mục</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 50px;">#</th>
+                                            <th>Tên danh mục</th>
+                                            <th style="width: 100px;">Số bài viết</th>
+                                            <th style="width: 120px;" class="text-end">Thao tác</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for category in categories %}
+                                        <tr>
+                                            <td>{{ category.id }}</td>
+                                            <td><strong>{{ category.name }}</strong></td>
+                                            <td>{{ category.count }} bài</td>
+                                            <td class="text-end">
+                                                <button class="btn btn-sm btn-outline-primary" title="Chỉnh sửa">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger" title="Xóa">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Thêm danh mục mới</h5>
+                        </div>
+                        <div class="card-body">
+                            <form>
+                                <div class="mb-3">
+                                    <label class="form-label">Tên danh mục</label>
+                                    <input type="text" class="form-control" placeholder="Nhập tên danh mục">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Slug</label>
+                                    <input type="text" class="form-control" placeholder="ten-danh-muc">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Mô tả</label>
+                                    <textarea class="form-control" rows="3"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-plus me-1"></i>Thêm danh mục
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SEO Tab -->
+        <div class="tab-pane fade" id="seo-tab">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-search me-2"></i>Cài đặt SEO</h5>
+                </div>
+                <div class="card-body">
+                    <form>
+                        <div class="mb-3">
+                            <label class="form-label">Tiêu đề website (Site Title)</label>
+                            <input type="text" class="form-control" value="{{ seo_settings.site_title }}">
+                            <small class="text-muted">Hiển thị trên tab trình duyệt và kết quả tìm kiếm</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Mô tả Meta (Meta Description)</label>
+                            <textarea class="form-control" rows="3">{{ seo_settings.meta_description }}</textarea>
+                            <small class="text-muted">Mô tả ngắn gọn về website, hiển thị trên kết quả tìm kiếm</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Từ khóa Meta (Meta Keywords)</label>
+                            <input type="text" class="form-control" value="{{ seo_settings.meta_keywords }}">
+                            <small class="text-muted">Các từ khóa chính, phân cách bằng dấu phẩy</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Ảnh đại diện (OG Image)</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" value="{{ seo_settings.og_image }}" placeholder="URL ảnh">
+                                <button class="btn btn-outline-secondary" type="button">
+                                    <i class="fas fa-upload"></i> Upload
+                                </button>
+                            </div>
+                            <small class="text-muted">Ảnh hiển thị khi chia sẻ link trên mạng xã hội (1200x630px)</small>
+                        </div>
+
+                        <hr>
+
+                        <div class="mb-3">
+                            <h6>Google Analytics</h6>
+                            <label class="form-label">Tracking ID</label>
+                            <input type="text" class="form-control" placeholder="UA-XXXXX-Y hoặc G-XXXXXXXXXX">
+                        </div>
+
+                        <div class="mb-3">
+                            <h6>Facebook Pixel</h6>
+                            <label class="form-label">Pixel ID</label>
+                            <input type="text" class="form-control" placeholder="XXXXXXXXXXXXXXXX">
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Lưu cài đặt
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New Post Modal -->
+<div class="modal fade" id="newPostModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Thêm bài viết mới</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="mb-3">
+                        <label class="form-label">Tiêu đề</label>
+                        <input type="text" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Slug</label>
+                        <input type="text" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Danh mục</label>
+                        <select class="form-select">
+                            {% for category in categories %}
+                            <option value="{{ category.id }}">{{ category.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Nội dung</label>
+                        <textarea class="form-control" rows="8"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-outline-primary">Lưu nháp</button>
+                <button type="button" class="btn btn-primary">Xuất bản</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

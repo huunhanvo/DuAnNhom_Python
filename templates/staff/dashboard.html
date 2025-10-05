@@ -1,0 +1,440 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard Nhân viên - Barbershop{% endblock %}
+
+{% block content %}
+<!-- Staff Sidebar -->
+<nav class="sidebar">
+    <div class="text-center py-4 border-bottom border-secondary">
+        <h4 class="text-white mb-0">
+            <i class="fas fa-cut"></i> Staff Panel
+        </h4>
+        <small class="text-white-50">{{ staff.ho_ten }}</small>
+    </div>
+    
+    <div class="sidebar-sticky">
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link active" href="/staff/dashboard">
+                    <i class="fas fa-tachometer-alt"></i> Tổng quan
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/staff/pos">
+                    <i class="fas fa-cash-register"></i> POS - Thanh toán
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/staff/schedule">
+                    <i class="fas fa-calendar-alt"></i> Lịch làm việc
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'staff_register_shift' %}">
+                    <i class="fas fa-calendar-plus"></i> Đăng ký ca làm
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/staff/today-bookings">
+                    <i class="fas fa-calendar-check"></i> Lịch hẹn hôm nay
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/staff/my-customers">
+                    <i class="fas fa-users"></i> Khách hàng của tôi
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/staff/revenue">
+                    <i class="fas fa-chart-line"></i> Doanh thu cá nhân
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/staff/profile">
+                    <i class="fas fa-user-circle"></i> Thông tin cá nhân
+                </a>
+            </li>
+            <li class="nav-item mt-4 pt-3 border-top border-secondary">
+                <a class="nav-link" href="/logout">
+                    <i class="fas fa-sign-out-alt"></i> Đăng xuất
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+<!-- Main Content -->
+<main class="main-content">
+    <!-- Top Navbar -->
+    <div class="top-navbar d-flex justify-content-between align-items-center">
+        <div>
+            <h3 class="mb-0">Dashboard</h3>
+            <small class="text-muted">Chào mừng trở lại, {{ staff.ho_ten }}</small>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <div class="position-relative">
+                <i class="fas fa-bell fs-5 text-muted"></i>
+                <span class="notification-badge">3</span>
+            </div>
+            <div class="user-info">
+                <div class="user-avatar">{{ staff.ho_ten|slice:":2"|upper }}</div>
+                <div>
+                    <div class="fw-bold">{{ staff.ho_ten }}</div>
+                    <small class="text-muted">{{ staff.get_vai_tro_display }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card revenue">
+                <div class="icon">
+                    <i class="fas fa-briefcase"></i>
+                </div>
+                <h6 class="text-muted mb-2">Ca làm hôm nay</h6>
+                <h3 class="mb-0">
+                    {% if today_schedule %}
+                        {{ today_schedule.ca_lam }}
+                    {% else %}
+                        Không có ca
+                    {% endif %}
+                </h3>
+                <small class="text-info">
+                    <i class="fas fa-clock"></i> 
+                    {% if today_schedule %}
+                        {{ today_schedule.gio_bat_dau|time:"H:i" }} - {{ today_schedule.gio_ket_thuc|time:"H:i" }}
+                    {% else %}
+                        --:-- - --:--
+                    {% endif %}
+                </small>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card bookings">
+                <div class="icon">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <h6 class="text-muted mb-2">Lịch hẹn hôm nay</h6>
+                <h3 class="mb-0">{{ booking_count }}</h3>
+                <small class="text-warning">
+                    <i class="fas fa-user-clock"></i> {{ waiting_checkin }} đang chờ check-in
+                </small>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card customers">
+                <div class="icon">
+                    <i class="fas fa-dollar-sign"></i>
+                </div>
+                <h6 class="text-muted mb-2">Doanh thu tháng này</h6>
+                <h3 class="mb-0">{{ month_revenue|floatformat:0 }}đ</h3>
+                <small class="text-success">
+                    <i class="fas fa-check-circle"></i> {{ month_bookings_count }} booking hoàn thành
+                </small>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card staff">
+                <div class="icon">
+                    <i class="fas fa-star"></i>
+                </div>
+                <h6 class="text-muted mb-2">Đánh giá trung bình</h6>
+                <h3 class="mb-0">{{ staff_rating|floatformat:1 }} <i class="fas fa-star text-warning"></i></h3>
+                <small class="text-success">
+                    <i class="fas fa-thumbs-up"></i> {{ total_services }} lượt phục vụ
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Next Booking & Performance -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-4">
+            <div class="stat-card" style="min-height: 280px;">
+                <h5 class="mb-3">
+                    <i class="fas fa-clock text-primary"></i> Lịch hẹn tiếp theo
+                </h5>
+                <div class="p-3 bg-light rounded-3">
+                    {% if next_booking %}
+                        <div class="d-flex justify-content-between mb-2">
+                            <strong>Mã booking:</strong>
+                            <span class="badge bg-primary">{{ next_booking.ma_dat_lich }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <strong>Khách hàng:</strong>
+                            <span>{{ next_booking.ten_khach_hang|default:next_booking.khach_hang.ho_ten }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <strong>Thời gian:</strong>
+                            <span class="text-primary fw-bold">{{ next_booking.gio_hen|time:"H:i" }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-3">
+                            <strong>Tổng tiền:</strong>
+                            <span>{{ next_booking.thanh_tien|floatformat:0 }}đ</span>
+                        </div>
+                        {% if next_booking.ghi_chu %}
+                            <div class="border-top pt-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-sticky-note"></i> 
+                                    {{ next_booking.ghi_chu }}
+                                </small>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center text-muted py-3">
+                            <i class="fas fa-calendar-times fs-2 mb-2"></i>
+                            <p class="mb-0">Không có lịch hẹn nào</p>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="mt-3 d-grid gap-2">
+                    {% if next_booking %}
+                        {% if next_booking.trang_thai == 'da_xac_nhan' %}
+                            <button class="btn btn-success" onclick="checkinBooking({{ next_booking.id }})">
+                                <i class="fas fa-check-circle"></i> Check-in khách
+                            </button>
+                        {% elif next_booking.trang_thai == 'da_checkin' %}
+                            <button class="btn btn-primary" onclick="completeBooking({{ next_booking.id }})">
+                                <i class="fas fa-flag-checkered"></i> Hoàn thành
+                            </button>
+                        {% else %}
+                            <button class="btn btn-secondary" disabled>
+                                <i class="fas fa-info-circle"></i> {{ next_booking.get_trang_thai_display }}
+                            </button>
+                        {% endif %}
+                    {% endif %}
+                    <a href="/staff/today-bookings" class="btn btn-outline-primary">
+                        Xem tất cả lịch hẹn <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-8">
+            <div class="stat-card" style="min-height: 280px;">
+                <h5 class="mb-3">
+                    <i class="fas fa-chart-line text-success"></i> Hiệu suất tháng này
+                </h5>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-3">
+                        <div class="text-center p-3 bg-light rounded-3">
+                            <h4 class="text-primary mb-0">{{ month_bookings_count }}</h4>
+                            <small class="text-muted">Số lượt phục vụ</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-3 bg-light rounded-3">
+                            <h4 class="text-success mb-0">{{ month_revenue|floatformat:0 }}</h4>
+                            <small class="text-muted">Doanh thu</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-3 bg-light rounded-3">
+                            <h4 class="text-warning mb-0">{{ avg_revenue|floatformat:0 }}</h4>
+                            <small class="text-muted">TB/booking</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-3 bg-light rounded-3">
+                            <h4 class="text-info mb-0">{{ staff_rating|floatformat:1 }}</h4>
+                            <small class="text-muted">Đánh giá TB</small>
+                        </div>
+                    </div>
+                </div>
+                <canvas id="performanceChart" height="120"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Today's Bookings Schedule -->
+    <div class="stat-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">
+                <i class="fas fa-calendar-day text-primary"></i> 
+                Lịch trình hôm nay ({{ "now"|date:"d/m/Y" }})
+            </h5>
+            <a href="/staff/today-bookings" class="btn btn-sm btn-outline-primary">
+                Xem đầy đủ <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table custom-table">
+                <thead>
+                    <tr>
+                        <th>Giờ</th>
+                        <th>Mã</th>
+                        <th>Khách hàng</th>
+                        <th>Dịch vụ</th>
+                        <th>Thời gian</th>
+                        <th>Tổng tiền</th>
+                        <th>Trạng thái</th>
+                        <th>Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for booking in today_bookings %}
+                        <tr {% if booking.trang_thai == 'da_xac_nhan' %}class="table-warning"{% elif booking.trang_thai == 'da_checkin' %}class="table-info"{% elif booking.trang_thai == 'hoan_thanh' %}class="table-success"{% endif %}>
+                            <td><strong>{{ booking.gio_hen|time:"H:i" }}</strong></td>
+                            <td><span class="badge bg-primary">{{ booking.ma_dat_lich }}</span></td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <img src="https://ui-avatars.com/api/?name={{ booking.ten_khach_hang|default:booking.khach_hang.ho_ten|urlencode }}" 
+                                         class="rounded-circle me-2" width="30" height="30">
+                                    <div>{{ booking.ten_khach_hang|default:booking.khach_hang.ho_ten }}</div>
+                                </div>
+                            </td>
+                            <td>{{ booking.ghi_chu|default:"Dịch vụ cắt tóc"|truncatechars:30 }}</td>
+                            <td>--</td>
+                            <td class="fw-bold">{{ booking.thanh_tien|floatformat:0 }}đ</td>
+                            <td>
+                                {% if booking.trang_thai == 'cho_xac_nhan' %}
+                                    <span class="badge bg-secondary">Chờ xác nhận</span>
+                                {% elif booking.trang_thai == 'da_xac_nhan' %}
+                                    <span class="badge bg-warning">Đã xác nhận</span>
+                                {% elif booking.trang_thai == 'da_checkin' %}
+                                    <span class="badge bg-info">Đã check-in</span>
+                                {% elif booking.trang_thai == 'hoan_thanh' %}
+                                    <span class="badge bg-success">Hoàn thành</span>
+                                {% elif booking.trang_thai == 'da_huy' %}
+                                    <span class="badge bg-danger">Đã hủy</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ booking.get_trang_thai_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if booking.trang_thai == 'da_xac_nhan' %}
+                                    <button class="btn btn-sm btn-success" title="Check-in" onclick="checkinBooking({{ booking.id }})">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                {% elif booking.trang_thai == 'da_checkin' %}
+                                    <button class="btn btn-sm btn-primary" title="Hoàn thành" onclick="completeBooking({{ booking.id }})">
+                                        <i class="fas fa-flag-checkered"></i>
+                                    </button>
+                                {% else %}
+                                    <button class="btn btn-sm btn-secondary" disabled>
+                                        <i class="fas fa-check-circle"></i>
+                                    </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-4 text-muted">
+                                <i class="fas fa-calendar-times fs-2 mb-2"></i>
+                                <br>Không có lịch hẹn nào hôm nay
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Performance Chart
+    const perfCtx = document.getElementById('performanceChart').getContext('2d');
+    new Chart(perfCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Tuần 1', 'Tuần 2', 'Tuần 3', 'Tuần 4'],
+            datasets: [{
+                label: 'Số lượt phục vụ',
+                data: [8, 12, 10, 12],
+                backgroundColor: 'rgba(139, 69, 19, 0.7)',
+                borderColor: '#8b4513',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    
+    // CSRF Token cho AJAX requests
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // Staff booking actions
+    function checkinBooking(bookingId) {
+        if (confirm('Xác nhận check-in khách hàng?')) {
+            fetch(`/staff/booking-checkin/${bookingId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Lỗi: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Có lỗi xảy ra khi check-in!');
+            });
+        }
+    }
+    
+    function completeBooking(bookingId) {
+        if (confirm('Xác nhận hoàn thành dịch vụ?')) {
+            fetch(`/staff/booking-complete/${bookingId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Lỗi: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Có lỗi xảy ra khi hoàn thành!');
+            });
+        }
+    }
+</script>
+{% endblock %}

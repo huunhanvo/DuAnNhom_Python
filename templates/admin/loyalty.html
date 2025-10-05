@@ -1,0 +1,543 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Chương trình khách hàng thân thiết{% endblock %}
+
+{% block extra_css %}
+<style>
+    .tier-card {
+        border-radius: 20px;
+        padding: 30px;
+        text-align: center;
+        transition: all 0.3s ease;
+        border: 3px solid;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .tier-card::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+        transform: rotate(45deg);
+        transition: all 0.6s;
+    }
+    
+    .tier-card:hover::before {
+        left: 100%;
+    }
+    
+    .tier-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+    }
+    
+    .tier-bronze {
+        border-color: #cd7f32;
+        background: linear-gradient(135deg, #f5e6d3 0%, #e6d4c1 100%);
+    }
+    
+    .tier-silver {
+        border-color: #c0c0c0;
+        background: linear-gradient(135deg, #f0f0f0 0%, #e0e0e0 100%);
+    }
+    
+    .tier-gold {
+        border-color: #ffd700;
+        background: linear-gradient(135deg, #fff9e6 0%, #ffe6b3 100%);
+    }
+    
+    .tier-platinum {
+        border-color: #e5e4e2;
+        background: linear-gradient(135deg, #f5f5f5 0%, #d4d4d4 100%);
+    }
+    
+    .tier-diamond {
+        border-color: #b9f2ff;
+        background: linear-gradient(135deg, #e6f7ff 0%, #b3e5ff 100%);
+    }
+    
+    .tier-icon {
+        font-size: 4rem;
+        margin-bottom: 15px;
+        filter: drop-shadow(0 5px 10px rgba(0,0,0,0.2));
+    }
+    
+    .tier-name {
+        font-size: 1.8rem;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+    
+    .tier-requirement {
+        font-size: 1.1rem;
+        color: #666;
+        margin-bottom: 20px;
+    }
+    
+    .benefit-list {
+        text-align: left;
+        margin-top: 20px;
+    }
+    
+    .benefit-item {
+        padding: 10px;
+        margin-bottom: 10px;
+        background: rgba(255,255,255,0.7);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .benefit-item i {
+        color: #8b4513;
+        font-size: 1.2rem;
+    }
+    
+    .customer-tier-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    
+    .customer-card {
+        border-left: 5px solid;
+        transition: all 0.3s;
+    }
+    
+    .customer-card:hover {
+        transform: translateX(5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .progress-ring {
+        width: 120px;
+        height: 120px;
+        position: relative;
+    }
+    
+    .progress-ring circle {
+        fill: none;
+        stroke-width: 8;
+    }
+    
+    .reward-card {
+        border-radius: 15px;
+        padding: 20px;
+        background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+        border: 2px solid #ff9800;
+    }
+    
+    .point-badge {
+        background: #8b4513;
+        color: white;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h2><i class="fas fa-crown"></i> Chương trình khách hàng thân thiết</h2>
+            <p class="text-muted mb-0">Quản lý hạng thành viên & ưu đãi</p>
+        </div>
+        <div class="col-md-6 text-end">
+            <button class="btn btn-outline-primary" onclick="exportLoyaltyReport()">
+                <i class="fas fa-file-excel"></i> Xuất báo cáo
+            </button>
+            <button class="btn btn-success" onclick="openRewardModal()">
+                <i class="fas fa-gift"></i> Tặng điểm thưởng
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-users fa-2x text-primary mb-2"></i>
+                    <h3 class="mb-0">{{ total_members }}</h3>
+                    <small class="text-muted">Tổng thành viên</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-gem fa-2x text-info mb-2"></i>
+                    <h3 class="mb-0">{{ vip_members }}</h3>
+                    <small class="text-muted">VIP (Gold+)</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-coins fa-2x text-warning mb-2"></i>
+                    <h3 class="mb-0">{{ total_points|floatformat:0 }}</h3>
+                    <small class="text-muted">Tổng điểm tích lũy</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-arrow-up fa-2x text-success mb-2"></i>
+                    <h3 class="mb-0">{{ upgraded_this_month }}</h3>
+                    <small class="text-muted">Thăng hạng tháng này</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tier Overview -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4 class="mb-3">
+                <i class="fas fa-layer-group"></i> Hạng thành viên
+            </h4>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="tier-card tier-bronze">
+                <div class="tier-icon">🥉</div>
+                <div class="tier-name">BRONZE</div>
+                <div class="tier-requirement">0 - 5.000.000đ</div>
+                <div class="badge bg-secondary">{{ bronze_count }} thành viên</div>
+                
+                <div class="benefit-list">
+                    <div class="benefit-item">
+                        <i class="fas fa-percent"></i>
+                        <span>Tích điểm 1%</span>
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fas fa-gift"></i>
+                        <span>Quà sinh nhật</span>
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fas fa-bell"></i>
+                        <span>Thông báo ưu đãi</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="tier-card tier-silver">
+                <div class="tier-icon">🥈</div>
+                <div class="tier-name">SILVER</div>
+                <div class="tier-requirement">5.000.000 - 10.000.000đ</div>
+                <div class="badge bg-secondary">{{ silver_count }} thành viên</div>
+                
+                <div class="benefit-list">
+                    <div class="benefit-item">
+                        <i class="fas fa-percent"></i>
+                        <span>Tích điểm 2%</span>
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fas fa-gift"></i>
+                        <span>Quà sinh nhật + Voucher</span>
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>Đặt lịch ưu tiên</span>
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fas fa-tag"></i>
+                        <span>Giảm 5% dịch vụ</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="tier-card tier-gold">
+                <div class="tier-icon">🥇</div>
+                <div class="tier-name">GOLD</div>
+                <div class="tier-requirement">10.000.000 - 20.000.000đ</div>
+                <div class="badge bg-warning">{{ gold_count }} thành viên</div>
+                
+                <div class="benefit-list">
+                    <div class="benefit-item">
+                        <i class="fas fa-percent"></i>
+                        <span>Tích điểm 3%</span>
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fas fa-gift"></i>
+                        <span>Quà sinh nhật cao cấp</span>
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fas fa-star"></i>
+                        <span>Chọn stylist ưu tiên</span>
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fas fa-tag"></i>
+                        <span>Giảm 10% dịch vụ</span>
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fas fa-coffee"></i>
+                        <span>Đồ uống miễn phí</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-4">
+            <div class="tier-card tier-platinum">
+                <div class="tier-icon">💎</div>
+                <div class="tier-name">PLATINUM</div>
+                <div class="tier-requirement">20.000.000 - 50.000.000đ</div>
+                <div class="badge bg-dark">{{ platinum_count }} thành viên</div>
+                
+                <div class="benefit-list">
+                    <div class="benefit-item">
+                        <i class="fas fa-percent"></i>
+                        <span>Tích điểm 5%</span>
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fas fa-gift"></i>
+                        <span>Quà tặng VIP</span>
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fas fa-user-tie"></i>
+                        <span>Stylist riêng</span>
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fas fa-tag"></i>
+                        <span>Giảm 15% tất cả dịch vụ</span>
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fas fa-car"></i>
+                        <span>Đưa đón miễn phí</span>
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fas fa-spa"></i>
+                        <span>Massage đầu miễn phí</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-4">
+            <div class="tier-card tier-diamond">
+                <div class="tier-icon">💍</div>
+                <div class="tier-name">DIAMOND</div>
+                <div class="tier-requirement">Trên 50.000.000đ</div>
+                <div class="badge bg-info">{{ diamond_count }} thành viên</div>
+                
+                <div class="benefit-list">
+                    <div class="benefit-item">
+                        <i class="fas fa-percent"></i>
+                        <span>Tích điểm 10%</span>
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fas fa-crown"></i>
+                        <span>Quyền lợi VIP tối đa</span>
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fas fa-tag"></i>
+                        <span>Giảm 20% vĩnh viễn</span>
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>Đặt lịch không giới hạn</span>
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fas fa-gift"></i>
+                        <span>1 dịch vụ miễn phí/tháng</span>
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fas fa-users"></i>
+                        <span>Mời bạn bè nhận ưu đãi</span>
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fas fa-concierge-bell"></i>
+                        <span>Phục vụ tận nhà</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Members -->
+    <div class="row">
+        <div class="col-12 mb-3">
+            <h4>
+                <i class="fas fa-trophy"></i> Top khách hàng thân thiết
+            </h4>
+        </div>
+        
+        {% for customer in top_customers %}
+        <div class="col-md-6 mb-3">
+            <div class="card customer-card" style="border-left-color: {{ customer.tier_color }}">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="position-relative me-3">
+                            <img src="{{ customer.avatar|default:'/static/img/avatar-default.jpg' }}" 
+                                 class="rounded-circle" 
+                                 style="width: 70px; height: 70px; object-fit: cover;">
+                            {% if forloop.counter <= 3 %}
+                            <span class="position-absolute bottom-0 end-0 badge rounded-pill bg-warning">
+                                #{{ forloop.counter }}
+                            </span>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="flex-grow-1">
+                            <h5 class="mb-1">{{ customer.name }}</h5>
+                            <span class="customer-tier-badge" style="background: {{ customer.tier_bg }}; color: {{ customer.tier_color }}">
+                                {{ customer.tier_icon }} {{ customer.tier_name }}
+                            </span>
+                        </div>
+                        
+                        <div class="text-end">
+                            <h4 class="mb-0 text-warning">
+                                <i class="fas fa-coins"></i> {{ customer.points }}
+                            </h4>
+                            <small class="text-muted">{{ customer.total_spent|floatformat:0 }}đ</small>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-4 text-center">
+                            <h6 class="mb-0">{{ customer.total_visits }}</h6>
+                            <small class="text-muted">Lượt đến</small>
+                        </div>
+                        <div class="col-4 text-center border-start border-end">
+                            <h6 class="mb-0">{{ customer.avg_rating }}</h6>
+                            <small class="text-muted">Đánh giá</small>
+                        </div>
+                        <div class="col-4 text-center">
+                            <h6 class="mb-0">{{ customer.last_visit }}</h6>
+                            <small class="text-muted">Lần cuối</small>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar" 
+                                 style="width: {{ customer.next_tier_progress }}%; background: {{ customer.tier_color }}">
+                            </div>
+                        </div>
+                        <small class="text-muted">
+                            Còn {{ customer.points_to_next_tier|floatformat:0 }}đ để lên {{ customer.next_tier }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Reward Points Modal -->
+<div class="modal fade" id="rewardModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-gift"></i> Tặng điểm thưởng
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="rewardForm">
+                    <div class="mb-3">
+                        <label class="form-label">Khách hàng:</label>
+                        <select class="form-select" id="customerSelect" required>
+                            <option value="">-- Chọn khách hàng --</option>
+                            {% for customer in all_customers %}
+                            <option value="{{ customer.id }}">{{ customer.name }} - {{ customer.phone }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Số điểm:</label>
+                        <input type="number" class="form-control" id="pointsAmount" 
+                               min="0" step="10" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Lý do:</label>
+                        <textarea class="form-control" id="rewardReason" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-success" onclick="saveReward()">
+                    <i class="fas fa-save"></i> Tặng điểm
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openRewardModal() {
+    new bootstrap.Modal(document.getElementById('rewardModal')).show();
+}
+
+function saveReward() {
+    const customerId = $('#customerSelect').val();
+    const points = $('#pointsAmount').val();
+    const reason = $('#rewardReason').val();
+    
+    if (!customerId || !points) {
+        alert('Vui lòng điền đầy đủ thông tin!');
+        return;
+    }
+    
+    $.ajax({
+        url: '/api/loyalty/reward/',
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        data: JSON.stringify({
+            customer_id: customerId,
+            points: points,
+            reason: reason
+        }),
+        contentType: 'application/json',
+        success: function() {
+            alert('Đã tặng điểm thưởng!');
+            location.reload();
+        }
+    });
+}
+
+function exportLoyaltyReport() {
+    alert('Xuất báo cáo khách hàng thân thiết - Cần API backend');
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

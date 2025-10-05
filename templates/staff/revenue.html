@@ -1,0 +1,400 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Doanh thu của tôi{% endblock %}
+
+{% block extra_css %}
+<style>
+    .revenue-header {
+        background: linear-gradient(135deg, #8b4513 0%, #d2691e 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    
+    .revenue-card {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        margin-bottom: 25px;
+    }
+    
+    .big-stat {
+        text-align: center;
+        padding: 20px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+    
+    .big-stat h2 {
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+    }
+    
+    .period-selector {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .period-btn {
+        padding: 10px 20px;
+        border-radius: 20px;
+        border: 2px solid #dee2e6;
+        background: white;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .period-btn.active {
+        background: #8b4513;
+        color: white;
+        border-color: #8b4513;
+    }
+    
+    .commission-card {
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .performance-badge {
+        padding: 10px 20px;
+        border-radius: 25px;
+        font-size: 1.1rem;
+        font-weight: bold;
+        display: inline-block;
+        margin: 10px 0;
+    }
+    
+    .badge-excellent { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; }
+    .badge-good { background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); color: white; }
+    .badge-average { background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%); color: #333; }
+    
+    .service-breakdown {
+        list-style: none;
+        padding: 0;
+    }
+    
+    .service-breakdown li {
+        padding: 12px;
+        border-bottom: 1px solid #dee2e6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .progress-custom {
+        height: 8px;
+        border-radius: 5px;
+        background: #e9ecef;
+        overflow: hidden;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="revenue-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-2"><i class="fas fa-chart-line"></i> Doanh thu của tôi</h2>
+                <p class="mb-0">Theo dõi thu nhập & hiệu suất công việc</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <button class="btn btn-light" onclick="exportReport()">
+                    <i class="fas fa-file-pdf"></i> Xuất báo cáo
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Period Selector -->
+    <div class="period-selector">
+        <button class="period-btn" onclick="setPeriod('today')">Hôm nay</button>
+        <button class="period-btn active" onclick="setPeriod('week')">Tuần này</button>
+        <button class="period-btn" onclick="setPeriod('month')">Tháng này</button>
+        <button class="period-btn" onclick="setPeriod('year')">Năm nay</button>
+        <button class="period-btn" onclick="setPeriod('custom')">Tùy chọn</button>
+    </div>
+
+    <!-- Big Stats -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="big-stat">
+                <h2 class="text-primary mb-2">{{ total_revenue|floatformat:0 }}đ</h2>
+                <p class="mb-0">Tổng doanh thu</p>
+                <small class="text-success">
+                    <i class="fas fa-arrow-up"></i> +{{ revenue_growth }}% so với kỳ trước
+                </small>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="big-stat">
+                <h2 class="text-success mb-2">{{ commission_earned|floatformat:0 }}đ</h2>
+                <p class="mb-0">Hoa hồng nhận được</p>
+                <small class="text-muted">{{ commission_rate }}% tổng doanh thu</small>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="big-stat">
+                <h2 class="text-info mb-2">{{ total_services }}</h2>
+                <p class="mb-0">Lượt phục vụ</p>
+                <small class="text-success">
+                    <i class="fas fa-arrow-up"></i> +{{ service_growth }}%
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Commission Details -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="revenue-card">
+                <h5 class="mb-4"><i class="fas fa-chart-area"></i> Biểu đồ doanh thu theo thời gian</h5>
+                <canvas id="revenueChart" height="100"></canvas>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="commission-card">
+                <h5 class="mb-3"><i class="fas fa-hand-holding-usd"></i> Chi tiết hoa hồng</h5>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Doanh thu cơ bản:</span>
+                        <strong>{{ base_revenue|floatformat:0 }}đ</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Tỷ lệ hoa hồng:</span>
+                        <strong>{{ commission_rate }}%</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Thưởng hiệu suất:</span>
+                        <strong>{{ performance_bonus|floatformat:0 }}đ</strong>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <strong>Tổng hoa hồng:</strong>
+                        <h5 class="text-success mb-0">{{ commission_earned|floatformat:0 }}đ</h5>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info mb-0">
+                    <small>
+                        <i class="fas fa-info-circle"></i> 
+                        Hoa hồng sẽ được thanh toán vào ngày {{ payment_date }}
+                    </small>
+                </div>
+            </div>
+            
+            <div class="revenue-card">
+                <h6 class="mb-3">Xếp hạng hiệu suất</h6>
+                <div class="text-center">
+                    {% if performance_rank <= 3 %}
+                    <div class="performance-badge badge-excellent">
+                        <i class="fas fa-trophy"></i> Top {{ performance_rank }}
+                    </div>
+                    {% elif performance_rank <= 10 %}
+                    <div class="performance-badge badge-good">
+                        <i class="fas fa-medal"></i> Top {{ performance_rank }}
+                    </div>
+                    {% else %}
+                    <div class="performance-badge badge-average">
+                        Hạng {{ performance_rank }}
+                    </div>
+                    {% endif %}
+                    <p class="text-muted mt-2">Trên tổng {{ total_staff }} nhân viên</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="revenue-card text-center">
+                <h4 class="text-primary">{{ avg_revenue_per_service|floatformat:0 }}đ</h4>
+                <small class="text-muted">TB/lượt phục vụ</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="revenue-card text-center">
+                <h4 class="text-success">{{ customer_rating|floatformat:1 }}/5 ⭐</h4>
+                <small class="text-muted">Đánh giá TB</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="revenue-card text-center">
+                <h4 class="text-info">{{ repeat_customer_rate }}%</h4>
+                <small class="text-muted">Khách quay lại</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="revenue-card text-center">
+                <h4 class="text-warning">{{ tips_received|floatformat:0 }}đ</h4>
+                <small class="text-muted">Tiền tip nhận được</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Service Breakdown -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="revenue-card">
+                <h5 class="mb-4"><i class="fas fa-chart-pie"></i> Phân bố theo dịch vụ</h5>
+                <canvas id="serviceChart" height="250"></canvas>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="revenue-card">
+                <h5 class="mb-4"><i class="fas fa-list"></i> Top dịch vụ</h5>
+                <ul class="service-breakdown">
+                    {% for service in top_services %}
+                    <li>
+                        <div>
+                            <strong>{{ service.name }}</strong>
+                            <br>
+                            <small class="text-muted">{{ service.count }} lượt</small>
+                        </div>
+                        <div class="text-end">
+                            <strong class="text-primary">{{ service.revenue|floatformat:0 }}đ</strong>
+                            <div class="progress-custom mt-1" style="width: 100px;">
+                                <div style="width: {{ service.percent }}%; height: 100%; background: #8b4513;"></div>
+                            </div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Performance -->
+    <div class="revenue-card mt-4">
+        <h5 class="mb-4"><i class="fas fa-calendar-alt"></i> Hiệu suất theo ngày</h5>
+        <canvas id="dailyChart" height="80"></canvas>
+    </div>
+
+    <!-- Goals & Achievements -->
+    <div class="revenue-card">
+        <h5 class="mb-4"><i class="fas fa-bullseye"></i> Mục tiêu & Thành tích</h5>
+        <div class="row">
+            <div class="col-md-6">
+                <h6>Mục tiêu tháng này</h6>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Doanh thu</span>
+                        <span>{{ current_revenue|floatformat:0 }}đ / {{ revenue_target|floatformat:0 }}đ</span>
+                    </div>
+                    <div class="progress-custom">
+                        <div style="width: {{ revenue_progress }}%; height: 100%; background: #28a745;"></div>
+                    </div>
+                    <small class="text-muted">{{ revenue_progress }}% hoàn thành</small>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Số lượt phục vụ</span>
+                        <span>{{ current_services }} / {{ service_target }}</span>
+                    </div>
+                    <div class="progress-custom">
+                        <div style="width: {{ service_progress }}%; height: 100%; background: #17a2b8;"></div>
+                    </div>
+                    <small class="text-muted">{{ service_progress }}% hoàn thành</small>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <h6>Thành tích</h6>
+                <div class="d-flex flex-wrap gap-2">
+                    {% if achievements %}
+                    {% for achievement in achievements %}
+                    <span class="badge bg-warning" title="{{ achievement.description }}">
+                        <i class="fas fa-award"></i> {{ achievement.name }}
+                    </span>
+                    {% endfor %}
+                    {% else %}
+                    <p class="text-muted">Chưa có thành tích nào</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Revenue Chart
+const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+new Chart(revenueCtx, {
+    type: 'line',
+    data: {
+        labels: {{ revenue_labels|safe }},
+        datasets: [{
+            label: 'Doanh thu',
+            data: {{ revenue_data|safe }},
+            borderColor: '#8b4513',
+            backgroundColor: 'rgba(139, 69, 19, 0.1)',
+            fill: true,
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false
+    }
+});
+
+// Service Chart
+const serviceCtx = document.getElementById('serviceChart').getContext('2d');
+new Chart(serviceCtx, {
+    type: 'doughnut',
+    data: {
+        labels: {{ service_labels|safe }},
+        datasets: [{
+            data: {{ service_data|safe }},
+            backgroundColor: ['#8b4513', '#d2691e', '#ffc107', '#28a745', '#17a2b8']
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false
+    }
+});
+
+// Daily Chart
+const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+new Chart(dailyCtx, {
+    type: 'bar',
+    data: {
+        labels: {{ daily_labels|safe }},
+        datasets: [{
+            label: 'Doanh thu',
+            data: {{ daily_data|safe }},
+            backgroundColor: '#d2691e'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false
+    }
+});
+
+function setPeriod(period) {
+    $('.period-btn').removeClass('active');
+    event.target.classList.add('active');
+    // Reload with new period
+}
+
+function exportReport() {
+    window.location.href = '/staff/revenue/export/';
+}
+</script>
+{% endblock %}

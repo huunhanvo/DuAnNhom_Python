@@ -1,0 +1,825 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Quản lý dịch vụ{% endblock %}
+{% block page_title %}Quản lý dịch vụ{% endblock %}
+
+{% block extra_css %}
+<style>
+    .service-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+    }
+    
+    .service-card {
+        border: 2px solid #dee2e6;
+        border-radius: 15px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        cursor: move;
+    }
+    
+    .service-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(139, 69, 19, 0.2);
+        border-color: #8b4513;
+    }
+    
+    .service-card.dragging {
+        opacity: 0.5;
+    }
+    
+    .service-image {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+    
+    .service-body {
+        padding: 20px;
+    }
+    
+    .service-category {
+        display: inline-block;
+        padding: 5px 12px;
+        border-radius: 15px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+    
+    .category-haircut { background: #e3f2fd; color: #1976d2; }
+    .category-shave { background: #f3e5f5; color: #7b1fa2; }
+    .category-treatment { background: #e8f5e9; color: #388e3c; }
+    .category-combo { background: #fff3e0; color: #f57c00; }
+    
+    .service-price {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #8b4513;
+    }
+    
+    .service-duration {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 10px;
+        background: #f8f9fa;
+        border-radius: 10px;
+        font-size: 0.9rem;
+    }
+    
+    .service-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid #dee2e6;
+    }
+    
+    .stat-item {
+        text-align: center;
+    }
+    
+    .stat-item h6 {
+        margin: 0;
+        color: #8b4513;
+    }
+    
+    .service-actions {
+        display: flex;
+        gap: 5px;
+        margin-top: 15px;
+    }
+    
+    .drag-handle {
+        cursor: move;
+        padding: 10px;
+        text-align: center;
+        background: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .category-filter {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+    }
+    
+    .category-filter .btn {
+        border-radius: 20px;
+    }
+    
+    .image-upload-preview {
+        width: 100%;
+        height: 200px;
+        border: 2px dashed #dee2e6;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .image-upload-preview:hover {
+        border-color: #8b4513;
+        background: #f8f9fa;
+    }
+    
+    .image-upload-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .upload-placeholder {
+        text-align: center;
+        color: #6c757d;
+    }
+    
+    /* Enhanced toggle button styles */
+    .service-actions .btn {
+        transition: all 0.3s ease;
+        min-width: 60px;
+    }
+    
+    .service-actions .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    
+    .service-card.border-success {
+        border-color: #28a745 !important;
+        box-shadow: 0 0 15px rgba(40, 167, 69, 0.3);
+        transition: all 0.3s ease;
+    }
+    
+    /* Toast container */
+    .toast {
+        min-width: 250px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Action Buttons -->
+    <div class="row mb-4">
+        <div class="col-12 text-end">
+            <button class="btn btn-outline-primary" id="toggleSortMode">
+                <i class="fas fa-arrows-alt"></i> Sắp xếp thứ tự
+            </button>
+            <button class="btn btn-success" onclick="importServices()">
+                <i class="fas fa-file-import"></i> Import
+            </button>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addServiceModal" onclick="resetServiceForm()">
+                <i class="fas fa-plus"></i> Thêm dịch vụ
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-primary mb-0">{{ total_services }}</h3>
+                    <small class="text-muted">Tổng dịch vụ</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-success mb-0">{{ active_services }}</h3>
+                    <small class="text-muted">Đang hoạt động</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-info mb-0">{{ avg_price|floatformat:0 }}đ</h3>
+                    <small class="text-muted">Giá trung bình</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-warning mb-0">{{ popular_service.ten_dich_vu|truncatewords:3 }}</h3>
+                    <small class="text-muted">Phổ biến nhất</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Filter -->
+    <div class="category-filter">
+        <button class="btn btn-outline-primary active" data-category="all">
+            <i class="fas fa-th"></i> Tất cả ({{ total_services }})
+        </button>
+        <button class="btn btn-outline-primary" data-category="haircut">
+            <i class="fas fa-cut"></i> Cắt tóc ({{ haircut_count }})
+        </button>
+        <button class="btn btn-outline-primary" data-category="shave">
+            <i class="fas fa-soap"></i> Cạo râu ({{ shave_count }})
+        </button>
+        <button class="btn btn-outline-primary" data-category="treatment">
+            <i class="fas fa-spa"></i> Chăm sóc ({{ treatment_count }})
+        </button>
+        <button class="btn btn-outline-primary" data-category="combo">
+            <i class="fas fa-gift"></i> Combo ({{ combo_count }})
+        </button>
+    </div>
+
+    <!-- Search & Sort -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <input type="text" class="form-control" id="searchInput" 
+                           placeholder="Tìm kiếm dịch vụ...">
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="sortSelect">
+                        <option value="order">Thứ tự hiển thị</option>
+                        <option value="name">Tên A-Z</option>
+                        <option value="-name">Tên Z-A</option>
+                        <option value="price">Giá tăng dần</option>
+                        <option value="-price">Giá giảm dần</option>
+                        <option value="-popular">Phổ biến nhất</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="statusFilter">
+                        <option value="all">Tất cả trạng thái</option>
+                        <option value="active">Đang hoạt động</option>
+                        <option value="inactive">Tạm ngưng</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Service Grid -->
+    <div class="service-grid" id="serviceGrid">
+        {% for service in services %}
+        <div class="service-card" data-id="{{ service.id }}" data-category="{{ service.danh_muc_key }}">
+            <div class="drag-handle" style="display: none;">
+                <i class="fas fa-grip-vertical"></i> Kéo để sắp xếp
+            </div>
+            
+            <img src="{{ service.anh_minh_hoa|default:'/static/img/service-default.jpg' }}" 
+                 alt="{{ service.ten_dich_vu }}" 
+                 class="service-image">
+            
+            <div class="service-body">
+                <span class="service-category category-{{ service.danh_muc_key }}">
+                    {{ service.danh_muc.ten_danh_muc|default:"Chưa phân loại" }}
+                </span>
+                
+                <h5 class="mb-2">{{ service.ten_dich_vu }}</h5>
+                <p class="text-muted small mb-3">{{ service.mo_ta_ngan|truncatewords:15|default:"Chưa có mô tả" }}</p>
+                
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="service-price">{{ service.gia|floatformat:0 }}đ</div>
+                    <span class="service-duration">
+                        <i class="fas fa-clock"></i> {{ service.thoi_gian_thuc_hien }} phút
+                    </span>
+                </div>
+                
+                <div class="service-stats">
+                    <div class="stat-item">
+                        <h6>{{ service.so_luot_dat }}</h6>
+                        <small class="text-muted">Lượt đặt</small>
+                    </div>
+                    <div class="stat-item">
+                        <h6>{{ service.doanh_thu|floatformat:0 }}đ</h6>
+                        <small class="text-muted">Doanh thu</small>
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <div>
+                        {% if service.trang_thai %}
+                        <span class="badge bg-success">Hoạt động</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Tạm ngưng</span>
+                        {% endif %}
+                    </div>
+                    <div class="service-actions">
+                        <button class="btn btn-sm btn-outline-primary" 
+                                onclick="editService({{ service.id }})"
+                                title="Chỉnh sửa">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" 
+                                onclick="deleteService({{ service.id }})"
+                                title="Xóa">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        {% if service.trang_thai %}
+                        <button class="btn btn-sm btn-success" 
+                                onclick="toggleStatus({{ service.id }})"
+                                title="Đang hoạt động - Click để tạm ngưng">
+                            <i class="fas fa-toggle-on"></i> ON
+                        </button>
+                        {% else %}
+                        <button class="btn btn-sm btn-secondary" 
+                                onclick="toggleStatus({{ service.id }})"
+                                title="Đang tạm ngưng - Click để kích hoạt">
+                            <i class="fas fa-toggle-off"></i> OFF
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info text-center">
+                <i class="fas fa-info-circle"></i> Chưa có dịch vụ nào
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Add/Edit Service Modal -->
+<div class="modal fade" id="addServiceModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus-circle"></i> Thêm dịch vụ mới
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="serviceForm">
+                    <input type="hidden" id="serviceId">
+                    
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Hình ảnh dịch vụ:</label>
+                            <div class="image-upload-preview" onclick="document.getElementById('serviceImage').click()">
+                                <div class="upload-placeholder">
+                                    <i class="fas fa-cloud-upload-alt fa-3x mb-2"></i>
+                                    <p>Nhấp để chọn hình ảnh</p>
+                                </div>
+                                <img id="imagePreview" style="display: none;">
+                            </div>
+                            <input type="file" id="serviceImage" accept="image/*" style="display: none;">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Tên dịch vụ: <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="serviceName" required>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Danh mục: <span class="text-danger">*</span></label>
+                            <select class="form-select" id="serviceCategory" required>
+                                <option value="">-- Chọn danh mục --</option>
+                                <option value="haircut">Cắt tóc</option>
+                                <option value="shave">Cạo râu</option>
+                                <option value="treatment">Chăm sóc</option>
+                                <option value="combo">Combo</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Giá tiền (VNĐ): <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="servicePrice" 
+                                   min="0" step="1000" required>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Thời lượng (phút): <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="serviceDuration" 
+                                   min="5" step="5" required>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label class="form-label">Mô tả:</label>
+                            <textarea class="form-control" id="serviceDescription" rows="4"></textarea>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Trạng thái:</label>
+                            <select class="form-select" id="serviceStatus">
+                                <option value="active">Hoạt động</option>
+                                <option value="inactive">Tạm ngưng</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Thứ tự hiển thị:</label>
+                            <input type="number" class="form-control" id="serviceOrder" 
+                                   min="0" value="0">
+                        </div>
+                        
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="isFeatured">
+                                <label class="form-check-label" for="isFeatured">
+                                    Dịch vụ nổi bật (hiển thị ưu tiên)
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary" onclick="saveService()">
+                    <i class="fas fa-save"></i> Lưu dịch vụ
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+let sortable;
+let isSortMode = false;
+
+$(document).ready(function() {
+    // Category filter
+    $('.category-filter .btn').click(function() {
+        $('.category-filter .btn').removeClass('active');
+        $(this).addClass('active');
+        
+        const category = $(this).data('category');
+        filterServices(category);
+    });
+    
+    // Search
+    $('#searchInput').on('input', function() {
+        const search = $(this).val().toLowerCase();
+        $('.service-card').each(function() {
+            const text = $(this).text().toLowerCase();
+            $(this).toggle(text.includes(search));
+        });
+    });
+    
+    // Sort
+    $('#sortSelect, #statusFilter').change(function() {
+        // Implement sorting logic
+    });
+    
+    // Image preview
+    $('#serviceImage').change(function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                $('#imagePreview').attr('src', e.target.result).show();
+                $('.upload-placeholder').hide();
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+    
+    // Toggle sort mode
+    $('#toggleSortMode').click(function() {
+        isSortMode = !isSortMode;
+        
+        if (isSortMode) {
+            $(this).addClass('active').html('<i class="fas fa-save"></i> Lưu thứ tự');
+            $('.drag-handle').show();
+            enableDragDrop();
+        } else {
+            $(this).removeClass('active').html('<i class="fas fa-arrows-alt"></i> Sắp xếp thứ tự');
+            $('.drag-handle').hide();
+            saveSortOrder();
+            disableDragDrop();
+        }
+    });
+});
+
+function enableDragDrop() {
+    const grid = document.getElementById('serviceGrid');
+    sortable = new Sortable(grid, {
+        animation: 150,
+        handle: '.drag-handle',
+        ghostClass: 'dragging',
+        onEnd: function() {
+            // Update order
+        }
+    });
+}
+
+function disableDragDrop() {
+    if (sortable) {
+        sortable.destroy();
+    }
+}
+
+function saveSortOrder() {
+    const order = [];
+    $('.service-card').each(function(index) {
+        order.push({
+            id: $(this).data('id'),
+            order: index
+        });
+    });
+    
+    $.ajax({
+        url: '/api/services/update-order/',
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        data: JSON.stringify({ order: order }),
+        contentType: 'application/json',
+        success: function() {
+            alert('Đã lưu thứ tự mới!');
+        }
+    });
+}
+
+function filterServices(category) {
+    if (category === 'all') {
+        $('.service-card').show();
+    } else {
+        $('.service-card').hide();
+        $(`.service-card[data-category="${category}"]`).show();
+    }
+}
+
+function editService(serviceId) {
+    $.ajax({
+        url: `/api/services/${serviceId}/`,
+        method: 'GET',
+        success: function(service) {
+            $('#serviceId').val(service.id);
+            $('#serviceName').val(service.ten_dich_vu);
+            $('#serviceCategory').val(service.danh_muc);
+            $('#servicePrice').val(service.gia);
+            $('#serviceDuration').val(service.thoi_luong);
+            $('#serviceDescription').val(service.mo_ta);
+            $('#serviceStatus').val(service.trang_thai);
+            $('#serviceOrder').val(service.thu_tu_hien_thi);
+            $('#isFeatured').prop('checked', service.noi_bat || false);
+            
+            if (service.hinh_anh) {
+                $('#imagePreview').attr('src', service.hinh_anh).show();
+                $('.upload-placeholder').hide();
+            } else {
+                $('#imagePreview').hide();
+                $('.upload-placeholder').show();
+            }
+            
+            $('.modal-title').html('<i class="fas fa-edit"></i> Chỉnh sửa dịch vụ');
+            $('#addServiceModal').modal('show');
+        },
+        error: function() {
+            alert('Không thể tải thông tin dịch vụ. Vui lòng thử lại.');
+        }
+    });
+}
+
+function saveService() {
+    // Basic validation
+    const serviceName = $('#serviceName').val().trim();
+    const serviceCategory = $('#serviceCategory').val();
+    const servicePrice = $('#servicePrice').val();
+    const serviceDuration = $('#serviceDuration').val();
+    
+    if (!serviceName) {
+        alert('Vui lòng nhập tên dịch vụ');
+        return;
+    }
+    if (!serviceCategory) {
+        alert('Vui lòng chọn danh mục');
+        return;
+    }
+    if (!servicePrice || servicePrice <= 0) {
+        alert('Vui lòng nhập giá hợp lệ');
+        return;
+    }
+    if (!serviceDuration || serviceDuration <= 0) {
+        alert('Vui lòng nhập thời lượng hợp lệ');
+        return;
+    }
+    
+    const serviceId = $('#serviceId').val();
+    const isUpdate = !!serviceId;
+    
+    // Prepare form data for traditional POST
+    const formData = new FormData();
+    formData.append('action', isUpdate ? 'update' : 'create');
+    if (isUpdate) {
+        formData.append('service_id', serviceId);
+    }
+    
+    formData.append('ten_dich_vu', serviceName);
+    formData.append('danh_muc', serviceCategory);
+    formData.append('gia', servicePrice);
+    formData.append('thoi_luong', serviceDuration);
+    formData.append('mo_ta', $('#serviceDescription').val());
+    formData.append('trang_thai', $('#serviceStatus').val());
+    formData.append('thu_tu_hien_thi', $('#serviceOrder').val());
+    formData.append('noi_bat', $('#isFeatured').is(':checked'));
+    
+    const imageFile = $('#serviceImage')[0].files[0];
+    if (imageFile) {
+        formData.append('anh_minh_hoa', imageFile);
+    }
+    
+    // Use admin_services endpoint instead of API
+    $.ajax({
+        url: '/admin/services/',
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            if (response.success) {
+                alert(response.message);
+                $('#addServiceModal').modal('hide');
+                location.reload();
+            } else {
+                alert('Lỗi: ' + response.message);
+            }
+        },
+        error: function(xhr) {
+            try {
+                const response = JSON.parse(xhr.responseText);
+                alert('Có lỗi xảy ra: ' + response.message);
+            } catch(e) {
+                alert('Có lỗi xảy ra. Vui lòng thử lại.');
+            }
+        }
+    });
+}
+
+function deleteService(serviceId) {
+    if (confirm('Bạn có chắc muốn xóa dịch vụ này?')) {
+        const formData = new FormData();
+        formData.append('action', 'delete');
+        formData.append('service_id', serviceId);
+        
+        $.ajax({
+            url: '/admin/services/',
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    alert(response.message);
+                    location.reload();
+                } else {
+                    alert('Lỗi: ' + response.message);
+                }
+            },
+            error: function() {
+                alert('Có lỗi xảy ra. Vui lòng thử lại.');
+            }
+        });
+    }
+}
+
+function toggleStatus(serviceId) {
+    const serviceCard = $(`.service-card[data-id="${serviceId}"]`);
+    const toggleBtn = serviceCard.find('button[onclick*="toggleStatus"]');
+    const statusBadge = serviceCard.find('.badge');
+    
+    // Show loading state
+    const originalText = toggleBtn.html();
+    toggleBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> ...');
+    
+    const formData = new FormData();
+    formData.append('action', 'toggle_status');
+    formData.append('service_id', serviceId);
+    
+    $.ajax({
+        url: '/admin/services/',
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            if (response.success) {
+                // Update button appearance based on new status
+                if (response.new_status) {
+                    // Service is now active
+                    toggleBtn.removeClass('btn-secondary').addClass('btn-success')
+                           .attr('title', 'Đang hoạt động - Click để tạm ngưng')
+                           .html('<i class="fas fa-toggle-on"></i> ON');
+                    statusBadge.removeClass('bg-secondary').addClass('bg-success').text('Hoạt động');
+                } else {
+                    // Service is now inactive
+                    toggleBtn.removeClass('btn-success').addClass('btn-secondary')
+                           .attr('title', 'Đang tạm ngưng - Click để kích hoạt')
+                           .html('<i class="fas fa-toggle-off"></i> OFF');
+                    statusBadge.removeClass('bg-success').addClass('bg-secondary').text('Tạm ngưng');
+                }
+                
+                // Show success animation
+                serviceCard.addClass('border-success');
+                setTimeout(() => {
+                    serviceCard.removeClass('border-success');
+                }, 1000);
+                
+                // Show toast notification
+                showToast(response.message, 'success');
+            } else {
+                alert('Lỗi: ' + response.message);
+                toggleBtn.html(originalText);
+            }
+            toggleBtn.prop('disabled', false);
+        },
+        error: function() {
+            alert('Có lỗi xảy ra. Vui lòng thử lại.');
+            toggleBtn.prop('disabled', false).html(originalText);
+        }
+    });
+}
+
+function importServices() {
+    alert('Chức năng import đang được phát triển');
+}
+
+function resetServiceForm() {
+    $('#serviceForm')[0].reset();
+    $('#serviceId').val('');
+    $('#imagePreview').hide();
+    $('.upload-placeholder').show();
+    $('.modal-title').html('<i class="fas fa-plus-circle"></i> Thêm dịch vụ mới');
+}
+
+function showToast(message, type = 'info') {
+    // Create toast container if it doesn't exist
+    if (!$('#toastContainer').length) {
+        $('body').append(`
+            <div id="toastContainer" style="position: fixed; top: 20px; right: 20px; z-index: 9999;"></div>
+        `);
+    }
+    
+    const toastId = 'toast-' + Date.now();
+    const bgClass = type === 'success' ? 'bg-success' : type === 'error' ? 'bg-danger' : 'bg-info';
+    
+    const toast = $(`
+        <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0 mb-2" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `);
+    
+    $('#toastContainer').append(toast);
+    
+    // Show toast
+    const bsToast = new bootstrap.Toast(toast[0], { delay: 3000 });
+    bsToast.show();
+    
+    // Remove toast element after it's hidden
+    toast.on('hidden.bs.toast', function() {
+        $(this).remove();
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

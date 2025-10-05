@@ -1,0 +1,693 @@
+{% extends 'base.html' %}
+
+{% block title %}Quản lý khuyến mãi - Admin{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="col">
+            <h2 class="h3 text-primary">
+                <i class="fas fa-tags"></i> Quản lý khuyến mãi
+            </h2>
+        </div>
+        <div class="col-auto">
+            <div class="btn-group">
+                <a href="{% url 'admin_promotions_export' %}" class="btn btn-success">
+                    <i class="fas fa-file-excel"></i> Xuất danh sách
+                </a>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#promotionModal" 
+                        onclick="console.log('Create button clicked'); resetForm();">
+                    <i class="fas fa-plus"></i> Tạo khuyến mãi
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Quick Stats -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-primary mb-0">{{ total_promotions }}</h3>
+                    <small class="text-muted">Tổng CTKM</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-success mb-0">{{ active_promotions }}</h3>
+                    <small class="text-muted">Đang hoạt động</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-danger mb-0">{{ expired_promotions }}</h3>
+                    <small class="text-muted">Đã hết hạn</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">  
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-info mb-0">{{ upcoming_promotions }}</h3>
+                    <small class="text-muted">Sắp diễn ra</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-warning mb-0">{{ total_usage_count }}</h3>
+                    <small class="text-muted">Lượt sử dụng</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-secondary mb-0">{{ filtered_count }}</h3>
+                    <small class="text-muted">Đang hiển thị</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Server-side Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" id="filterForm" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Trạng thái:</label>
+                    <select class="form-select" name="status" onchange="document.getElementById('filterForm').submit()">
+                        {% for value, label in status_choices %}
+                        <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Loại giảm giá:</label>
+                    <select class="form-select" name="type" onchange="document.getElementById('filterForm').submit()">
+                        {% for value, label in type_choices %}
+                        <option value="{{ value }}" {% if type_filter == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Tìm kiếm:</label>
+                    <input type="text" class="form-control" name="search" value="{{ search }}" 
+                           placeholder="Mã voucher, tên, mô tả...">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Lọc
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Quick Filter Chips -->
+    <div class="filter-chips mb-4">
+        <a href="?status=all" class="filter-chip {% if status_filter == 'all' %}active{% endif %}">
+            <i class="fas fa-th"></i> Tất cả
+        </a>
+        <a href="?status=active" class="filter-chip {% if status_filter == 'active' %}active{% endif %}">
+            <i class="fas fa-check-circle text-success"></i> Đang hoạt động
+        </a>
+        <a href="?status=upcoming" class="filter-chip {% if status_filter == 'upcoming' %}active{% endif %}">
+            <i class="fas fa-clock text-info"></i> Sắp diễn ra
+        </a>
+        <a href="?status=expired" class="filter-chip {% if status_filter == 'expired' %}active{% endif %}">
+            <i class="fas fa-times-circle text-danger"></i> Đã hết hạn
+        </a>
+        <a href="?type=phan_tram" class="filter-chip {% if type_filter == 'phan_tram' %}active{% endif %}">
+            <i class="fas fa-percent text-warning"></i> Giảm %
+        </a>
+        <a href="?type=tien_mat" class="filter-chip {% if type_filter == 'tien_mat' %}active{% endif %}">
+            <i class="fas fa-dollar-sign text-primary"></i> Giảm tiền
+        </a>
+    </div>
+
+    <!-- Promotions Grid -->
+    <div class="row">
+        {% for promo in promotions %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card mb-4 h-100 
+                {% if promo.trang_thai %}
+                    {% if promo.ngay_bat_dau > today %}border-info{% elif promo.ngay_ket_thuc < today %}border-danger{% else %}border-success{% endif %}
+                {% else %}border-secondary{% endif %}
+            ">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong class="text-truncate me-2">{{ promo.ma_voucher }}</strong>
+                    <div>
+                        {% if promo.trang_thai %}
+                            {% if promo.ngay_bat_dau > today %}
+                                <span class="badge bg-info">Sắp diễn ra</span>
+                            {% elif promo.ngay_ket_thuc < today %}
+                                <span class="badge bg-danger">Hết hạn</span>
+                            {% else %}
+                                <span class="badge bg-success">Hoạt động</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="badge bg-secondary">Tạm dừng</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <h6 class="card-title">{{ promo.ten_voucher }}</h6>
+                    {% if promo.mo_ta %}
+                        <p class="card-text text-muted small">{{ promo.mo_ta|truncatechars:80 }}</p>
+                    {% endif %}
+                    
+                    <div class="mb-2">
+                        <strong class="text-primary fs-5">
+                            {% if promo.loai_giam == 'phan_tram' %}
+                                {{ promo.gia_tri_giam }}%
+                            {% else %}
+                                {{ promo.gia_tri_giam|floatformat:0 }}đ
+                            {% endif %}
+                        </strong>
+                        <small class="text-muted">
+                            {% if promo.loai_giam == 'phan_tram' %}giảm{% else %}giảm tiền{% endif %}
+                        </small>
+                    </div>
+                    
+                    <div class="row g-1 mb-2">
+                        <div class="col-6">
+                            <small class="text-muted">Bắt đầu:</small><br>
+                            <small>{{ promo.ngay_bat_dau|date:"d/m/Y" }} {{ promo.ngay_bat_dau|time:"H:i" }}</small>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Kết thúc:</small><br>
+                            <small>{{ promo.ngay_ket_thuc|date:"d/m/Y" }} {{ promo.ngay_ket_thuc|time:"H:i" }}</small>
+                        </div>
+                    </div>
+                    
+                    {% if promo.so_luong_da_dung or promo.so_luong_tong %}
+                    <div class="progress mt-3" style="height: 6px;">
+                        <div class="progress-bar bg-success" 
+                             style="width: {{ promo.usage_percentage }}%"></div>
+                    </div>
+                    <small class="text-muted">{{ promo.usage_percentage|floatformat:1 }}% đã sử dụng ({{ promo.so_luong_da_dung }}/{{ promo.so_luong_tong|default:"∞" }})</small>
+                    {% endif %}
+                    
+                    <div class="d-flex gap-2 mt-3">
+                        <button class="btn btn-sm btn-outline-primary flex-fill" 
+                                type="button"
+                                data-promo-id="{{ promo.id }}"
+                                data-promo-ma="{{ promo.ma_voucher }}"
+                                data-promo-ten="{{ promo.ten_voucher }}"
+                                data-promo-mota="{{ promo.mo_ta|default:""|escapejs }}"
+                                data-promo-loai="{{ promo.loai_giam }}"
+                                data-promo-giatri="{{ promo.gia_tri_giam }}"
+                                data-promo-donhang="{{ promo.gia_tri_don_toi_thieu|default:"0" }}"
+                                data-promo-giamtoida="{{ promo.giam_toi_da|default:"0" }}"
+                                data-promo-batdau="{{ promo.ngay_bat_dau|date:"Y-m-d" }}"
+                                data-promo-ketthuc="{{ promo.ngay_ket_thuc|date:"Y-m-d" }}"
+                                data-promo-soluong="{{ promo.so_luong_tong|default:"0" }}"
+                                data-promo-trangthai="{{ promo.trang_thai|yesno:"active,inactive" }}"
+                                onclick="editPromotionFromButton(this);">
+                            <i class="fas fa-edit"></i> Sửa
+                        </button>
+                        <button class="btn btn-sm btn-outline-success" 
+                                onclick="viewStats({{ promo.id }})">
+                            <i class="fas fa-chart-bar"></i> Stats
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" 
+                                onclick="deletePromotion({{ promo.id }})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info text-center">
+                <i class="fas fa-info-circle"></i>
+                {% if search or status_filter != 'all' or type_filter != 'all' %}
+                    Không tìm thấy khuyến mãi nào phù hợp với điều kiện lọc.
+                {% else %}
+                    Chưa có chương trình khuyến mãi nào. Hãy tạo chương trình đầu tiên!
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Statistics Modal -->
+<div class="modal fade" id="statsModal" tabindex="-1" aria-labelledby="statsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="statsModalLabel">
+                    <i class="fas fa-chart-bar"></i> Thống kê voucher
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="statsContent">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Đang tải...</span>
+                        </div>
+                        <p class="mt-2">Đang tải dữ liệu thống kê...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Promotion Modal -->
+<div class="modal fade" id="promotionModal" tabindex="-1" aria-labelledby="promotionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="promotionModalLabel">
+                    <i class="fas fa-plus"></i> Tạo khuyến mãi mới
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="promotionForm" method="POST" action="{% url 'admin_promotions' %}">
+                {% csrf_token %}
+                <input type="hidden" id="promotionId" name="voucher_id" value="">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="ma_voucher" class="form-label">Mã voucher *</label>
+                            <input type="text" class="form-control" id="ma_voucher" name="ma_voucher" required 
+                                   placeholder="Ví dụ: SALE20">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="ten_voucher" class="form-label">Tên voucher *</label>
+                            <input type="text" class="form-control" id="ten_voucher" name="ten_voucher" required 
+                                   placeholder="Ví dụ: Giảm giá 20%">
+                        </div>
+                        <div class="col-12">
+                            <label for="mo_ta" class="form-label">Mô tả</label>
+                            <textarea class="form-control" id="mo_ta" name="mo_ta" rows="3" 
+                                      placeholder="Mô tả chi tiết về chương trình khuyến mãi"></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="loai_giam" class="form-label">Loại giảm giá *</label>
+                            <select class="form-select" id="loai_giam" name="loai_giam" required onchange="toggleDiscountValue()">
+                                <option value="">-- Chọn loại --</option>
+                                <option value="phan_tram">Giảm theo phần trăm (%)</option>
+                                <option value="tien_mat">Giảm tiền mặt (VNĐ)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="gia_tri_giam" class="form-label">Giá trị giảm *</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="gia_tri_giam" name="gia_tri_giam" 
+                                       required min="0" step="0.01">
+                                <span class="input-group-text" id="discount-unit">%</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="gia_tri_don_hang_toi_thieu" class="form-label">Giá trị đơn hàng tối thiểu</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="gia_tri_don_hang_toi_thieu" 
+                                       name="gia_tri_don_hang_toi_thieu" min="0" step="1000" placeholder="0">
+                                <span class="input-group-text">VNĐ</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="gia_tri_giam_toi_da" class="form-label">Giá trị giảm tối đa</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="gia_tri_giam_toi_da" 
+                                       name="gia_tri_giam_toi_da" min="0" step="1000" placeholder="Không giới hạn">
+                                <span class="input-group-text">VNĐ</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="ngay_bat_dau" class="form-label">Ngày bắt đầu *</label>
+                            <input type="datetime-local" class="form-control" id="ngay_bat_dau" name="ngay_bat_dau" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="ngay_ket_thuc" class="form-label">Ngày kết thúc *</label>
+                            <input type="datetime-local" class="form-control" id="ngay_ket_thuc" name="ngay_ket_thuc" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="so_luong_toi_da" class="form-label">Số lượng tối đa</label>
+                            <input type="number" class="form-control" id="so_luong_toi_da" name="so_luong_toi_da" 
+                                   min="1" placeholder="Không giới hạn">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="trang_thai" class="form-label">Trạng thái *</label>
+                            <select class="form-select" id="trang_thai" name="trang_thai" required>
+                                <option value="active">Hoạt động</option>
+                                <option value="inactive">Tạm dừng</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> <span id="submitButtonText">Tạo voucher</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.filter-chips {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.375rem 0.75rem;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 20px;
+    text-decoration: none;
+    color: #495057;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+.filter-chip:hover {
+    background: #e9ecef;
+    text-decoration: none;
+    color: #495057;
+}
+
+.filter-chip.active {
+    background: #007bff;
+    border-color: #007bff;
+    color: white;
+}
+
+.filter-chip.active:hover {
+    color: white;
+}
+</style>
+
+<script>
+function toggleDiscountValue() {
+    const loaiGiam = document.getElementById('loai_giam').value;
+    const discountUnit = document.getElementById('discount-unit');
+    const giaTriGiam = document.getElementById('gia_tri_giam');
+    
+    if (loaiGiam === 'phan_tram') {
+        discountUnit.textContent = '%';
+        giaTriGiam.max = '100';
+        giaTriGiam.placeholder = 'Ví dụ: 20';
+    } else if (loaiGiam === 'tien_mat') {
+        discountUnit.textContent = 'VNĐ';
+        giaTriGiam.removeAttribute('max');
+        giaTriGiam.placeholder = 'Ví dụ: 50000';
+    }
+}
+
+function editPromotionFromButton(button) {
+    try {
+        // Get data from button attributes
+        const voucher = {
+            id: button.dataset.promoId,
+            ma_voucher: button.dataset.promoMa,
+            ten_voucher: button.dataset.promoTen,
+            mo_ta: button.dataset.promoMota,
+            loai_giam: button.dataset.promoLoai,
+            gia_tri_giam: button.dataset.promoGiatri,
+            gia_tri_don_hang_toi_thieu: button.dataset.promoDonhang,
+            gia_tri_giam_toi_da: button.dataset.promoGiamtoida,
+            ngay_bat_dau: button.dataset.promoBatdau + 'T09:00',
+            ngay_ket_thuc: button.dataset.promoKetthuc + 'T23:59',
+            so_luong_toi_da: button.dataset.promoSoluong,
+            trang_thai: button.dataset.promoTrangthai
+        };
+        
+        editPromotion(voucher);
+    } catch (error) {
+        console.error('Error in editPromotionFromButton:', error);
+        alert('Có lỗi xảy ra khi mở form chỉnh sửa!');
+    }
+}
+
+function editPromotion(voucher) {
+    try {
+        console.log('Edit promotion data:', voucher);
+        
+        // Check if modal exists
+        const modal = document.getElementById('promotionModal');
+        if (!modal) {
+            alert('Không tìm thấy form chỉnh sửa!');
+            return;
+        }
+        
+        // Populate form for editing
+        document.getElementById('promotionModalLabel').innerHTML = '<i class="fas fa-edit"></i> Chỉnh sửa khuyến mãi';
+        document.getElementById('submitButtonText').textContent = 'Cập nhật voucher';
+        
+        // Set form values with error checking
+        const setFieldValue = (fieldId, value) => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.value = value || '';
+            } else {
+                console.warn(`Field not found: ${fieldId}`);
+            }
+        };
+        
+        setFieldValue('promotionId', voucher.id);
+        setFieldValue('ma_voucher', voucher.ma_voucher);
+        setFieldValue('ten_voucher', voucher.ten_voucher);
+        setFieldValue('mo_ta', voucher.mo_ta);
+        setFieldValue('loai_giam', voucher.loai_giam);
+        setFieldValue('gia_tri_giam', voucher.gia_tri_giam);
+        setFieldValue('gia_tri_don_hang_toi_thieu', voucher.gia_tri_don_hang_toi_thieu);
+        setFieldValue('gia_tri_giam_toi_da', voucher.gia_tri_giam_toi_da);
+        setFieldValue('ngay_bat_dau', voucher.ngay_bat_dau);
+        setFieldValue('ngay_ket_thuc', voucher.ngay_ket_thuc);
+        setFieldValue('so_luong_toi_da', voucher.so_luong_toi_da);
+        setFieldValue('trang_thai', voucher.trang_thai);
+        
+        toggleDiscountValue();
+        
+        // Show modal
+        const bootstrapModal = new bootstrap.Modal(modal);
+        bootstrapModal.show();
+        
+    } catch (error) {
+        console.error('Error in editPromotion:', error);
+        alert('Có lỗi xảy ra khi hiển thị form chỉnh sửa!');
+    }
+}
+
+function viewStats(id) {
+    // Show stats modal
+    const statsModal = new bootstrap.Modal(document.getElementById('statsModal'));
+    statsModal.show();
+    
+    // Reset content
+    document.getElementById('statsContent').innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Đang tải...</span>
+            </div>
+            <p class="mt-2">Đang tải dữ liệu thống kê...</p>
+        </div>
+    `;
+    
+    // Fetch statistics
+    fetch(`/admin/promotions/stats/${id}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayStats(data.stats);
+            } else {
+                document.getElementById('statsContent').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Không thể tải dữ liệu thống kê: ${data.message}
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('statsContent').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Có lỗi xảy ra khi tải dữ liệu thống kê.
+                </div>
+            `;
+        });
+}
+
+function displayStats(stats) {
+    const usagePercent = stats.so_luong_toi_da > 0 ? 
+        (stats.so_luong_da_dung / stats.so_luong_toi_da * 100).toFixed(1) : 0;
+    
+    document.getElementById('statsContent').innerHTML = `
+        <div class="row g-4">
+            <div class="col-12">
+                <div class="card border-primary">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0">
+                            <i class="fas fa-tag"></i> ${stats.ma_voucher} - ${stats.ten_voucher}
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-users fa-2x text-primary mb-2"></i>
+                                        <h4 class="mb-1">${stats.so_luong_da_dung}</h4>
+                                        <small class="text-muted">Lượt sử dụng</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-percent fa-2x text-success mb-2"></i>
+                                        <h4 class="mb-1">${usagePercent}%</h4>
+                                        <small class="text-muted">Tỷ lệ sử dụng</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-money-bill-wave fa-2x text-warning mb-2"></i>
+                                        <h4 class="mb-1">${stats.tong_tiet_kiem ? stats.tong_tiet_kiem.toLocaleString('vi-VN') + ' VNĐ' : '0 VNĐ'}</h4>
+                                        <small class="text-muted">Tổng tiết kiệm</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-clock fa-2x text-info mb-2"></i>
+                                        <h4 class="mb-1">${stats.so_ngay_con_lai}</h4>
+                                        <small class="text-muted">Ngày còn lại</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        ${stats.so_luong_toi_da > 0 ? `
+                        <div class="mt-4">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Tiến độ sử dụng:</span>
+                                <span>${stats.so_luong_da_dung}/${stats.so_luong_toi_da}</span>
+                            </div>
+                            <div class="progress" style="height: 10px;">
+                                <div class="progress-bar bg-success" style="width: ${usagePercent}%"></div>
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        <div class="mt-4">
+                            <h6>Thông tin chi tiết:</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Loại giảm:</strong> ${stats.loai_giam === 'phan_tram' ? 'Phần trăm' : 'Tiền mặt'}</p>
+                                    <p class="mb-1"><strong>Giá trị giảm:</strong> ${stats.gia_tri_giam}${stats.loai_giam === 'phan_tram' ? '%' : ' VNĐ'}</p>
+                                    ${stats.gia_tri_don_hang_toi_thieu > 0 ? `<p class="mb-1"><strong>Đơn hàng tối thiểu:</strong> ${stats.gia_tri_don_hang_toi_thieu.toLocaleString('vi-VN')} VNĐ</p>` : ''}
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Ngày bắt đầu:</strong> ${new Date(stats.ngay_bat_dau).toLocaleDateString('vi-VN')}</p>
+                                    <p class="mb-1"><strong>Ngày kết thúc:</strong> ${new Date(stats.ngay_ket_thuc).toLocaleDateString('vi-VN')}</p>
+                                    <p class="mb-1"><strong>Trạng thái:</strong> 
+                                        <span class="badge ${stats.trang_thai ? 'bg-success' : 'bg-warning'}">
+                                            ${stats.trang_thai ? 'Hoạt động' : 'Tạm dừng'}
+                                        </span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function deletePromotion(id) {
+    if (confirm('Bạn có chắc muốn xóa chương trình khuyến mãi này? Hành động này không thể hoàn tác!')) {
+        // Send DELETE request
+        fetch(`/admin/promotions/delete/${id}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show success message and reload page
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Lỗi: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Có lỗi xảy ra khi xóa voucher!');
+        });
+    }
+}
+
+function resetForm() {
+    console.log('Resetting form');
+    document.getElementById('promotionForm').reset();
+    document.getElementById('promotionModalLabel').innerHTML = '<i class="fas fa-plus"></i> Tạo khuyến mãi mới';
+    document.getElementById('submitButtonText').textContent = 'Tạo voucher';
+    document.getElementById('promotionId').value = '';
+}
+
+// Reset form when modal is hidden
+document.getElementById('promotionModal').addEventListener('hidden.bs.modal', function () {
+    resetForm();
+});
+
+// Initialize edit buttons
+document.addEventListener('DOMContentLoaded', function() {
+    const editButtons = document.querySelectorAll('.btn-outline-primary');
+    
+    editButtons.forEach((btn, index) => {
+        // Add click event listener for additional handling if needed
+        btn.addEventListener('click', function() {
+            console.log('Edit button clicked for voucher ID:', btn.dataset.promoId);
+        });
+    });
+});
+</script>
+{% endblock %}

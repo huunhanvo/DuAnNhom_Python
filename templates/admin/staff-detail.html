@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Chi tiết nhân viên - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-user-tie me-2"></i>Chi tiết nhân viên</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'admin_staff' %}">Nhân viên</a></li>
+                    <li class="breadcrumb-item active">{{ staff.ho_ten }}</li>
+                </ol>
+            </nav>
+        </div>
+        <div>
+            <a href="{% url 'admin_staff_edit' staff.id %}" class="btn btn-primary">
+                <i class="fas fa-edit me-1"></i>Chỉnh sửa
+            </a>
+            <a href="{% url 'admin_staff' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Quay lại
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Profile Card -->
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <img src="{% if staff.anh_dai_dien %}{{ staff.anh_dai_dien }}{% else %}https://ui-avatars.com/api/?name={{ staff.ho_ten|urlencode }}&size=150&background=0D6EFD&color=fff{% endif %}" 
+                             class="rounded-circle" alt="{{ staff.ho_ten }}" style="width: 150px; height: 150px;">
+                    </div>
+                    <h4 class="mb-1">{{ staff.ho_ten }}</h4>
+                    <p class="text-muted mb-3">{{ chuc_vu }}</p>
+                    
+                    <div class="d-flex justify-content-around mb-3">
+                        <div>
+                            <div class="text-warning mb-1">
+                                <i class="fas fa-star"></i> {{ avg_rating|default:"0" }}
+                            </div>
+                            <small class="text-muted">Đánh giá TB</small>
+                        </div>
+                        <div>
+                            <div class="text-primary mb-1">
+                                <strong>{{ total_services|default:"0" }}</strong>
+                            </div>
+                            <small class="text-muted">Lượt phục vụ</small>
+                        </div>
+                        <div>
+                            <div class="text-success mb-1">
+                                <strong>{{ total_customers|default:"0" }}</strong>
+                            </div>
+                            <small class="text-muted">Khách hàng</small>
+                        </div>
+                    </div>
+
+                    <span class="badge {% if staff.trang_thai %}bg-success{% else %}bg-secondary{% endif %} mb-3">
+                        {% if staff.trang_thai %}Đang làm việc{% else %}Nghỉ việc{% endif %}
+                    </span>
+
+                    <hr>
+
+                    <div class="text-start">
+                        <p class="mb-2">
+                            <i class="fas fa-phone text-muted me-2"></i>
+                            <strong>{{ staff.so_dien_thoai }}</strong>
+                        </p>
+                        <p class="mb-2">
+                            <i class="fas fa-envelope text-muted me-2"></i>
+                            {{ staff.email|default:"Chưa có email" }}
+                        </p>
+                        <p class="mb-2">
+                            <i class="fas fa-calendar text-muted me-2"></i>
+                            Ngày tạo: {{ staff.ngay_tao|date:"d/m/Y" }}
+                        </p>
+                        {% if staff_info %}
+                        <p class="mb-2">
+                            <i class="fas fa-birthday-cake text-muted me-2"></i>
+                            Ngày sinh: {% if staff_info.ngay_sinh %}{{ staff_info.ngay_sinh|date:"d/m/Y" }}{% else %}Chưa cập nhật{% endif %}
+                        </p>
+                        <p class="mb-2">
+                            <i class="fas fa-briefcase text-muted me-2"></i>
+                            Kinh nghiệm: {{ staff_info.kinh_nghiem_nam|default:"0" }} năm
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Skills Card -->
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-star me-2"></i>Kỹ năng</h5>
+                    {% if skills %}
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for skill in skills %}
+                        <span class="badge bg-primary">{{ skill }}</span>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">Chưa cập nhật kỹ năng</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Certifications Card -->
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-certificate me-2"></i>Chứng chỉ</h5>
+                    {% if certificates %}
+                    <ul class="list-unstyled mb-0">
+                        {% for cert in certificates %}
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>{{ cert }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted mb-0">Chưa có chứng chỉ</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats & History -->
+        <div class="col-md-8">
+            <!-- Performance Stats -->
+            <div class="row mb-4">
+                <div class="col-md-4 mb-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-0">Lượt phục vụ</h6>
+                                    <h3 class="mb-0">{{ total_services|default:"0" }}</h3>
+                                </div>
+                                <i class="fas fa-calendar-check fa-2x opacity-50"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-0">Khách hàng</h6>
+                                    <h3 class="mb-0">{{ total_customers|default:"0" }}</h3>
+                                </div>
+                                <i class="fas fa-users fa-2x opacity-50"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-0">Đánh giá TB</h6>
+                                    <h3 class="mb-0">{{ avg_rating|default:"0" }} <i class="fas fa-star"></i></h3>
+                                </div>
+                                <i class="fas fa-star fa-2x opacity-50"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Bookings -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="fas fa-history me-2"></i>Lịch hẹn gần đây</h5>
+                </div>
+                <div class="card-body">
+                    {% if bookings %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Ngày</th>
+                                    <th>Giờ</th>
+                                    <th>Khách hàng</th>
+                                    <th>Dịch vụ</th>
+                                    <th>Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for booking in bookings %}
+                                <tr>
+                                    <td>{{ booking.ngay_hen|date:"d/m/Y" }}</td>
+                                    <td>{{ booking.gio_hen|time:"H:i" }}</td>
+                                    <td>{{ booking.khach_hang.ho_ten }}</td>
+                                    <td>
+                                        <small>
+                                        {% for item in booking.dich_vu_dat_lich.all %}
+                                            {{ item.dich_vu.ten_dich_vu }}{% if not forloop.last %}, {% endif %}
+                                        {% endfor %}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        {% if booking.trang_thai == 'cho_xac_nhan' %}
+                                            <span class="badge bg-warning">Chờ</span>
+                                        {% elif booking.trang_thai == 'da_xac_nhan' %}
+                                            <span class="badge bg-info">Đã xác nhận</span>
+                                        {% elif booking.trang_thai == 'dang_phuc_vu' %}
+                                            <span class="badge bg-primary">Đang phục vụ</span>
+                                        {% elif booking.trang_thai == 'hoan_thanh' %}
+                                            <span class="badge bg-success">Hoàn thành</span>
+                                        {% elif booking.trang_thai == 'huy' %}
+                                            <span class="badge bg-danger">Đã hủy</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center mb-0">Chưa có lịch hẹn nào</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

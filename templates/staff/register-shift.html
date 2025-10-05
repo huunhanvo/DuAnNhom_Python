@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+
+{% block title %}Đăng ký ca làm - Barbershop{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-calendar-plus me-2"></i>Đăng ký ca làm việc</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'staff_dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'staff_schedule' %}">Lịch làm việc</a></li>
+                    <li class="breadcrumb-item active">Đăng ký ca</li>
+                </ol>
+            </nav>
+        </div>
+        <div>
+            <a href="{% url 'staff_schedule' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Quay lại
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Registration Form -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Thông tin đăng ký</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Ngày làm việc <span class="text-danger">*</span></label>
+                            <input type="date" name="ngay_lam" class="form-control" 
+                                   min="{{ today|date:'Y-m-d' }}" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Ca làm việc <span class="text-danger">*</span></label>
+                            <select name="ca_lam" class="form-select" required>
+                                <option value="">-- Chọn ca làm --</option>
+                                <option value="sang">Ca sáng (08:00 - 12:00)</option>
+                                <option value="chieu">Ca chiều (13:00 - 17:00)</option>
+                                <option value="toi">Ca tối (18:00 - 22:00)</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Ghi chú</label>
+                            <textarea name="ghi_chu" class="form-control" rows="3" 
+                                      placeholder="Ghi chú thêm (nếu có)..."></textarea>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Lưu ý:</strong> Ca làm đăng ký sẽ được gửi đến quản lý để xét duyệt. 
+                            Bạn sẽ nhận được thông báo khi ca làm được phê duyệt.
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-check me-1"></i>Đăng ký
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Existing Shifts -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Ca làm đã đăng ký</h5>
+                </div>
+                <div class="card-body">
+                    {% if existing_shifts %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Ngày</th>
+                                    <th>Ca</th>
+                                    <th>Giờ</th>
+                                    <th>Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for shift in existing_shifts %}
+                                <tr>
+                                    <td>{{ shift.ngay_lam|date:"d/m/Y" }}</td>
+                                    <td>
+                                        {% if shift.ca_lam == 'sang' %}
+                                            <span class="badge bg-warning">Sáng</span>
+                                        {% elif shift.ca_lam == 'chieu' %}
+                                            <span class="badge bg-info">Chiều</span>
+                                        {% else %}
+                                            <span class="badge bg-dark">Tối</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ shift.gio_bat_dau|time:"H:i" }} - {{ shift.gio_ket_thuc|time:"H:i" }}</td>
+                                    <td>
+                                        {% if shift.trang_thai == 'cho_duyet' %}
+                                            <span class="badge bg-warning">Chờ duyệt</span>
+                                        {% elif shift.trang_thai == 'da_duyet' %}
+                                            <span class="badge bg-success">Đã duyệt</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Từ chối</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-calendar-times fa-3x mb-3"></i>
+                        <p>Chưa có ca làm nào được đăng ký</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Info -->
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h6 class="mb-3"><i class="fas fa-clock me-2"></i>Thời gian ca làm</h6>
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2">
+                            <strong>Ca sáng:</strong> 08:00 - 12:00 (4 giờ)
+                        </li>
+                        <li class="mb-2">
+                            <strong>Ca chiều:</strong> 13:00 - 17:00 (4 giờ)
+                        </li>
+                        <li>
+                            <strong>Ca tối:</strong> 18:00 - 22:00 (4 giờ)
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

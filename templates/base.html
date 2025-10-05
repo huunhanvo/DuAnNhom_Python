@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Barbershop Hoàng Gia{% endblock %}</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <style>
+        :root {
+            --primary-color: #8b4513;
+            --secondary-color: #d2691e;
+            --dark-color: #2c3e50;
+            --light-bg: #f8f9fa;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--light-bg);
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            padding: 48px 0 0;
+            width: 260px;
+            background: linear-gradient(180deg, var(--primary-color) 0%, var(--dark-color) 100%);
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+
+        .sidebar-sticky {
+            position: sticky;
+            top: 0;
+            height: calc(100vh - 48px);
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 12px 20px;
+            margin: 2px 10px;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .sidebar .nav-link:hover {
+            color: white;
+            background: rgba(255,255,255,0.1);
+        }
+
+        .sidebar .nav-link.active {
+            color: white;
+            background: rgba(255,255,255,0.2);
+            font-weight: 600;
+        }
+
+        .sidebar .nav-link i {
+            width: 25px;
+            margin-right: 10px;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 260px;
+            padding: 20px;
+        }
+
+        /* Top Navbar */
+        .top-navbar {
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 15px 30px;
+            margin-bottom: 25px;
+            border-radius: 10px;
+        }
+
+        .top-navbar .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .top-navbar .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        /* Card Styles */
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+
+        .stat-card .icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            margin-bottom: 15px;
+        }
+
+        .stat-card.revenue .icon {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .stat-card.bookings .icon {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .stat-card.customers .icon {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .stat-card.staff .icon {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            color: white;
+        }
+
+        /* Table Styles */
+        .custom-table {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .custom-table thead {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .custom-table th {
+            padding: 15px;
+            font-weight: 600;
+            border: none;
+        }
+
+        .custom-table td {
+            padding: 12px 15px;
+            vertical-align: middle;
+        }
+
+        .custom-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        /* Badge Styles */
+        .badge-status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        /* Button Styles */
+        .btn-primary {
+            background: var(--primary-color);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .btn-primary:hover {
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(139,69,19,0.3);
+        }
+
+        /* Search and Filter */
+        .filter-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        /* Notification Badge */
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #dc3545;
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
+        }
+
+        /* Mobile menu toggle */
+        .mobile-menu-toggle {
+            display: none;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 1001;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 99;
+        }
+
+        /* Prevent scrolling when sidebar is open on mobile */
+        body.sidebar-open {
+            overflow: hidden;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+            
+            .sidebar.active {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+                padding: 70px 15px 20px;
+            }
+            
+            .mobile-menu-toggle {
+                display: block;
+            }
+            
+            .sidebar-backdrop.active {
+                display: block;
+            }
+            
+            .top-navbar {
+                margin: 0 -15px 25px;
+                border-radius: 0;
+            }
+        }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Mobile Menu Toggle -->
+    <button class="mobile-menu-toggle" id="mobileMenuToggle">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- Sidebar Backdrop -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="sidebar-sticky">
+            <div class="px-3 py-3">
+                <h4 class="text-white text-center mb-4">
+                    <i class="fas fa-cut"></i> Barbershop
+                </h4>
+            </div>
+            
+            <ul class="nav flex-column">
+                <!-- Admin Menu -->
+                {% if user.vai_tro == 'quan_ly' %}
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin/dashboard/">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin/staff/">
+                        <i class="fas fa-users"></i> Quản lý nhân viên
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin/customers/">
+                        <i class="fas fa-user-friends"></i> Quản lý khách hàng
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin/services/">
+                        <i class="fas fa-cut"></i> Quản lý dịch vụ
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin/bookings/">
+                        <i class="fas fa-calendar-alt"></i> Quản lý đặt lịch
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin/invoices/">
+                        <i class="fas fa-receipt"></i> Quản lý hóa đơn
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin/work-schedule/">
+                        <i class="fas fa-calendar-check"></i> Lịch làm việc
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin/reports/">
+                        <i class="fas fa-chart-bar"></i> Báo cáo
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin/promotions/">
+                        <i class="fas fa-gift"></i> Khuyến mãi
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin/reviews/">
+                        <i class="fas fa-star"></i> Đánh giá
+                    </a>
+                </li>
+                <!-- <li class="nav-item">
+                    <a class="nav-link" href="/admin/inventory/">
+                        <i class="fas fa-boxes"></i> Kho hàng
+                    </a>
+                </li> -->
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin/settings/">
+                        <i class="fas fa-cog"></i> Cài đặt
+                    </a>
+                </li>
+                {% endif %}
+
+                <!-- Staff Menu -->
+                {% if user.vai_tro == 'nhan_vien' %}
+                <li class="nav-item">
+                    <a class="nav-link" href="/staff/dashboard/">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/staff/pos/">
+                        <i class="fas fa-cash-register"></i> POS Bán hàng
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/staff/today-bookings/">
+                        <i class="fas fa-calendar-day"></i> Lịch hôm nay
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/staff/schedule/">
+                        <i class="fas fa-calendar"></i> Lịch làm việc
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/staff/my-customers/">
+                        <i class="fas fa-users"></i> Khách hàng của tôi
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/staff/revenue/">
+                        <i class="fas fa-money-bill-wave"></i> Doanh thu
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/staff/commission/">
+                        <i class="fas fa-percentage"></i> Hoa hồng
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/staff/profile/">
+                        <i class="fas fa-user"></i> Hồ sơ cá nhân
+                    </a>
+                </li>
+                {% endif %}
+
+                <!-- Common Menu -->
+                <li class="nav-item mt-4">
+                    <hr class="text-white-50">
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/logout/">
+                        <i class="fas fa-sign-out-alt"></i> Đăng xuất
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Top Navbar -->
+        <div class="top-navbar d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="mb-0">{% block page_title %}{% endblock %}</h5>
+            </div>
+            <div class="user-info">
+                <span class="me-2">Xin chào, <strong>{{ user.ho_ten|default:"User" }}</strong></span>
+                <div class="user-avatar">
+                    {{ user.ho_ten|first|upper|default:"U" }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Page Content -->
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    
+    <script>
+        $(document).ready(function() {
+            // Highlight active menu item
+            const currentPath = window.location.pathname;
+            $('.nav-link').each(function() {
+                if ($(this).attr('href') === currentPath) {
+                    $(this).addClass('active');
+                }
+            });
+
+            // Mobile menu toggle functionality
+            $('#mobileMenuToggle').click(function() {
+                $('.sidebar').addClass('active');
+                $('#sidebarBackdrop').addClass('active');
+                $('body').addClass('sidebar-open');
+            });
+
+            // Close sidebar when clicking backdrop
+            $('#sidebarBackdrop').click(function() {
+                $('.sidebar').removeClass('active');
+                $(this).removeClass('active');
+                $('body').removeClass('sidebar-open');
+            });
+
+            // Close sidebar on window resize if screen becomes large
+            $(window).resize(function() {
+                if ($(window).width() > 768) {
+                    $('.sidebar').removeClass('active');
+                    $('#sidebarBackdrop').removeClass('active');
+                    $('body').removeClass('sidebar-open');
+                }
+            });
+
+            // Close sidebar when clicking on nav links (mobile)
+            $('.nav-link').click(function() {
+                if ($(window).width() <= 768) {
+                    $('.sidebar').removeClass('active');
+                    $('#sidebarBackdrop').removeClass('active');
+                    $('body').removeClass('sidebar-open');
+                }
+            });
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

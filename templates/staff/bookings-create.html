@@ -1,0 +1,190 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Tạo lịch hẹn mới - Staff{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-calendar-plus me-2"></i>Tạo lịch hẹn mới</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'staff_dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'staff_today_bookings' %}">Lịch hẹn</a></li>
+                    <li class="breadcrumb-item active">Tạo mới</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" id="bookingForm">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <!-- Customer Selection -->
+                            <div class="col-md-12 mb-3">
+                                <label for="customer_id" class="form-label">Khách hàng <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <select class="form-select" id="customer_id" name="customer_id" required>
+                                        <option value="">-- Chọn khách hàng --</option>
+                                        {% for customer in customers %}
+                                        <option value="{{ customer.id }}" 
+                                                {% if selected_customer_id == customer.id|stringformat:"s" %}selected{% endif %}
+                                                data-phone="{{ customer.so_dien_thoai }}">
+                                            {{ customer.ho_ten }} - {{ customer.so_dien_thoai }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#newCustomerModal">
+                                        <i class="fas fa-plus me-1"></i>Khách mới
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Service Selection -->
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">Dịch vụ <span class="text-danger">*</span></label>
+                                <div id="serviceList">
+                                    {% for service in services %}
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input service-checkbox" type="checkbox" 
+                                               name="services[]" value="{{ service.id }}" id="service{{ service.id }}"
+                                               data-price="{{ service.gia }}" data-time="{{ service.thoi_gian }}">
+                                        <label class="form-check-label d-flex justify-content-between w-100" for="service{{ service.id }}">
+                                            <span>{{ service.ten_dich_vu }}</span>
+                                            <span class="text-muted">{{ service.gia|floatformat:0 }}đ - {{ service.thoi_gian }} phút</span>
+                                        </label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <div class="mt-2">
+                                    <strong>Tổng: </strong>
+                                    <span id="totalPrice" class="text-success">0đ</span>
+                                    <span class="text-muted ms-3">|</span>
+                                    <strong class="ms-3">Thời gian: </strong>
+                                    <span id="totalTime" class="text-info">0 phút</span>
+                                </div>
+                            </div>
+
+                            <!-- Date -->
+                            <div class="col-md-6 mb-3">
+                                <label for="booking_date" class="form-label">Ngày hẹn <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" id="booking_date" name="booking_date" 
+                                       required min="{{ today }}">
+                            </div>
+
+                            <!-- Time -->
+                            <div class="col-md-6 mb-3">
+                                <label for="booking_time" class="form-label">Giờ hẹn <span class="text-danger">*</span></label>
+                                <select class="form-select" id="booking_time" name="booking_time" required>
+                                    <option value="">-- Chọn giờ --</option>
+                                    {% for slot in time_slots %}
+                                    <option value="{{ slot }}">{{ slot }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Notes -->
+                            <div class="col-md-12 mb-3">
+                                <label for="notes" class="form-label">Ghi chú</label>
+                                <textarea class="form-control" id="notes" name="notes" rows="3" 
+                                          placeholder="Yêu cầu đặc biệt, ghi chú khác..."></textarea>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- Buttons -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'staff_today_bookings' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i>Hủy
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-check me-1"></i>Tạo lịch hẹn
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New Customer Modal -->
+<div class="modal fade" id="newCustomerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Thêm khách hàng mới</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="newCustomerForm">
+                    <div class="mb-3">
+                        <label for="new_name" class="form-label">Họ tên <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="new_name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="new_phone" class="form-label">Số điện thoại <span class="text-danger">*</span></label>
+                        <input type="tel" class="form-control" id="new_phone" required pattern="[0-9]{10}">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-primary" onclick="addNewCustomer()">Thêm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Calculate total price and time
+document.querySelectorAll('.service-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        let totalPrice = 0;
+        let totalTime = 0;
+        
+        document.querySelectorAll('.service-checkbox:checked').forEach(checked => {
+            totalPrice += parseInt(checked.dataset.price);
+            totalTime += parseInt(checked.dataset.time);
+        });
+        
+        document.getElementById('totalPrice').textContent = totalPrice.toLocaleString('vi-VN') + 'đ';
+        document.getElementById('totalTime').textContent = totalTime + ' phút';
+    });
+});
+
+// Set default date to today
+document.getElementById('booking_date').valueAsDate = new Date();
+
+// Add new customer
+function addNewCustomer() {
+    const name = document.getElementById('new_name').value;
+    const phone = document.getElementById('new_phone').value;
+    
+    if (!name || !phone) {
+        alert('Vui lòng điền đầy đủ thông tin!');
+        return;
+    }
+    
+    // In production, this would be an AJAX call
+    const select = document.getElementById('customer_id');
+    const newOption = document.createElement('option');
+    newOption.value = 'new_' + Date.now();
+    newOption.textContent = name + ' - ' + phone;
+    newOption.selected = true;
+    select.appendChild(newOption);
+    
+    // Close modal
+    bootstrap.Modal.getInstance(document.getElementById('newCustomerModal')).hide();
+    document.getElementById('newCustomerForm').reset();
+}
+</script>
+{% endblock %}

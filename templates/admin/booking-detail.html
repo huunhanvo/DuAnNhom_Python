@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+
+{% block title %}Chi tiết đặt lịch - Barbershop{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-calendar-check me-2"></i>Chi tiết đặt lịch</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'admin_bookings' %}">Đặt lịch</a></li>
+                    <li class="breadcrumb-item active">{{ booking.ma_dat_lich }}</li>
+                </ol>
+            </nav>
+        </div>
+        <div>
+            <a href="{% url 'admin_bookings' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Quay lại
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Booking Info -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Thông tin đặt lịch</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <p><strong>Mã đặt lịch:</strong> {{ booking.ma_dat_lich }}</p>
+                            <p><strong>Ngày hẹn:</strong> {{ booking.ngay_hen|date:"d/m/Y" }}</p>
+                            <p><strong>Giờ hẹn:</strong> {{ booking.gio_hen|time:"H:i" }}</p>
+                            <p><strong>Loại:</strong> 
+                                {% if booking.loai_dat_lich == 'online' %}
+                                    <span class="badge bg-primary">Online</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Walk-in</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Trạng thái:</strong>
+                                {% if booking.trang_thai == 'cho_xac_nhan' %}
+                                    <span class="badge bg-warning">Chờ xác nhận</span>
+                                {% elif booking.trang_thai == 'da_xac_nhan' %}
+                                    <span class="badge bg-info">Đã xác nhận</span>
+                                {% elif booking.trang_thai == 'da_checkin' %}
+                                    <span class="badge bg-primary">Đã check-in</span>
+                                {% elif booking.trang_thai == 'hoan_thanh' %}
+                                    <span class="badge bg-success">Hoàn thành</span>
+                                {% elif booking.trang_thai == 'da_huy' %}
+                                    <span class="badge bg-danger">Đã hủy</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Không đến</span>
+                                {% endif %}
+                            </p>
+                            <p><strong>Ngày tạo:</strong> {{ booking.ngay_tao|date:"d/m/Y H:i" }}</p>
+                            {% if booking.ngay_check_in %}
+                            <p><strong>Check-in:</strong> {{ booking.ngay_check_in|date:"d/m/Y H:i" }}</p>
+                            {% endif %}
+                            {% if booking.ngay_hoan_thanh %}
+                            <p><strong>Hoàn thành:</strong> {{ booking.ngay_hoan_thanh|date:"d/m/Y H:i" }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Customer Info -->
+                    <hr>
+                    <h6 class="mb-3"><i class="fas fa-user me-2"></i>Thông tin khách hàng</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Họ tên:</strong> {{ booking.ten_khach_hang|default:booking.khach_hang.ho_ten }}</p>
+                            <p><strong>Số điện thoại:</strong> {{ booking.so_dien_thoai_khach }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            {% if booking.email_khach %}
+                            <p><strong>Email:</strong> {{ booking.email_khach }}</p>
+                            {% endif %}
+                            {% if booking.khach_hang %}
+                            <p><strong>Điểm tích lũy:</strong> {{ booking.khach_hang.diem_tich_luy }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Staff Info -->
+                    {% if booking.nhan_vien %}
+                    <hr>
+                    <h6 class="mb-3"><i class="fas fa-user-tie me-2"></i>Nhân viên phục vụ</h6>
+                    <p><strong>Họ tên:</strong> {{ booking.nhan_vien.ho_ten }}</p>
+                    <p><strong>Số điện thoại:</strong> {{ booking.nhan_vien.so_dien_thoai }}</p>
+                    {% endif %}
+
+                    <!-- Services -->
+                    <hr>
+                    <h6 class="mb-3"><i class="fas fa-cut me-2"></i>Dịch vụ đã chọn</h6>
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Dịch vụ</th>
+                                <th class="text-end">Giá</th>
+                                <th class="text-center">SL</th>
+                                <th class="text-end">Thành tiền</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for service in services %}
+                            <tr>
+                                <td>{{ service.ten_dich_vu }}</td>
+                                <td class="text-end">{{ service.gia|floatformat:0 }}đ</td>
+                                <td class="text-center">{{ service.so_luong }}</td>
+                                <td class="text-end">{{ service.thanh_tien|floatformat:0 }}đ</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">Chưa có dịch vụ</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    <!-- Total -->
+                    <div class="text-end mt-3">
+                        <p><strong>Tổng tiền:</strong> {{ booking.tong_tien|floatformat:0 }}đ</p>
+                        {% if booking.tien_giam_gia > 0 %}
+                        <p class="text-danger"><strong>Giảm giá:</strong> -{{ booking.tien_giam_gia|floatformat:0 }}đ</p>
+                        {% endif %}
+                        <h5><strong>Thanh toán:</strong> <span class="text-primary">{{ booking.thanh_tien|floatformat:0 }}đ</span></h5>
+                    </div>
+
+                    <!-- Notes -->
+                    {% if booking.ghi_chu %}
+                    <hr>
+                    <h6 class="mb-2"><i class="fas fa-sticky-note me-2"></i>Ghi chú</h6>
+                    <p class="text-muted">{{ booking.ghi_chu }}</p>
+                    {% endif %}
+
+                    {% if booking.ly_do_huy %}
+                    <hr>
+                    <h6 class="mb-2 text-danger"><i class="fas fa-ban me-2"></i>Lý do hủy</h6>
+                    <p class="text-danger">{{ booking.ly_do_huy }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Thao tác</h5>
+                </div>
+                <div class="card-body">
+                    {% if booking.trang_thai == 'cho_xac_nhan' or booking.trang_thai == 'da_xac_nhan' %}
+                    <form method="post" class="mb-3">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="update_status">
+                        <div class="mb-3">
+                            <label class="form-label">Cập nhật trạng thái:</label>
+                            <select name="trang_thai" class="form-select">
+                                <option value="cho_xac_nhan" {% if booking.trang_thai == 'cho_xac_nhan' %}selected{% endif %}>Chờ xác nhận</option>
+                                <option value="da_xac_nhan" {% if booking.trang_thai == 'da_xac_nhan' %}selected{% endif %}>Đã xác nhận</option>
+                                <option value="da_checkin">Đã check-in</option>
+                                <option value="hoan_thanh">Hoàn thành</option>
+                                <option value="khong_den">Không đến</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-check me-1"></i>Cập nhật
+                        </button>
+                    </form>
+
+                    <button type="button" class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#cancelModal">
+                        <i class="fas fa-times me-1"></i>Hủy lịch
+                    </button>
+                    {% endif %}
+
+                    {% if booking.trang_thai == 'hoan_thanh' %}
+                    <div class="alert alert-success mb-0">
+                        <i class="fas fa-check-circle me-2"></i>Đã hoàn thành
+                    </div>
+                    {% elif booking.trang_thai == 'da_huy' %}
+                    <div class="alert alert-danger mb-0">
+                        <i class="fas fa-ban me-2"></i>Đã hủy
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cancel Modal -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Hủy đặt lịch</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="cancel">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Lý do hủy:</label>
+                        <textarea name="ly_do_huy" class="form-control" rows="3" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-danger">Xác nhận hủy</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
