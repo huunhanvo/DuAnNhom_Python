@@ -3,7 +3,7 @@ from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.db.models import Count, Sum, Q, Avg, F, Case, When, IntegerField, Max
 from django.views.decorators.csrf import csrf_exempt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from decimal import Decimal
 import csv
 import json
@@ -11,7 +11,8 @@ import bcrypt
 from .models import (
     NguoiDung, ThongTinNhanVien, DanhMucDichVu, DichVu, 
     LichLamViec, YeuCauNghiPhep, DatLich, DichVuDatLich,
-    HoaDon, ChiTietHoaDon, Voucher, CaiDatHeThong, DanhGia, DonXinNghi
+    HoaDon, ChiTietHoaDon, Voucher, CaiDatHeThong, DanhGia, DonXinNghi, ChamCong,
+    DanhMucSanPham, SanPham, PhieuNhapKho, ChiTietNhapKho, PhieuXuatKho, ChiTietXuatKho
 )
 
 # ============ HELPER FUNCTIONS ============
@@ -3204,26 +3205,391 @@ def admin_loyalty(request):
 
 @require_role(['quan_ly'])
 def admin_inventory(request):
-    """Inventory Management - Placeholder"""
+    """Inventory Management - Full Implementation"""
+    from django.db.models import Sum, Count, Q
+    from django.db import transaction
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'create_category':
+            try:
+                ten_danh_muc = request.POST.get('ten_danh_muc', '').strip()
+                mo_ta = request.POST.get('mo_ta', '').strip()
+                
+                if not ten_danh_muc:
+                    return JsonResponse({'success': False, 'message': 'Tên danh mục không được để trống'})
+                
+                if DanhMucSanPham.objects.filter(ten_danh_muc=ten_danh_muc, da_xoa=False).exists():
+                    return JsonResponse({'success': False, 'message': 'Danh mục đã tồn tại'})
+                
+                DanhMucSanPham.objects.create(
+                    ten_danh_muc=ten_danh_muc,
+                    mo_ta=mo_ta if mo_ta else None
+                )
+                
+                return JsonResponse({'success': True, 'message': 'Đã tạo danh mục thành công!'})
+                
+            except Exception as e:
+                return JsonResponse({'success': False, 'message': f'Lỗi: {str(e)}'})
+        
+        elif action == 'create_product':
+            try:
+                ten_san_pham = request.POST.get('ten_san_pham', '').strip()
+                danh_muc_id = request.POST.get('danh_muc_id')
+                loai_san_pham = request.POST.get('loai_san_pham', 'san_pham')
+                don_vi_tinh = request.POST.get('don_vi_tinh', 'cái')
+                gia_nhap = Decimal(request.POST.get('gia_nhap', '0'))
+                gia_ban = Decimal(request.POST.get('gia_ban', '0'))
+                so_luong_toi_thieu = int(request.POST.get('so_luong_toi_thieu', '0'))
+                mo_ta = request.POST.get('mo_ta', '').strip()
+                
+                if not ten_san_pham:
+                    return JsonResponse({'success': False, 'message': 'Tên sản phẩm không được để trống'})
+                
+                if not danh_muc_id:
+                    return JsonResponse({'success': False, 'message': 'Vui lòng chọn danh mục'})
+                
+                danh_muc = get_object_or_404(DanhMucSanPham, id=danh_muc_id, da_xoa=False)
+                
+                SanPham.objects.create(
+                    ten_san_pham=ten_san_pham,
+                    danh_muc=danh_muc,
+                    loai_san_pham=loai_san_pham,
+                    don_vi_tinh=don_vi_tinh,
+                    gia_nhap=gia_nhap,
+                    gia_ban=gia_ban,
+                    so_luong_toi_thieu=so_luong_toi_thieu,
+                    mo_ta=mo_ta if mo_ta else None
+                )
+                
+                return JsonResponse({'success': True, 'message': 'Đã tạo sản phẩm thành công!'})
+                
+            except Exception as e:
+                return JsonResponse({'success': False, 'message': f'Lỗi: {str(e)}'})
+        
+        elif action == 'import_stock':
+            try:
+                with transaction.atomic():
+                    nha_cung_cap = request.POST.get('nha_cung_cap', '').strip()
+                    ghi_chu = request.POST.get('ghi_chu', '').strip()
+                    
+                    if not nha_cung_cap:
+                        return JsonResponse({'success': False, 'message': 'Vui lòng nhập nhà cung cấp'})
+                    
+                    # Create import receipt
+                    user_id = request.session.get('user_id')
+                    nhan_vien = get_object_or_404(NguoiDung, id=user_id)
+                    
+                    phieu_nhap = PhieuNhapKho.objects.create(
+                        nha_cung_cap=nha_cung_cap,
+                        nhan_vien_nhap=nhan_vien,
+                        ghi_chu=ghi_chu,
+                        trang_thai='da_nhap_kho'  # Auto approve for now
+                    )
+                    
+                    # Process import details
+                    san_pham_ids = request.POST.getlist('san_pham_id[]')
+                    so_luongs = request.POST.getlist('so_luong[]')
+                    gia_nhaps = request.POST.getlist('gia_nhap[]')
+                    
+                    total_amount = 0
+                    for i, san_pham_id in enumerate(san_pham_ids):
+                        if san_pham_id and so_luongs[i] and gia_nhaps[i]:
+                            san_pham = get_object_or_404(SanPham, id=san_pham_id)
+                            so_luong = int(so_luongs[i])
+                            gia_nhap = Decimal(gia_nhaps[i])
+                            
+                            # Create import detail
+                            chi_tiet = ChiTietNhapKho.objects.create(
+                                phieu_nhap=phieu_nhap,
+                                san_pham=san_pham,
+                                so_luong=so_luong,
+                                gia_nhap=gia_nhap,
+                                thanh_tien=so_luong * gia_nhap
+                            )
+                            
+                            # Update stock
+                            san_pham.so_luong_ton_kho += so_luong
+                            san_pham.gia_nhap = gia_nhap
+                            san_pham.save()
+                            
+                            total_amount += chi_tiet.thanh_tien
+                    
+                    phieu_nhap.tong_tien = total_amount
+                    phieu_nhap.save()
+                    
+                    return JsonResponse({'success': True, 'message': f'Đã nhập kho thành công! Mã phiếu: {phieu_nhap.ma_phieu}'})
+                    
+            except Exception as e:
+                return JsonResponse({'success': False, 'message': f'Lỗi: {str(e)}'})
+        
+        elif action == 'export_stock':
+            try:
+                with transaction.atomic():
+                    ly_do = request.POST.get('ly_do', '').strip()
+                    loai_xuat = request.POST.get('loai_xuat', 'su_dung_dich_vu')
+                    ghi_chu = request.POST.get('ghi_chu', '').strip()
+                    
+                    if not ly_do:
+                        return JsonResponse({'success': False, 'message': 'Vui lòng nhập lý do xuất kho'})
+                    
+                    # Create export receipt
+                    user_id = request.session.get('user_id')
+                    nhan_vien = get_object_or_404(NguoiDung, id=user_id)
+                    
+                    phieu_xuat = PhieuXuatKho.objects.create(
+                        loai_xuat=loai_xuat,
+                        nhan_vien_xuat=nhan_vien,
+                        ly_do=ly_do,
+                        ghi_chu=ghi_chu,
+                        trang_thai='da_xuat_kho'  # Auto approve for now
+                    )
+                    
+                    # Process export details
+                    san_pham_ids = request.POST.getlist('san_pham_id_export[]')
+                    so_luongs = request.POST.getlist('so_luong_export[]')
+                    
+                    for i, san_pham_id in enumerate(san_pham_ids):
+                        if san_pham_id and so_luongs[i]:
+                            san_pham = get_object_or_404(SanPham, id=san_pham_id)
+                            so_luong = int(so_luongs[i])
+                            
+                            if san_pham.so_luong_ton_kho < so_luong:
+                                return JsonResponse({'success': False, 'message': f'Sản phẩm {san_pham.ten_san_pham} không đủ số lượng trong kho'})
+                            
+                            # Create export detail
+                            ChiTietXuatKho.objects.create(
+                                phieu_xuat=phieu_xuat,
+                                san_pham=san_pham,
+                                so_luong=so_luong,
+                                gia_xuat=san_pham.gia_ban,
+                                thanh_tien=so_luong * san_pham.gia_ban
+                            )
+                            
+                            # Update stock
+                            san_pham.so_luong_ton_kho -= so_luong
+                            san_pham.save()
+                    
+                    return JsonResponse({'success': True, 'message': f'Đã xuất kho thành công! Mã phiếu: {phieu_xuat.ma_phieu}'})
+                    
+            except Exception as e:
+                return JsonResponse({'success': False, 'message': f'Lỗi: {str(e)}'})
+    
+    # GET request - Display inventory
+    search = request.GET.get('search', '')
+    category_filter = request.GET.get('category', '')
+    status_filter = request.GET.get('status', '')
+    
+    # Get products
+    products = SanPham.objects.filter(da_xoa=False).select_related('danh_muc')
+    
+    if search:
+        products = products.filter(
+            Q(ten_san_pham__icontains=search) | 
+            Q(ma_san_pham__icontains=search) |
+            Q(mo_ta__icontains=search)
+        )
+    
+    if category_filter:
+        products = products.filter(danh_muc_id=category_filter)
+    
+    if status_filter:
+        products = products.filter(trang_thai=status_filter)
+    
+    products = products.order_by('ten_san_pham')
+    
+    # Get categories
+    categories = DanhMucSanPham.objects.filter(da_xoa=False, trang_thai=True).order_by('thu_tu', 'ten_danh_muc')
+    
+    # Calculate summary stats
+    total_products = products.count()
+    total_value = sum(p.gia_tri_ton_kho for p in products)
+    low_stock_count = products.filter(so_luong_ton_kho__lte=F('so_luong_toi_thieu')).count()
+    out_of_stock_count = products.filter(so_luong_ton_kho=0).count()
+    
+    # Recent import/export activities
+    recent_imports = PhieuNhapKho.objects.filter(da_xoa=False).order_by('-ngay_nhap')[:5]
+    recent_exports = PhieuXuatKho.objects.filter(da_xoa=False).order_by('-ngay_xuat')[:5]
+    
     context = {
-        'inventory_items': [],
+        'products': products,
+        'categories': categories,
+        'search': search,
+        'category_filter': category_filter,
+        'status_filter': status_filter,
+        'total_products': total_products,
+        'total_value': total_value,
+        'low_stock_count': low_stock_count,
+        'out_of_stock_count': out_of_stock_count,
+        'recent_imports': recent_imports,
+        'recent_exports': recent_exports,
+        'status_choices': SanPham.TRANG_THAI_CHOICES,
+        'product_types': SanPham.LOAI_SP_CHOICES,
+        'export_types': PhieuXuatKho.LOAI_XUAT_CHOICES,
     }
     return render(request, 'admin/inventory.html', context)
 
 @require_role(['quan_ly'])
 def admin_attendance(request):
-    """Attendance Management - Placeholder"""
+    """Attendance Management - Full Implementation"""
+    from django.db.models import Q, Sum, Avg, Count
+    from datetime import datetime, timedelta
+    
     today = timezone.now().date()
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'checkin':
+            try:
+                staff_id = request.POST.get('staff_id')
+                checkin_time = request.POST.get('checkin_time')
+                
+                staff = get_object_or_404(NguoiDung, id=staff_id, vai_tro='nhan_vien')
+                
+                # Parse time
+                if checkin_time:
+                    checkin_time_obj = datetime.strptime(checkin_time, '%H:%M').time()
+                else:
+                    checkin_time_obj = timezone.now().time()
+                
+                # Create or update attendance
+                attendance, created = ChamCong.objects.get_or_create(
+                    nhan_vien=staff,
+                    ngay_lam=today,
+                    defaults={
+                        'gio_vao': checkin_time_obj,
+                        'trang_thai_vao': 'dung_gio' if checkin_time_obj <= time(8, 15) else 'tre'
+                    }
+                )
+                
+                if not created and not attendance.gio_vao:
+                    attendance.gio_vao = checkin_time_obj
+                    attendance.trang_thai_vao = 'dung_gio' if checkin_time_obj <= time(8, 15) else 'tre'
+                    attendance.save()
+                
+                return JsonResponse({'success': True, 'message': 'Check-in thành công!'})
+                
+            except Exception as e:
+                return JsonResponse({'success': False, 'message': f'Lỗi: {str(e)}'})
+        
+        elif action == 'checkout':
+            try:
+                staff_id = request.POST.get('staff_id')
+                checkout_time = request.POST.get('checkout_time')
+                
+                staff = get_object_or_404(NguoiDung, id=staff_id, vai_tro='nhan_vien')
+                
+                # Parse time
+                if checkout_time:
+                    checkout_time_obj = datetime.strptime(checkout_time, '%H:%M').time()
+                else:
+                    checkout_time_obj = timezone.now().time()
+                
+                # Update attendance
+                attendance = get_object_or_404(ChamCong, nhan_vien=staff, ngay_lam=today)
+                attendance.gio_ra = checkout_time_obj
+                attendance.trang_thai_ra = 'dung_gio' if checkout_time_obj >= time(17, 0) else 'som'
+                attendance.save()  # This will trigger calculate_work_hours()
+                
+                return JsonResponse({'success': True, 'message': 'Check-out thành công!'})
+                
+            except Exception as e:
+                return JsonResponse({'success': False, 'message': f'Lỗi: {str(e)}'})
+        
+        elif action == 'mark_absent':
+            try:
+                staff_id = request.POST.get('staff_id')
+                reason = request.POST.get('reason', '')
+                
+                staff = get_object_or_404(NguoiDung, id=staff_id, vai_tro='nhan_vien')
+                
+                # Create absence record
+                ChamCong.objects.update_or_create(
+                    nhan_vien=staff,
+                    ngay_lam=today,
+                    defaults={
+                        'trang_thai_vao': 'vang_mat',
+                        'trang_thai_ra': 'vang_mat',
+                        'ghi_chu': reason
+                    }
+                )
+                
+                return JsonResponse({'success': True, 'message': 'Đã ghi nhận vắng mặt!'})
+                
+            except Exception as e:
+                return JsonResponse({'success': False, 'message': f'Lỗi: {str(e)}'})
+    
+    # Get filter parameters
+    filter_date = request.GET.get('date', today.strftime('%Y-%m-%d'))
+    filter_staff = request.GET.get('staff', '')
+    
+    try:
+        filter_date_obj = datetime.strptime(filter_date, '%Y-%m-%d').date()
+    except:
+        filter_date_obj = today
+    
+    # Get staff list
+    staff_list = NguoiDung.objects.filter(
+        vai_tro='nhan_vien',
+        da_xoa=False,
+        trang_thai=True
+    ).order_by('ho_ten')
     
     # Get today's schedules
     schedules = LichLamViec.objects.filter(
-        ngay_lam=today,
+        ngay_lam=filter_date_obj,
         da_xoa=False
     ).select_related('nhan_vien')
     
+    # Get attendance records for the date
+    attendances = ChamCong.objects.filter(
+        ngay_lam=filter_date_obj
+    ).select_related('nhan_vien')
+    
+    if filter_staff:
+        attendances = attendances.filter(nhan_vien_id=filter_staff)
+    
+    # Combine schedule and attendance data
+    attendance_data = []
+    for staff in staff_list:
+        if filter_staff and str(staff.id) != filter_staff:
+            continue
+            
+        # Find schedule
+        schedule = schedules.filter(nhan_vien=staff).first()
+        
+        # Find attendance
+        attendance = attendances.filter(nhan_vien=staff).first()
+        
+        attendance_data.append({
+            'staff': staff,
+            'schedule': schedule,
+            'attendance': attendance,
+            'has_checkin': attendance and attendance.gio_vao,
+            'has_checkout': attendance and attendance.gio_ra,
+            'is_absent': attendance and attendance.trang_thai_vao == 'vang_mat'
+        })
+    
+    # Calculate summary stats
+    total_staff = staff_list.count()
+    present_count = attendances.exclude(trang_thai_vao='vang_mat').count()
+    absent_count = attendances.filter(trang_thai_vao='vang_mat').count()
+    late_count = attendances.filter(trang_thai_vao='tre').count()
+    
     context = {
-        'schedules': schedules,
+        'attendance_data': attendance_data,
         'today': today,
+        'filter_date': filter_date,
+        'filter_date_obj': filter_date_obj,
+        'filter_staff': filter_staff,
+        'staff_list': staff_list,
+        'total_staff': total_staff,
+        'present_count': present_count,
+        'absent_count': absent_count,
+        'late_count': late_count,
+        'schedules': schedules,
     }
     return render(request, 'admin/attendance.html', context)
 

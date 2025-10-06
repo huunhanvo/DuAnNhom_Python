@@ -284,7 +284,8 @@
                                 <small class="text-muted">Lịch hẹn sẽ được tự động xác nhận</small>
                             </div>
                             <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="autoConfirm" checked>
+                                <input class="form-check-input" type="checkbox" id="autoConfirm" name="auto_confirm" 
+                                       {% if settings.tu_dong_xac_nhan %}checked{% endif %}>
                             </div>
                         </div>
                         
@@ -294,7 +295,8 @@
                                 <small class="text-muted">Khách hàng có thể chọn stylist khi đặt lịch</small>
                             </div>
                             <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="allowStaffSelect" checked>
+                                <input class="form-check-input" type="checkbox" id="allowStaffSelect" name="allow_staff_select"
+                                       {% if settings.cho_phep_chon_nhan_vien %}checked{% endif %}>
                             </div>
                         </div>
                         
@@ -304,7 +306,8 @@
                                 <small class="text-muted">Khách phải đặt cọc khi đặt lịch</small>
                             </div>
                             <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="requireDeposit">
+                                <input class="form-check-input" type="checkbox" id="requireDeposit" name="require_deposit"
+                                       {% if settings.yeu_cau_dat_coc %}checked{% endif %}>
                             </div>
                         </div>
                         
@@ -662,6 +665,96 @@ $('#businessHoursForm').submit(function(e) {
     });
 });
 
+// Services settings form
+$('.setting-item input[type="checkbox"]').change(function() {
+    var section = $(this).closest('.tab-pane').attr('id');
+    var data = {};
+    
+    if (section === 'services') {
+        data.auto_confirm = $('#autoConfirm').prop('checked') ? 'on' : '';
+        data.allow_staff_select = $('#allowStaffSelect').prop('checked') ? 'on' : '';
+        data.require_deposit = $('#requireDeposit').prop('checked') ? 'on' : '';
+        data.deposit_amount = $('input[type="number"]').val();
+        data.deposit_type = $('select option:selected').val();
+        
+        $.ajax({
+            url: '/api/settings/services/',
+            type: 'POST',
+            data: data,
+            headers: {'X-CSRFToken': getCookie('csrftoken')},
+            success: function(response) {
+                if (response.success) {
+                    showToast(response.message, 'success');
+                }
+            }
+        });
+    } else if (section === 'payment') {
+        // Payment settings handling
+        $.ajax({
+            url: '/api/settings/payments/',
+            type: 'POST',
+            data: $('#payment input, #payment select').serialize(),
+            headers: {'X-CSRFToken': getCookie('csrftoken')},
+            success: function(response) {
+                if (response.success) {
+                    showToast(response.message, 'success');
+                }
+            }
+        });
+    } else if (section === 'booking') {
+        data.min_advance_time = $('select[name="min_advance"]').val();
+        data.max_advance_time = $('select[name="max_advance"]').val();
+        data.cancel_time = $('select[name="cancel_time"]').val();
+        data.send_reminders = $('input[type="checkbox"]:checked').length > 0 ? 'on' : '';
+        
+        $.ajax({
+            url: '/api/settings/booking/',
+            type: 'POST',
+            data: data,
+            headers: {'X-CSRFToken': getCookie('csrftoken')},
+            success: function(response) {
+                if (response.success) {
+                    showToast(response.message, 'success');
+                }
+            }
+        });
+    } else if (section === 'notifications') {
+        data.sms_new_booking = $('#notifications input[type="checkbox"]').eq(0).prop('checked') ? 'on' : '';
+        data.sms_reminder = $('#notifications input[type="checkbox"]').eq(1).prop('checked') ? 'on' : '';
+        data.sms_cancel = $('#notifications input[type="checkbox"]').eq(2).prop('checked') ? 'on' : '';
+        data.email_invoice = $('#notifications input[type="checkbox"]').eq(3).prop('checked') ? 'on' : '';
+        data.email_reports = $('#notifications input[type="checkbox"]').eq(4).prop('checked') ? 'on' : '';
+        
+        $.ajax({
+            url: '/api/settings/notifications/',
+            type: 'POST',
+            data: data,
+            headers: {'X-CSRFToken': getCookie('csrftoken')},
+            success: function(response) {
+                if (response.success) {
+                    showToast(response.message, 'success');
+                }
+            }
+        });
+    } else if (section === 'appearance') {
+        data.primary_color = $('#primaryColor').val();
+        data.secondary_color = $('#secondaryColor').val();
+        data.dark_mode = $(this).prop('checked') ? 'on' : '';
+        
+        $.ajax({
+            url: '/api/settings/appearance/',
+            type: 'POST',
+            data: data,
+            headers: {'X-CSRFToken': getCookie('csrftoken')},
+            success: function(response) {
+                if (response.success) {
+                    showToast(response.message, 'success');
+                }
+            }
+        });
+    }
+});
+
 function resetToDefault() {
     if (confirm('Bạn có chắc muốn khôi phục cài đặt mặc định?')) {
         // Reset logic
@@ -670,7 +763,25 @@ function resetToDefault() {
 
 function backupNow() {
     if (confirm('Bắt đầu sao lưu dữ liệu?')) {
-        alert('Đang sao lưu...');
+        $.ajax({
+            url: '/api/settings/backup/',
+            type: 'POST',
+            data: {
+                action: 'backup_now'
+            },
+            headers: {'X-CSRFToken': getCookie('csrftoken')},
+            success: function(response) {
+                if (response.success) {
+                    alert(response.message);
+                    location.reload(); // Reload để cập nhật thời gian backup cuối
+                } else {
+                    alert('Lỗi: ' + response.message);
+                }
+            },
+            error: function(xhr) {
+                alert('Có lỗi xảy ra: ' + (xhr.responseJSON?.message || 'Lỗi không xác định'));
+            }
+        });
     }
 }
 
@@ -686,13 +797,42 @@ function restoreBackup() {
 
 function clearCache() {
     if (confirm('Xóa cache hệ thống?')) {
-        alert('Đã xóa cache thành công!');
+        $.ajax({
+            url: '/api/settings/advanced/',
+            type: 'POST',
+            data: {
+                action: 'clear_cache'
+            },
+            headers: {'X-CSRFToken': getCookie('csrftoken')},
+            success: function(response) {
+                if (response.success) {
+                    alert(response.message);
+                } else {
+                    alert('Lỗi: ' + response.message);
+                }
+            }
+        });
     }
 }
 
 function resetSystem() {
     if (confirm('CẢNH BÁO: Đặt lại toàn bộ hệ thống về mặc định?')) {
-        // Reset logic
+        $.ajax({
+            url: '/api/settings/advanced/',
+            type: 'POST',
+            data: {
+                action: 'reset_system'
+            },
+            headers: {'X-CSRFToken': getCookie('csrftoken')},
+            success: function(response) {
+                if (response.success) {
+                    alert(response.message);
+                    location.reload();
+                } else {
+                    alert('Lỗi: ' + response.message);
+                }
+            }
+        });
     }
 }
 
@@ -709,6 +849,24 @@ function getCookie(name) {
         }
     }
     return cookieValue;
+}
+
+function showToast(message, type = 'info') {
+    // Simple toast notification
+    const toast = $(`
+        <div class="alert alert-${type === 'success' ? 'success' : 'info'} alert-dismissible fade show position-fixed" 
+             style="top: 20px; right: 20px; z-index: 9999; min-width: 250px;">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `);
+    
+    $('body').append(toast);
+    
+    // Auto hide after 3 seconds
+    setTimeout(function() {
+        toast.alert('close');
+    }, 3000);
 }
 </script>
 {% endblock %}

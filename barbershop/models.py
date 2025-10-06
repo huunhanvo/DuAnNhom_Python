@@ -467,6 +467,7 @@ class CaiDatHeThong(models.Model):
         return self.ten_tiem
     
     @classmethod
+    @classmethod
     def get_settings(cls):
         """Get or create settings instance"""
         settings, created = cls.objects.get_or_create(
@@ -610,6 +611,284 @@ class DanhGia(models.Model):
     def save(self, *args, **kwargs):
         if self.phan_hoi and not self.ngay_phan_hoi:
             self.ngay_phan_hoi = timezone.now()
+        super().save(*args, **kwargs)
+
+# =============================================
+# 16. QUẢN LÝ KHO HÀNG
+# =============================================
+class DanhMucSanPham(models.Model):
+    """Danh mục sản phẩm trong kho"""
+    ten_danh_muc = models.CharField(max_length=100)
+    mo_ta = models.TextField(null=True, blank=True)
+    thu_tu = models.IntegerField(default=0)
+    trang_thai = models.BooleanField(default=True)
+    ngay_tao = models.DateTimeField(auto_now_add=True)
+    ngay_cap_nhat = models.DateTimeField(auto_now=True)
+    da_xoa = models.BooleanField(default=False)
+    
+    class Meta:
+        db_table = 'danh_muc_san_pham'
+        verbose_name = 'Danh mục sản phẩm'
+        verbose_name_plural = 'Danh mục sản phẩm'
+        ordering = ['thu_tu', 'ten_danh_muc']
+    
+    def __str__(self):
+        return self.ten_danh_muc
+
+class SanPham(models.Model):
+    """Sản phẩm trong kho"""
+    LOAI_SP_CHOICES = [
+        ('dung_cu', 'Dụng cụ'),
+        ('san_pham', 'Sản phẩm chăm sóc'),
+        ('nguyen_lieu', 'Nguyên liệu'),
+        ('khac', 'Khác'),
+    ]
+    
+    TRANG_THAI_CHOICES = [
+        ('con_hang', 'Còn hàng'),
+        ('sap_het', 'Sắp hết'),
+        ('het_hang', 'Hết hàng'),
+        ('ngung_kinh_doanh', 'Ngừng kinh doanh'),
+    ]
+    
+    ma_san_pham = models.CharField(max_length=50, unique=True)
+    ten_san_pham = models.CharField(max_length=200)
+    danh_muc = models.ForeignKey(DanhMucSanPham, on_delete=models.CASCADE, related_name='san_pham')
+    loai_san_pham = models.CharField(max_length=20, choices=LOAI_SP_CHOICES, default='san_pham')
+    mo_ta = models.TextField(null=True, blank=True)
+    don_vi_tinh = models.CharField(max_length=20, default='cái')
+    gia_nhap = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    gia_ban = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    so_luong_ton_kho = models.IntegerField(default=0)
+    so_luong_toi_thieu = models.IntegerField(default=0)  # Cảnh báo hết hàng
+    hinh_anh = models.CharField(max_length=255, null=True, blank=True)
+    trang_thai = models.CharField(max_length=20, choices=TRANG_THAI_CHOICES, default='con_hang')
+    ngay_tao = models.DateTimeField(auto_now_add=True)
+    ngay_cap_nhat = models.DateTimeField(auto_now=True)
+    da_xoa = models.BooleanField(default=False)
+    
+    class Meta:
+        db_table = 'san_pham'
+        verbose_name = 'Sản phẩm'
+        verbose_name_plural = 'Sản phẩm'
+        ordering = ['ten_san_pham']
+    
+    def __str__(self):
+        return f"{self.ma_san_pham} - {self.ten_san_pham}"
+    
+    @property
+    def gia_tri_ton_kho(self):
+        return self.so_luong_ton_kho * self.gia_nhap
+    
+    def cap_nhat_trang_thai(self):
+        """Tự động cập nhật trạng thái dựa trên số lượng tồn kho"""
+        if self.so_luong_ton_kho <= 0:
+            self.trang_thai = 'het_hang'
+        elif self.so_luong_ton_kho <= self.so_luong_toi_thieu:
+            self.trang_thai = 'sap_het'
+        else:
+            self.trang_thai = 'con_hang'
+    
+    def save(self, *args, **kwargs):
+        if not self.ma_san_pham:
+            # Auto generate product code
+            last_product = SanPham.objects.filter(ma_san_pham__startswith='SP').order_by('-ma_san_pham').first()
+            if last_product:
+                last_num = int(last_product.ma_san_pham[2:])
+                self.ma_san_pham = f'SP{last_num + 1:04d}'
+            else:
+                self.ma_san_pham = 'SP0001'
+        
+        self.cap_nhat_trang_thai()
+        super().save(*args, **kwargs)
+
+class PhieuNhapKho(models.Model):
+    """Phiếu nhập kho"""
+    ma_phieu = models.CharField(max_length=50, unique=True)
+    nha_cung_cap = models.CharField(max_length=200)
+    nhan_vien_nhap = models.ForeignKey(NguoiDung, on_delete=models.CASCADE, related_name='phieu_nhap_kho')
+    ngay_nhap = models.DateTimeField(default=timezone.now)
+    tong_tien = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    ghi_chu = models.TextField(null=True, blank=True)
+    trang_thai = models.CharField(max_length=20, choices=[
+        ('cho_duyet', 'Chờ duyệt'),
+        ('da_duyet', 'Đã duyệt'),
+        ('da_nhap_kho', 'Đã nhập kho'),
+        ('huy', 'Hủy'),
+    ], default='cho_duyet')
+    ngay_tao = models.DateTimeField(auto_now_add=True)
+    ngay_cap_nhat = models.DateTimeField(auto_now=True)
+    da_xoa = models.BooleanField(default=False)
+    
+    class Meta:
+        db_table = 'phieu_nhap_kho'
+        verbose_name = 'Phiếu nhập kho'
+        verbose_name_plural = 'Phiếu nhập kho'
+        ordering = ['-ngay_nhap']
+    
+    def __str__(self):
+        return f"{self.ma_phieu} - {self.nha_cung_cap}"
+    
+    def save(self, *args, **kwargs):
+        if not self.ma_phieu:
+            from datetime import datetime
+            today = datetime.now().strftime('%Y%m%d')
+            count = PhieuNhapKho.objects.filter(ma_phieu__startswith=f'NK{today}').count()
+            self.ma_phieu = f'NK{today}{count + 1:03d}'
+        super().save(*args, **kwargs)
+
+class ChiTietNhapKho(models.Model):
+    """Chi tiết phiếu nhập kho"""
+    phieu_nhap = models.ForeignKey(PhieuNhapKho, on_delete=models.CASCADE, related_name='chi_tiet')
+    san_pham = models.ForeignKey(SanPham, on_delete=models.CASCADE, related_name='chi_tiet_nhap')
+    so_luong = models.IntegerField()
+    gia_nhap = models.DecimalField(max_digits=10, decimal_places=2)
+    thanh_tien = models.DecimalField(max_digits=12, decimal_places=2)
+    han_su_dung = models.DateField(null=True, blank=True)
+    ghi_chu = models.TextField(null=True, blank=True)
+    
+    class Meta:
+        db_table = 'chi_tiet_nhap_kho'
+        verbose_name = 'Chi tiết nhập kho'
+        verbose_name_plural = 'Chi tiết nhập kho'
+    
+    def save(self, *args, **kwargs):
+        self.thanh_tien = self.so_luong * self.gia_nhap
+        super().save(*args, **kwargs)
+        
+        # Update product inventory when import is approved  
+        if self.phieu_nhap.trang_thai == 'da_nhap_kho':
+            self.san_pham.so_luong_ton_kho += self.so_luong
+            self.san_pham.gia_nhap = self.gia_nhap  # Update latest import price
+            self.san_pham.save()
+
+class PhieuXuatKho(models.Model):
+    """Phiếu xuất kho"""
+    LOAI_XUAT_CHOICES = [
+        ('ban_hang', 'Bán hàng'),
+        ('su_dung_dich_vu', 'Sử dụng dịch vụ'),
+        ('hao_hut', 'Hao hụt'),
+        ('tra_hang', 'Trả hàng'),
+        ('khac', 'Khác'),
+    ]
+    
+    ma_phieu = models.CharField(max_length=50, unique=True)
+    loai_xuat = models.CharField(max_length=20, choices=LOAI_XUAT_CHOICES, default='su_dung_dich_vu')
+    nhan_vien_xuat = models.ForeignKey(NguoiDung, on_delete=models.CASCADE, related_name='phieu_xuat_kho')
+    ngay_xuat = models.DateTimeField(default=timezone.now)
+    ly_do = models.CharField(max_length=200)
+    ghi_chu = models.TextField(null=True, blank=True)
+    trang_thai = models.CharField(max_length=20, choices=[
+        ('cho_duyet', 'Chờ duyệt'),
+        ('da_duyet', 'Đã duyệt'),
+        ('da_xuat_kho', 'Đã xuất kho'),
+        ('huy', 'Hủy'),
+    ], default='cho_duyet')
+    ngay_tao = models.DateTimeField(auto_now_add=True)
+    ngay_cap_nhat = models.DateTimeField(auto_now=True)
+    da_xoa = models.BooleanField(default=False)
+    
+    class Meta:
+        db_table = 'phieu_xuat_kho'
+        verbose_name = 'Phiếu xuất kho'
+        verbose_name_plural = 'Phiếu xuất kho'
+        ordering = ['-ngay_xuat']
+    
+    def __str__(self):
+        return f"{self.ma_phieu} - {self.ly_do}"
+    
+    def save(self, *args, **kwargs):
+        if not self.ma_phieu:
+            from datetime import datetime
+            today = datetime.now().strftime('%Y%m%d')
+            count = PhieuXuatKho.objects.filter(ma_phieu__startswith=f'XK{today}').count()
+            self.ma_phieu = f'XK{today}{count + 1:03d}'
+        super().save(*args, **kwargs)
+
+class ChiTietXuatKho(models.Model):
+    """Chi tiết phiếu xuất kho"""
+    phieu_xuat = models.ForeignKey(PhieuXuatKho, on_delete=models.CASCADE, related_name='chi_tiet')
+    san_pham = models.ForeignKey(SanPham, on_delete=models.CASCADE, related_name='chi_tiet_xuat')
+    so_luong = models.IntegerField()
+    gia_xuat = models.DecimalField(max_digits=10, decimal_places=2)
+    thanh_tien = models.DecimalField(max_digits=12, decimal_places=2)
+    ghi_chu = models.TextField(null=True, blank=True)
+    
+    class Meta:
+        db_table = 'chi_tiet_xuat_kho'
+        verbose_name = 'Chi tiết xuất kho'
+        verbose_name_plural = 'Chi tiết xuất kho'
+    
+    def save(self, *args, **kwargs):
+        self.thanh_tien = self.so_luong * self.gia_xuat
+        super().save(*args, **kwargs)
+        
+        # Update product inventory when export is approved
+        if self.phieu_xuat.trang_thai == 'da_xuat_kho':
+            if self.san_pham.so_luong_ton_kho >= self.so_luong:
+                self.san_pham.so_luong_ton_kho -= self.so_luong
+                self.san_pham.save()
+
+# =============================================
+# 17. CHẤM CÔNG NHÂN VIÊN
+# =============================================
+class ChamCong(models.Model):
+    TRANG_THAI_CHOICES = [
+        ('dung_gio', 'Đúng giờ'),
+        ('tre', 'Trễ'),
+        ('som', 'Sớm'),
+        ('vang_mat', 'Vắng mặt'),
+    ]
+    
+    nhan_vien = models.ForeignKey(NguoiDung, on_delete=models.CASCADE, related_name='cham_cong')
+    ngay_lam = models.DateField()
+    gio_vao = models.TimeField(null=True, blank=True)
+    gio_ra = models.TimeField(null=True, blank=True)
+    gio_vao_chuan = models.TimeField(default='08:00')  # Giờ vào chuẩn
+    gio_ra_chuan = models.TimeField(default='17:00')   # Giờ ra chuẩn
+    tong_gio_lam = models.DurationField(null=True, blank=True)
+    gio_lam_them = models.DurationField(null=True, blank=True)
+    trang_thai_vao = models.CharField(max_length=20, choices=TRANG_THAI_CHOICES, default='dung_gio')
+    trang_thai_ra = models.CharField(max_length=20, choices=TRANG_THAI_CHOICES, default='dung_gio')
+    ghi_chu = models.TextField(null=True, blank=True)
+    ngay_tao = models.DateTimeField(auto_now_add=True)
+    ngay_cap_nhat = models.DateTimeField(auto_now=True)
+    da_xoa = models.BooleanField(default=False)
+    
+    class Meta:
+        db_table = 'cham_cong'
+        verbose_name = 'Chấm công'
+        verbose_name_plural = 'Chấm công'
+        unique_together = ['nhan_vien', 'ngay_lam']
+        ordering = ['-ngay_lam', 'nhan_vien__ho_ten']
+    
+    def __str__(self):
+        return f"{self.nhan_vien.ho_ten} - {self.ngay_lam}"
+    
+    def calculate_work_hours(self):
+        """Tính tổng giờ làm và giờ làm thêm"""
+        if self.gio_vao and self.gio_ra:
+            from datetime import datetime, timedelta
+            
+            # Tính tổng giờ làm
+            vao = datetime.combine(self.ngay_lam, self.gio_vao)
+            ra = datetime.combine(self.ngay_lam, self.gio_ra)
+            
+            # Nếu ra trước vào (qua ngày) thì cộng thêm 1 ngày
+            if ra < vao:
+                ra += timedelta(days=1)
+            
+            self.tong_gio_lam = ra - vao
+            
+            # Tính giờ làm thêm (so với 8 tiếng chuẩn)
+            gio_chuan = timedelta(hours=8)
+            if self.tong_gio_lam > gio_chuan:
+                self.gio_lam_them = self.tong_gio_lam - gio_chuan
+            else:
+                self.gio_lam_them = timedelta(0)
+    
+    def save(self, *args, **kwargs):
+        self.calculate_work_hours()
         super().save(*args, **kwargs)
 
 # CÁC MODEL KHÁC (Voucher khách hàng, Điểm đổi thưởng, Giao dịch điểm, 
