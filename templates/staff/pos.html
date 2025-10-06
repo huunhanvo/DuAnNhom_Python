@@ -216,11 +216,6 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="/staff/revenue">
-                    <i class="fas fa-chart-line"></i> Doanh thu cá nhân
-                </a>
-            </li>
-            <li class="nav-item">
                 <a class="nav-link" href="/staff/profile">
                     <i class="fas fa-user-circle"></i> Thông tin cá nhân
                 </a>
@@ -643,7 +638,8 @@
     }
 
     function viewHistory() {
-        window.location.href = '/staff/pos/history';
+        // Redirect to today-bookings page to view booking history
+        window.location.href = '/staff/today-bookings/';
     }
 
     // Show/hide cash input

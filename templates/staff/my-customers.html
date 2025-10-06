@@ -42,6 +42,11 @@
         font-weight: 600;
     }
     
+    .tier-bronze { background: linear-gradient(135deg, #cd7f32 0%, #8b4513 100%); color: white; }
+    .tier-silver { background: linear-gradient(135deg, #c0c0c0 0%, #808080 100%); color: white; }
+    .tier-gold { background: linear-gradient(135deg, #ffd700 0%, #b8860b 100%); color: white; }
+    .tier-platinum { background: linear-gradient(135deg, #e5e4e2 0%, #b8b6b3 100%); color: #333; }
+    
     .customer-stats {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
@@ -154,37 +159,50 @@
     <!-- Filters -->
     <div class="card mb-4">
         <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <input type="text" class="form-control" id="searchInput" 
-                           placeholder="Tìm kiếm khách hàng...">
+            <form method="GET" id="filterForm">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <input type="text" class="form-control" name="search" 
+                               value="{{ search_query }}"
+                               placeholder="Tìm kiếm khách hàng...">
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" name="sort">
+                            <option value="-last_visit" {% if sort_by == '-last_visit' %}selected{% endif %}>Gặp gần nhất</option>
+                            <option value="-visit_count" {% if sort_by == '-visit_count' %}selected{% endif %}>Số lần nhiều nhất</option>
+                            <option value="-revenue" {% if sort_by == '-revenue' %}selected{% endif %}>Doanh thu cao nhất</option>
+                            <option value="-rating" {% if sort_by == '-rating' %}selected{% endif %}>Đánh giá cao nhất</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" name="tier">
+                            <option value="">Tất cả hạng</option>
+                            <option value="bronze" {% if tier_filter == 'bronze' %}selected{% endif %}>Đồng</option>
+                            <option value="silver" {% if tier_filter == 'silver' %}selected{% endif %}>Bạc</option>
+                            <option value="gold" {% if tier_filter == 'gold' %}selected{% endif %}>Vàng</option>
+                            <option value="platinum" {% if tier_filter == 'platinum' %}selected{% endif %}>Bạch kim</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select" name="loyalty">
+                            <option value="">Tất cả</option>
+                            <option value="high" {% if loyalty_filter == 'high' %}selected{% endif %}>Trung thành cao</option>
+                            <option value="medium" {% if loyalty_filter == 'medium' %}selected{% endif %}>Trung thành TB</option>
+                            <option value="low" {% if loyalty_filter == 'low' %}selected{% endif %}>Mới</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="col-md-3">
-                    <select class="form-select" id="sortSelect">
-                        <option value="-last_visit">Gặp gần nhất</option>
-                        <option value="-visit_count">Số lần nhiều nhất</option>
-                        <option value="-revenue">Doanh thu cao nhất</option>
-                        <option value="-rating">Đánh giá cao nhất</option>
-                    </select>
+                <div class="row mt-3">
+                    <div class="col-md-12 text-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Lọc
+                        </button>
+                        <a href="{% url 'staff_my_customers' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i> Xóa bộ lọc
+                        </a>
+                    </div>
                 </div>
-                <div class="col-md-3">
-                    <select class="form-select" id="tierFilter">
-                        <option value="">Tất cả hạng</option>
-                        <option value="bronze">Đồng</option>
-                        <option value="silver">Bạc</option>
-                        <option value="gold">Vàng</option>
-                        <option value="platinum">Bạch kim</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <select class="form-select" id="loyaltyFilter">
-                        <option value="">Tất cả</option>
-                        <option value="high">Trung thành cao</option>
-                        <option value="medium">Trung thành TB</option>
-                        <option value="low">Mới</option>
-                    </select>
-                </div>
-            </div>
+            </form>
         </div>
     </div>
 
@@ -204,7 +222,10 @@
                             <i class="fas fa-phone"></i> {{ customer.so_dien_thoai }}
                         </p>
                         <span class="tier-badge tier-{{ customer.hang_thanh_vien }}">
-                            {{ customer.get_hang_thanh_vien_display }}
+                            {% if customer.hang_thanh_vien == 'platinum' %}Bạch kim
+                            {% elif customer.hang_thanh_vien == 'gold' %}Vàng
+                            {% elif customer.hang_thanh_vien == 'silver' %}Bạc
+                            {% else %}Đồng{% endif %}
                         </span>
                     </div>
                     
@@ -340,23 +361,23 @@
 {% block extra_js %}
 <script>
 $(document).ready(function() {
-    // Search
-    $('#searchInput').on('input', function() {
-        const search = $(this).val().toLowerCase();
-        $('.customer-card').each(function() {
-            const text = $(this).text().toLowerCase();
-            $(this).parent().toggle(text.includes(search));
-        });
+    // Auto-submit form when filters change
+    $('select[name="sort"], select[name="tier"], select[name="loyalty"]').change(function() {
+        $('#filterForm').submit();
     });
     
-    // Sort
-    $('#sortSelect, #tierFilter, #loyaltyFilter').change(function() {
-        // Apply filters
+    // Auto-submit form when search input changes (with delay)
+    let searchTimeout;
+    $('input[name="search"]').on('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(function() {
+            $('#filterForm').submit();
+        }, 500);
     });
 });
 
 function createBooking(customerId) {
-    window.location.href = `/staff/bookings/create/?customer_id=${customerId}`;
+    window.location.href = `{% url 'staff_bookings_create' %}?customer_id=${customerId}`;
 }
 
 function viewDetail(customerId) {

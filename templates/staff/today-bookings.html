@@ -239,17 +239,17 @@
         <div class="col-12">
             <div class="booking-timeline" id="bookingTimeline">
                 {% for booking in bookings %}
-                <div class="booking-card card {{ booking.trang_thai }}" data-status="{{ booking.trang_thai }}">
+                <div class="booking-card card {% if booking.trang_thai == 'cho_xac_nhan' %}pending{% elif booking.trang_thai == 'da_xac_nhan' %}confirmed{% elif booking.trang_thai == 'da_checkin' %}in-progress{% elif booking.trang_thai == 'hoan_thanh' %}completed{% elif booking.trang_thai == 'da_huy' %}cancelled{% endif %}" data-status="{% if booking.trang_thai == 'cho_xac_nhan' %}pending{% elif booking.trang_thai == 'da_xac_nhan' %}confirmed{% elif booking.trang_thai == 'da_checkin' %}in-progress{% elif booking.trang_thai == 'hoan_thanh' %}completed{% elif booking.trang_thai == 'da_huy' %}cancelled{% endif %}">
                     <div class="card-body">
                         <div class="row align-items-center">
                             <!-- Time -->
                             <div class="col-md-2">
                                 <div class="time-badge">
-                                    <i class="fas fa-clock"></i> {{ booking.gio_bat_dau }}
+                                    <i class="fas fa-clock"></i> {{ booking.gio_hen|time:"H:i" }}
                                 </div>
                                 <div class="mt-2">
                                     <small class="text-muted">
-                                        Thời lượng: {{ booking.thoi_luong_du_kien }} phút
+                                        Tổng tiền: {{ booking.thanh_tien|floatformat:0 }}đ
                                     </small>
                                 </div>
                             </div>
@@ -257,15 +257,15 @@
                             <!-- Customer Info -->
                             <div class="col-md-3">
                                 <div class="d-flex align-items-center">
-                                    <img src="{{ booking.khach_hang.anh_dai_dien|default:'/static/img/avatar-default.png' }}" 
-                                         alt="{{ booking.khach_hang.ho_ten }}" 
+                                    <img src="https://ui-avatars.com/api/?name={{ booking.ten_khach_hang|default:booking.khach_hang.ho_ten|urlencode }}" 
+                                         alt="{{ booking.ten_khach_hang|default:booking.khach_hang.ho_ten }}" 
                                          class="customer-avatar me-3">
                                     <div>
-                                        <h6 class="mb-1">{{ booking.khach_hang.ho_ten }}</h6>
+                                        <h6 class="mb-1">{{ booking.ten_khach_hang|default:booking.khach_hang.ho_ten }}</h6>
                                         <small class="text-muted">
-                                            <i class="fas fa-phone"></i> {{ booking.khach_hang.so_dien_thoai }}
+                                            <i class="fas fa-phone"></i> {{ booking.so_dien_thoai_khach }}
                                         </small>
-                                        {% if booking.khach_hang.diem_tich_luy > 0 %}
+                                        {% if booking.khach_hang and booking.khach_hang.diem_tich_luy > 0 %}
                                         <br>
                                         <small class="text-warning">
                                             <i class="fas fa-star"></i> {{ booking.khach_hang.diem_tich_luy }} điểm
@@ -278,10 +278,15 @@
                             <!-- Services -->
                             <div class="col-md-3">
                                 <h6 class="mb-2">Dịch vụ:</h6>
-                                {% for service in booking.dich_vu.all %}
+                                {% for dv_dat_lich in booking.dich_vu_dat_lich.all %}
                                 <span class="service-tag">
-                                    <i class="fas fa-cut"></i> {{ service.ten_dich_vu }}
-                                    <span class="text-primary">{{ service.gia|floatformat:0 }}đ</span>
+                                    <i class="fas fa-cut"></i> {{ dv_dat_lich.dich_vu.ten_dich_vu }}
+                                    <span class="text-primary">{{ dv_dat_lich.gia_tai_thoi_diem|floatformat:0 }}đ</span>
+                                </span>
+                                {% empty %}
+                                <span class="service-tag">
+                                    <i class="fas fa-cut"></i> Dịch vụ cắt tóc
+                                    <span class="text-primary">{{ booking.thanh_tien|floatformat:0 }}đ</span>
                                 </span>
                                 {% endfor %}
                             </div>
@@ -290,23 +295,23 @@
                             <div class="col-md-4">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
-                                        {% if booking.trang_thai == 'pending' %}
+                                        {% if booking.trang_thai == 'cho_xac_nhan' %}
                                         <span class="status-badge bg-warning text-dark">
                                             <i class="fas fa-clock"></i> Chờ xác nhận
                                         </span>
-                                        {% elif booking.trang_thai == 'confirmed' %}
+                                        {% elif booking.trang_thai == 'da_xac_nhan' %}
                                         <span class="status-badge bg-success text-white">
                                             <i class="fas fa-check"></i> Đã xác nhận
                                         </span>
-                                        {% elif booking.trang_thai == 'in-progress' %}
+                                        {% elif booking.trang_thai == 'da_checkin' %}
                                         <span class="status-badge bg-info text-white">
                                             <i class="fas fa-cut"></i> Đang phục vụ
                                         </span>
-                                        {% elif booking.trang_thai == 'completed' %}
+                                        {% elif booking.trang_thai == 'hoan_thanh' %}
                                         <span class="status-badge bg-primary text-white">
                                             <i class="fas fa-check-double"></i> Hoàn thành
                                         </span>
-                                        {% elif booking.trang_thai == 'cancelled' %}
+                                        {% elif booking.trang_thai == 'da_huy' %}
                                         <span class="status-badge bg-danger text-white">
                                             <i class="fas fa-times"></i> Đã hủy
                                         </span>
@@ -322,7 +327,7 @@
                                     </div>
 
                                     <div class="quick-actions">
-                                        {% if booking.trang_thai == 'pending' %}
+                                        {% if booking.trang_thai == 'cho_xac_nhan' %}
                                         <button class="btn btn-sm btn-success" 
                                                 onclick="confirmBooking({{ booking.id }})">
                                             <i class="fas fa-check"></i> Xác nhận
@@ -331,17 +336,17 @@
                                                 onclick="cancelBooking({{ booking.id }})">
                                             <i class="fas fa-times"></i> Hủy
                                         </button>
-                                        {% elif booking.trang_thai == 'confirmed' %}
+                                        {% elif booking.trang_thai == 'da_xac_nhan' %}
                                         <button class="btn btn-sm btn-info" 
                                                 onclick="checkInBooking({{ booking.id }})">
                                             <i class="fas fa-sign-in-alt"></i> Check-in
                                         </button>
-                                        {% elif booking.trang_thai == 'in-progress' %}
+                                        {% elif booking.trang_thai == 'da_checkin' %}
                                         <button class="btn btn-sm btn-primary" 
                                                 onclick="completeBooking({{ booking.id }})">
                                             <i class="fas fa-check-double"></i> Hoàn thành
                                         </button>
-                                        {% elif booking.trang_thai == 'completed' %}
+                                        {% elif booking.trang_thai == 'hoan_thanh' %}
                                         <a href="{% url 'staff_pos' %}?booking_id={{ booking.id }}" 
                                            class="btn btn-sm btn-warning">
                                             <i class="fas fa-cash-register"></i> Thanh toán

@@ -6,6 +6,7 @@ from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
 from barbershop import views
+import test_avatar_views
 
 urlpatterns = [
     path('admin-panel/', admin.site.urls),
@@ -71,9 +72,7 @@ urlpatterns = [
     path('staff/schedule/', views.staff_schedule, name='staff_schedule'),
     path('staff/register-shift/', views.staff_register_shift, name='staff_register_shift'),
     path('staff/my-customers/', views.staff_my_customers, name='staff_my_customers'),
-    path('staff/revenue/', views.staff_revenue, name='staff_revenue'),
     path('staff/profile/', views.staff_profile, name='staff_profile'),
-    path('staff/commission/', views.staff_commission, name='staff_commission'),
     path('staff/bookings/create/', views.staff_bookings_create, name='staff_bookings_create'),
     
     # API URLs
@@ -96,6 +95,33 @@ urlpatterns = [
     # Staff action endpoints
     path('staff/booking-checkin/<int:booking_id>/', views.staff_booking_checkin, name='staff_booking_checkin'),
     path('staff/booking-complete/<int:booking_id>/', views.staff_booking_complete, name='staff_booking_complete'),
+    
+    # Staff today bookings API endpoints
+    path('api/bookings/<int:booking_id>/confirm/', views.api_booking_confirm, name='api_booking_confirm'),
+    path('api/bookings/<int:booking_id>/check-in/', views.api_booking_checkin, name='api_booking_checkin'),
+    path('api/bookings/<int:booking_id>/complete/', views.api_booking_complete_today, name='api_booking_complete_today'),
+    path('api/bookings/<int:booking_id>/cancel/', views.api_booking_cancel, name='api_booking_cancel'),
+    path('api/bookings/<int:booking_id>/', views.api_booking_detail, name='api_booking_detail'),
+    
+    # Staff schedule API endpoints
+    path('api/attendance/check-in/', views.api_attendance_checkin, name='api_attendance_checkin'),
+    path('api/attendance/check-out/', views.api_attendance_checkout, name='api_attendance_checkout'),
+    path('api/leave-requests/', views.api_leave_request_create, name='api_leave_request_create'),
+    path('api/leave-requests/<int:leave_id>/', views.api_leave_request_cancel, name='api_leave_request_cancel'),
+    path('api/schedule/day/<str:date_str>/', views.api_schedule_day_detail, name='api_schedule_day_detail'),
+    
+    # Staff my-customers API endpoints
+    path('api/customers/<int:customer_id>/detail/', views.api_customer_detail_staff, name='api_customer_detail_staff'),
+    path('staff/my-customers/export/', views.staff_customers_export, name='staff_customers_export'),
+    
+    # Staff profile API endpoints
+    path('api/staff/update-profile/', views.api_staff_update_profile, name='api_staff_update_profile'),
+    path('api/staff/change-password/', views.api_staff_change_password, name='api_staff_change_password'),
+    path('api/staff/upload-avatar/', views.api_staff_upload_avatar, name='api_staff_upload_avatar'),
+    path('api/staff/update-notifications/', views.api_staff_update_notifications, name='api_staff_update_notifications'),
+    
+    # Test URLs
+    path('test/avatar/', test_avatar_views.test_avatar, name='test_avatar'),
 ]
 
 # Serve media files in development

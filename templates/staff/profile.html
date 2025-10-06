@@ -104,7 +104,7 @@
     <!-- Profile Header -->
     <div class="profile-header">
         <div class="avatar-upload">
-            <img src="{{ staff.anh_dai_dien|default:'/static/img/avatar-default.png' }}" 
+            <img src="{% if staff.anh_dai_dien %}{{ MEDIA_URL }}{{ staff.anh_dai_dien }}{% else %}/static/img/avatar-default.png{% endif %}" 
                  alt="{{ staff.ho_ten }}" 
                  class="avatar-preview" 
                  id="avatarPreview">
@@ -164,6 +164,7 @@
                     <div class="profile-card">
                         <h5 class="mb-4"><i class="fas fa-id-card"></i> Thông tin cá nhân</h5>
                         <form id="profileForm">
+                            {% csrf_token %}
                             <div class="row mb-3">
                                 <div class="col-md-6">
                                     <label class="form-label">Họ và tên <span class="text-danger">*</span></label>
@@ -323,9 +324,10 @@
                     <div class="profile-card">
                         <h5 class="mb-4"><i class="fas fa-key"></i> Đổi mật khẩu</h5>
                         <form id="passwordForm">
+                            {% csrf_token %}
                             <div class="mb-3">
                                 <label class="form-label">Mật khẩu hiện tại <span class="text-danger">*</span></label>
-                                <input type="password" class="form-control" name="current_password" required>
+                                <input type="password" class="form-control" name="old_password" required>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Mật khẩu mới <span class="text-danger">*</span></label>
@@ -383,6 +385,7 @@
                 <h5 class="mb-4"><i class="fas fa-bell"></i> Cài đặt thông báo</h5>
                 
                 <form id="notificationForm">
+                    {% csrf_token %}
                     <div class="mb-4">
                         <h6>Thông báo Email</h6>
                         <div class="form-check mb-2">
@@ -457,6 +460,9 @@ $('#avatarInput').change(function() {
         const formData = new FormData();
         formData.append('avatar', file);
         
+        // Add CSRF token
+        formData.append('csrfmiddlewaretoken', $('[name=csrfmiddlewaretoken]').val());
+        
         $.ajax({
             url: '/api/staff/upload-avatar/',
             type: 'POST',
@@ -464,7 +470,18 @@ $('#avatarInput').change(function() {
             processData: false,
             contentType: false,
             success: function(response) {
-                alert('Cập nhật ảnh đại diện thành công!');
+                if (response.success) {
+                    alert(response.message);
+                    // Update avatar preview if URL provided
+                    if (response.avatar_url) {
+                        $('#avatarPreview').attr('src', response.avatar_url);
+                    }
+                } else {
+                    alert('Lỗi: ' + response.message);
+                }
+            },
+            error: function(xhr, status, error) {
+                alert('Lỗi upload ảnh: ' + (xhr.responseJSON?.message || error));
             }
         });
     }
@@ -479,7 +496,14 @@ $('#profileForm').submit(function(e) {
         type: 'POST',
         data: $(this).serialize(),
         success: function(response) {
-            alert('Cập nhật thông tin thành công!');
+            if (response.success) {
+                alert(response.message);
+            } else {
+                alert('Lỗi: ' + response.message);
+            }
+        },
+        error: function(xhr, status, error) {
+            alert('Lỗi cập nhật thông tin: ' + (xhr.responseJSON?.message || error));
         }
     });
 });
@@ -501,8 +525,15 @@ $('#passwordForm').submit(function(e) {
         type: 'POST',
         data: $(this).serialize(),
         success: function(response) {
-            alert('Đổi mật khẩu thành công!');
-            $('#passwordForm')[0].reset();
+            if (response.success) {
+                alert(response.message);
+                $('#passwordForm')[0].reset();
+            } else {
+                alert('Lỗi: ' + response.message);
+            }
+        },
+        error: function(xhr, status, error) {
+            alert('Lỗi đổi mật khẩu: ' + (xhr.responseJSON?.message || error));
         }
     });
 });

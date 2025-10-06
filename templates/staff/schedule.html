@@ -332,15 +332,15 @@
                     <small class="text-muted">Gửi lúc: {{ leave.ngay_tao|date:"d/m/Y H:i" }}</small>
                 </div>
                 <div class="text-end">
-                    {% if leave.trang_thai == 'pending' %}
+                    {% if leave.trang_thai == 'cho_duyet' %}
                     <span class="badge bg-warning">Chờ duyệt</span>
-                    {% elif leave.trang_thai == 'approved' %}
+                    {% elif leave.trang_thai == 'da_duyet' %}
                     <span class="badge bg-success">Đã duyệt</span>
                     {% else %}
                     <span class="badge bg-danger">Từ chối</span>
                     {% endif %}
                     
-                    {% if leave.trang_thai == 'pending' %}
+                    {% if leave.trang_thai == 'cho_duyet' %}
                     <br>
                     <button class="btn btn-sm btn-outline-danger mt-2" onclick="cancelLeave({{ leave.id }})">
                         <i class="fas fa-times"></i> Hủy
@@ -349,7 +349,7 @@
                 </div>
             </div>
             
-            {% if leave.trang_thai == 'rejected' and leave.ly_do_tu_choi %}
+            {% if leave.trang_thai == 'tu_choi' and leave.ly_do_tu_choi %}
             <div class="alert alert-danger mt-3 mb-0">
                 <strong>Lý do từ chối:</strong> {{ leave.ly_do_tu_choi }}
             </div>

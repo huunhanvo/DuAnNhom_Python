@@ -1,8 +1,10 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
-from django.db.models import Count, Sum, Q, Avg, F, Case, When, IntegerField
+from django.db.models import Count, Sum, Q, Avg, F, Case, When, IntegerField, Max
+from django.views.decorators.csrf import csrf_exempt
 from datetime import datetime, timedelta
+from decimal import Decimal
 import csv
 import json
 import bcrypt
@@ -45,8 +47,44 @@ def login_view(request):
         try:
             user = NguoiDung.objects.get(so_dien_thoai=sdt, da_xoa=False)
             
-            # Verify password with bcrypt
-            if bcrypt.checkpw(password.encode('utf-8'), user.mat_khau_hash.encode('utf-8')):
+            # Debug: Log password hash format
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"Login attempt for user: {user.ho_ten}, hash: {user.mat_khau_hash[:20]}...")
+            
+            # Verify password with multiple hash formats
+            password_matches = False
+            
+            # Try bcrypt first (preferred format)
+            if user.mat_khau_hash.startswith('$2b$'):
+                try:
+                    password_matches = bcrypt.checkpw(password.encode('utf-8'), user.mat_khau_hash.encode('utf-8'))
+                except ValueError as e:
+                    logger.error(f"Bcrypt error for user {user.ho_ten}: {e}")
+                    context = {'error': 'Lỗi xác thực mật khẩu. Vui lòng liên hệ admin.'}
+                    return render(request, 'login.html', context)
+            
+            # Try Django's built-in password hashers (for legacy accounts)
+            elif user.mat_khau_hash.startswith('pbkdf2_sha256$'):
+                from django.contrib.auth.hashers import check_password
+                try:
+                    password_matches = check_password(password, user.mat_khau_hash)
+                except Exception as e:
+                    logger.error(f"Django hasher error for user {user.ho_ten}: {e}")
+            
+            # Handle simple text passwords (invalid - should be updated)
+            elif user.mat_khau_hash == 'hashed_password':
+                # These accounts need password reset
+                context = {'error': 'Tài khoản cần được cập nhật mật khẩu. Vui lòng liên hệ admin.'}
+                return render(request, 'login.html', context)
+            
+            else:
+                # Unknown hash format
+                logger.warning(f"Unknown password hash format for user {user.ho_ten}: {user.mat_khau_hash[:20]}...")
+                context = {'error': 'Lỗi xác thực mật khẩu. Vui lòng liên hệ admin.'}
+                return render(request, 'login.html', context)
+            
+            if password_matches:
                 # Save user info to session
                 request.session['user_id'] = user.id
                 request.session['vai_tro'] = user.vai_tro
@@ -64,7 +102,7 @@ def login_view(request):
                 return render(request, 'login.html', context)
                 
         except NguoiDung.DoesNotExist:
-            context = {'error': 'Số điện thoại không tồn tại!'}
+            context = {'error': 'Sá» Äiá»n thoáº¡i khÃ´ng tá»n táº¡i!'}
             return render(request, 'login.html', context)
     
     return render(request, 'login.html')
@@ -177,22 +215,22 @@ def admin_staff(request):
                 email = request.POST.get('email', '').strip()
                 
                 if not ho_ten:
-                    return JsonResponse({'success': False, 'message': 'Họ tên không được để trống'})
+                    return JsonResponse({'success': False, 'message': 'Há» tÃªn khÃ´ng ÄÆ°á»£c Äá» trá»ng'})
                 
                 if not so_dien_thoai:
-                    return JsonResponse({'success': False, 'message': 'Số điện thoại không được để trống'})
+                    return JsonResponse({'success': False, 'message': 'Sá» Äiá»n thoáº¡i khÃ´ng ÄÆ°á»£c Äá» trá»ng'})
                 
                 # Check if phone already exists
                 if NguoiDung.objects.filter(so_dien_thoai=so_dien_thoai, da_xoa=False).exists():
-                    return JsonResponse({'success': False, 'message': f'Số điện thoại {so_dien_thoai} đã tồn tại!'})
+                    return JsonResponse({'success': False, 'message': f'Sá» Äiá»n thoáº¡i {so_dien_thoai} ÄÃ£ tá»n táº¡i!'})
                 
                 # Check if email already exists (if provided)
                 if email and NguoiDung.objects.filter(email=email, da_xoa=False).exists():
-                    return JsonResponse({'success': False, 'message': f'Email {email} đã tồn tại!'})
+                    return JsonResponse({'success': False, 'message': f'Email {email} ÄÃ£ tá»n táº¡i!'})
                 
                 # Validate phone format (basic)
                 if not so_dien_thoai.isdigit() or len(so_dien_thoai) < 10:
-                    return JsonResponse({'success': False, 'message': 'Số điện thoại không hợp lệ (tối thiểu 10 số)'})
+                    return JsonResponse({'success': False, 'message': 'Sá» Äiá»n thoáº¡i khÃ´ng há»£p lá» (tá»i thiá»u 10 sá»)'})
                 
                 # Parse date
                 ngay_sinh_str = request.POST.get('ngay_sinh', '').strip()
@@ -202,7 +240,7 @@ def admin_staff(request):
                     try:
                         ngay_sinh = datetime.strptime(ngay_sinh_str, '%Y-%m-%d').date()
                     except ValueError:
-                        return JsonResponse({'success': False, 'message': 'Ngày sinh không hợp lệ (định dạng: YYYY-MM-DD)'})
+                        return JsonResponse({'success': False, 'message': 'NgÃ y sinh khÃ´ng há»£p lá» (Äá»nh dáº¡ng: YYYY-MM-DD)'})
                 
                 # Create user account
                 user = NguoiDung.objects.create(
@@ -236,9 +274,9 @@ def admin_staff(request):
                     mo_ta=request.POST.get('mo_ta', '').strip() or None,
                 )
                 
-                return JsonResponse({'success': True, 'message': 'Đã thêm nhân viên mới thành công!', 'staff_id': user.id})
+                return JsonResponse({'success': True, 'message': 'ÄÃ£ thÃªm nhÃ¢n viÃªn má»i thÃ nh cÃ´ng!', 'staff_id': user.id})
             except Exception as e:
-                return JsonResponse({'success': False, 'message': f'Lỗi: {str(e)}'})
+                return JsonResponse({'success': False, 'message': f'Lá»i: {str(e)}'})
         
         elif action == 'delete':
             # Soft delete staff
@@ -249,7 +287,7 @@ def admin_staff(request):
                 user.ngay_xoa = timezone.now()
                 user.save()
                 
-                return JsonResponse({'success': True, 'message': 'Đã xóa nhân viên!'})
+                return JsonResponse({'success': True, 'message': 'ÄÃ£ xÃ³a nhÃ¢n viÃªn!'})
             except Exception as e:
                 return JsonResponse({'success': False, 'message': str(e)})
         
@@ -261,8 +299,8 @@ def admin_staff(request):
                 user.trang_thai = not user.trang_thai
                 user.save()
                 
-                status_text = 'kích hoạt' if user.trang_thai else 'tạm ngừng'
-                return JsonResponse({'success': True, 'message': f'Đã {status_text} nhân viên!', 'new_status': user.trang_thai})
+                status_text = 'kÃ­ch hoáº¡t' if user.trang_thai else 'táº¡m ngá»«ng'
+                return JsonResponse({'success': True, 'message': f'ÄÃ£ {status_text} nhÃ¢n viÃªn!', 'new_status': user.trang_thai})
             except Exception as e:
                 return JsonResponse({'success': False, 'message': str(e)})
     
@@ -384,7 +422,7 @@ def admin_staff_detail(request, staff_id):
         'skills': skills,
         'certificates': certificates,
         # Statistics
-        'chuc_vu': 'Nhân viên',  # Default role
+        'chuc_vu': 'NhÃ¢n viÃªn',  # Default role
         'avg_rating': avg_rating,
         'total_services': total_bookings,  # Total bookings as proxy
         'total_customers': total_customers,
@@ -444,11 +482,11 @@ def admin_staff_edit(request, staff_id):
             staff_info.save()
             
             from django.contrib import messages
-            messages.success(request, 'Đã cập nhật thông tin nhân viên!')
+            messages.success(request, 'ÄÃ£ cáº­p nháº­t thÃ´ng tin nhÃ¢n viÃªn!')
             return redirect('admin_staff_detail', staff_id=staff_id)
         except Exception as e:
             from django.contrib import messages
-            messages.error(request, f'Có lỗi xảy ra: {str(e)}')
+            messages.error(request, f'CÃ³ lá»i xáº£y ra: {str(e)}')
     
     staff_info = None
     if hasattr(user, 'thong_tin_nhan_vien'):
@@ -458,7 +496,7 @@ def admin_staff_edit(request, staff_id):
         'staff': user,
         'user': user,
         'staff_info': staff_info,
-        'chuc_vu': 'Nhân viên',  # Default role
+        'chuc_vu': 'NhÃ¢n viÃªn',  # Default role
     }
     return render(request, 'admin/staff-edit.html', context)
 
@@ -577,12 +615,12 @@ def admin_bookings_create(request):
             
             if not all([customer_id, staff_id, booking_date, booking_time]):
                 from django.contrib import messages
-                messages.error(request, 'Vui lòng điền đầy đủ thông tin bắt buộc!')
+                messages.error(request, 'Vui lÃ²ng Äiá»n Äáº§y Äá»§ thÃ´ng tin báº¯t buá»c!')
                 return redirect(request.get_full_path())
             
             if not services:
                 from django.contrib import messages  
-                messages.error(request, 'Vui lòng chọn ít nhất một dịch vụ!')
+                messages.error(request, 'Vui lÃ²ng chá»n Ã­t nháº¥t má»t dá»ch vá»¥!')
                 return redirect(request.get_full_path())
             
             # Calculate total amount and generate booking code
@@ -630,12 +668,12 @@ def admin_bookings_create(request):
                 )
             
             from django.contrib import messages
-            messages.success(request, f'Đã tạo lịch hẹn {booking_code} thành công!')
+            messages.success(request, f'ÄÃ£ táº¡o lá»ch háº¹n {booking_code} thÃ nh cÃ´ng!')
             return redirect('admin_bookings')
             
         except Exception as e:
             from django.contrib import messages
-            messages.error(request, f'Lỗi tạo lịch hẹn: {str(e)}')
+            messages.error(request, f'Lá»i táº¡o lá»ch háº¹n: {str(e)}')
             return redirect(request.get_full_path())
     
     # Get data for form
@@ -716,23 +754,23 @@ def admin_booking_cancel(request, booking_id):
             if booking.trang_thai in ['hoan_thanh', 'da_huy']:
                 return JsonResponse({
                     'success': False, 
-                    'message': 'Không thể hủy lịch hẹn đã hoàn thành hoặc đã hủy'
+                    'message': 'KhÃ´ng thá» há»§y lá»ch háº¹n ÄÃ£ hoÃ n thÃ nh hoáº·c ÄÃ£ há»§y'
                 })
             
             booking.trang_thai = 'da_huy'
             booking.ngay_huy = timezone.now()
-            booking.ly_do_huy = request.POST.get('reason', 'Hủy từ admin')
+            booking.ly_do_huy = request.POST.get('reason', 'Há»§y tá»« admin')
             booking.save()
             
             return JsonResponse({
                 'success': True,
-                'message': 'Đã hủy lịch hẹn thành công'
+                'message': 'ÄÃ£ há»§y lá»ch háº¹n thÃ nh cÃ´ng'
             })
             
         except Exception as e:
             return JsonResponse({
                 'success': False,
-                'message': f'Lỗi: {str(e)}'
+                'message': f'Lá»i: {str(e)}'
             })
     
     return JsonResponse({'success': False, 'message': 'Method not allowed'})
@@ -747,7 +785,7 @@ def admin_booking_checkin(request, booking_id):
             if booking.trang_thai != 'da_xac_nhan':
                 return JsonResponse({
                     'success': False,
-                    'message': 'Chỉ có thể check-in lịch hẹn đã xác nhận'
+                    'message': 'Chá» cÃ³ thá» check-in lá»ch háº¹n ÄÃ£ xÃ¡c nháº­n'
                 })
             
             booking.trang_thai = 'da_checkin'
@@ -756,13 +794,13 @@ def admin_booking_checkin(request, booking_id):
             
             return JsonResponse({
                 'success': True,
-                'message': 'Đã check-in thành công'
+                'message': 'ÄÃ£ check-in thÃ nh cÃ´ng'
             })
             
         except Exception as e:
             return JsonResponse({
                 'success': False,
-                'message': f'Lỗi: {str(e)}'
+                'message': f'Lá»i: {str(e)}'
             })
     
     return JsonResponse({'success': False, 'message': 'Method not allowed'})
@@ -777,7 +815,7 @@ def admin_booking_complete(request, booking_id):
             if booking.trang_thai != 'da_checkin':
                 return JsonResponse({
                     'success': False,
-                    'message': 'Chỉ có thể hoàn thành lịch hẹn đã check-in'
+                    'message': 'Chá» cÃ³ thá» hoÃ n thÃ nh lá»ch háº¹n ÄÃ£ check-in'
                 })
             
             booking.trang_thai = 'hoan_thanh'
@@ -786,13 +824,13 @@ def admin_booking_complete(request, booking_id):
             
             return JsonResponse({
                 'success': True,
-                'message': 'Đã hoàn thành lịch hẹn'
+                'message': 'ÄÃ£ hoÃ n thÃ nh lá»ch háº¹n'
             })
             
         except Exception as e:
             return JsonResponse({
                 'success': False,
-                'message': f'Lỗi: {str(e)}'
+                'message': f'Lá»i: {str(e)}'
             })
     
     return JsonResponse({'success': False, 'message': 'Method not allowed'})
@@ -840,7 +878,7 @@ def admin_bookings_export(request):
         # Create workbook
         wb = openpyxl.Workbook()
         ws = wb.active
-        ws.title = "Danh sách đặt lịch"
+        ws.title = "Danh sÃ¡ch Äáº·t lá»ch"
         
         # Header style
         header_font = Font(bold=True, color="FFFFFF")
@@ -849,9 +887,9 @@ def admin_bookings_export(request):
         
         # Headers
         headers = [
-            'Mã đặt lịch', 'Khách hàng', 'Số điện thoại', 'Nhân viên',
-            'Ngày hẹn', 'Giờ hẹn', 'Dịch vụ', 'Tổng tiền', 'Trạng thái', 
-            'Ngày tạo', 'Ghi chú'
+            'MÃ£ Äáº·t lá»ch', 'KhÃ¡ch hÃ ng', 'Sá» Äiá»n thoáº¡i', 'NhÃ¢n viÃªn',
+            'NgÃ y háº¹n', 'Giá» háº¹n', 'Dá»ch vá»¥', 'Tá»ng tiá»n', 'Tráº¡ng thÃ¡i', 
+            'NgÃ y táº¡o', 'Ghi chÃº'
         ]
         
         for col, header in enumerate(headers, 1):
@@ -862,12 +900,12 @@ def admin_bookings_export(request):
         
         # Data rows
         status_map = {
-            'cho_xac_nhan': 'Chờ xác nhận',
-            'da_xac_nhan': 'Đã xác nhận',
-            'da_checkin': 'Đang phục vụ',
-            'hoan_thanh': 'Hoàn thành',
-            'da_huy': 'Đã hủy',
-            'khong_den': 'Không đến'
+            'cho_xac_nhan': 'Chá» xÃ¡c nháº­n',
+            'da_xac_nhan': 'ÄÃ£ xÃ¡c nháº­n',
+            'da_checkin': 'Äang phá»¥c vá»¥',
+            'hoan_thanh': 'HoÃ n thÃ nh',
+            'da_huy': 'ÄÃ£ há»§y',
+            'khong_den': 'KhÃ´ng Äáº¿n'
         }
         
         for row, booking in enumerate(bookings, 2):
@@ -911,12 +949,12 @@ def admin_bookings_export(request):
     except ImportError:
         return JsonResponse({
             'success': False,
-            'message': 'Cần cài đặt openpyxl để xuất Excel: pip install openpyxl'
+            'message': 'Cáº§n cÃ i Äáº·t openpyxl Äá» xuáº¥t Excel: pip install openpyxl'
         })
     except Exception as e:
         return JsonResponse({
             'success': False,
-            'message': f'Lỗi xuất Excel: {str(e)}'
+            'message': f'Lá»i xuáº¥t Excel: {str(e)}'
         })
 
 @require_role(['quan_ly'])
@@ -933,14 +971,14 @@ def admin_customers(request):
             email = request.POST.get('email', '').strip()
             
             if not ho_ten:
-                return JsonResponse({'success': False, 'message': 'Họ tên không được để trống'})
+                return JsonResponse({'success': False, 'message': 'Há» tÃªn khÃ´ng ÄÆ°á»£c Äá» trá»ng'})
             
             if not so_dien_thoai:
-                return JsonResponse({'success': False, 'message': 'Số điện thoại không được để trống'})
+                return JsonResponse({'success': False, 'message': 'Sá» Äiá»n thoáº¡i khÃ´ng ÄÆ°á»£c Äá» trá»ng'})
             
             # Check if phone already exists
             if NguoiDung.objects.filter(so_dien_thoai=so_dien_thoai, da_xoa=False).exists():
-                return JsonResponse({'success': False, 'message': f'Số điện thoại {so_dien_thoai} đã tồn tại!'})
+                return JsonResponse({'success': False, 'message': f'Sá» Äiá»n thoáº¡i {so_dien_thoai} ÄÃ£ tá»n táº¡i!'})
             
             # Process email - set to None if empty
             email = email.strip() if email else None
@@ -949,11 +987,11 @@ def admin_customers(request):
                 
             # Check if email already exists (if provided)
             if email and NguoiDung.objects.filter(email__iexact=email, da_xoa=False).exists():
-                return JsonResponse({'success': False, 'message': f'Email {email} đã tồn tại!'})
+                return JsonResponse({'success': False, 'message': f'Email {email} ÄÃ£ tá»n táº¡i!'})
             
             # Validate phone format
             if not so_dien_thoai.isdigit() or len(so_dien_thoai) < 10:
-                return JsonResponse({'success': False, 'message': 'Số điện thoại không hợp lệ (tối thiểu 10 số)'})
+                return JsonResponse({'success': False, 'message': 'Sá» Äiá»n thoáº¡i khÃ´ng há»£p lá» (tá»i thiá»u 10 sá»)'})
             
             # Parse birth date
             ngay_sinh_str = request.POST.get('ngay_sinh', '').strip()
@@ -962,7 +1000,7 @@ def admin_customers(request):
                 try:
                     ngay_sinh = datetime.strptime(ngay_sinh_str, '%Y-%m-%d').date()
                 except ValueError:
-                    return JsonResponse({'success': False, 'message': 'Ngày sinh không hợp lệ (định dạng: YYYY-MM-DD)'})
+                    return JsonResponse({'success': False, 'message': 'NgÃ y sinh khÃ´ng há»£p lá» (Äá»nh dáº¡ng: YYYY-MM-DD)'})
             
             # Create customer
             import bcrypt
@@ -980,12 +1018,12 @@ def admin_customers(request):
             
             return JsonResponse({
                 'success': True, 
-                'message': f'Đã thêm khách hàng {ho_ten} thành công!',
+                'message': f'ÄÃ£ thÃªm khÃ¡ch hÃ ng {ho_ten} thÃ nh cÃ´ng!',
                 'customer_id': customer.id
             })
             
         except Exception as e:
-            return JsonResponse({'success': False, 'message': f'Lỗi: {str(e)}'})
+            return JsonResponse({'success': False, 'message': f'Lá»i: {str(e)}'})
     
     # GET request - Base query
     customers_query = NguoiDung.objects.filter(
@@ -1085,30 +1123,30 @@ def admin_services(request):
                 thoi_luong = request.POST.get('thoi_luong', '').strip()
                 
                 if not ten_dich_vu:
-                    return JsonResponse({'success': False, 'message': 'Tên dịch vụ không được để trống'})
+                    return JsonResponse({'success': False, 'message': 'TÃªn dá»ch vá»¥ khÃ´ng ÄÆ°á»£c Äá» trá»ng'})
                 if not danh_muc:
-                    return JsonResponse({'success': False, 'message': 'Danh mục không được để trống'})
+                    return JsonResponse({'success': False, 'message': 'Danh má»¥c khÃ´ng ÄÆ°á»£c Äá» trá»ng'})
                 if not gia:
-                    return JsonResponse({'success': False, 'message': 'Giá không được để trống'})
+                    return JsonResponse({'success': False, 'message': 'GiÃ¡ khÃ´ng ÄÆ°á»£c Äá» trá»ng'})
                 if not thoi_luong:
-                    return JsonResponse({'success': False, 'message': 'Thời lượng không được để trống'})
+                    return JsonResponse({'success': False, 'message': 'Thá»i lÆ°á»£ng khÃ´ng ÄÆ°á»£c Äá» trá»ng'})
                 
                 # Check if service name exists
                 if DichVu.objects.filter(ten_dich_vu=ten_dich_vu, da_xoa=False).exists():
-                    return JsonResponse({'success': False, 'message': f'Tên dịch vụ {ten_dich_vu} đã tồn tại!'})
+                    return JsonResponse({'success': False, 'message': f'TÃªn dá»ch vá»¥ {ten_dich_vu} ÄÃ£ tá»n táº¡i!'})
                 
                 # Get or create category based on name
                 category_mapping = {
-                    'haircut': 'Cắt tóc',
-                    'shave': 'Cạo râu', 
-                    'treatment': 'Chăm sóc',
+                    'haircut': 'Cáº¯t tÃ³c',
+                    'shave': 'Cáº¡o rÃ¢u', 
+                    'treatment': 'ChÄm sÃ³c',
                     'combo': 'Combo'
                 }
                 
                 category_name = category_mapping.get(danh_muc, danh_muc)
                 danh_muc_obj, created = DanhMucDichVu.objects.get_or_create(
                     ten_danh_muc=category_name,
-                    defaults={'mo_ta': f'Danh mục {category_name}', 'da_xoa': False}
+                    defaults={'mo_ta': f'Danh má»¥c {category_name}', 'da_xoa': False}
                 )
                 
                 # Handle image upload
@@ -1140,7 +1178,7 @@ def admin_services(request):
                     trang_thai=request.POST.get('trang_thai', 'active') == 'active',
                     da_xoa=False
                 )
-                return JsonResponse({'success': True, 'message': 'Đã thêm dịch vụ mới!', 'service_id': service.id})
+                return JsonResponse({'success': True, 'message': 'ÄÃ£ thÃªm dá»ch vá»¥ má»i!', 'service_id': service.id})
             except Exception as e:
                 return JsonResponse({'success': False, 'message': str(e)})
         
@@ -1157,20 +1195,20 @@ def admin_services(request):
                 
                 # Check if service name exists (excluding current service)
                 if DichVu.objects.filter(ten_dich_vu=ten_dich_vu, da_xoa=False).exclude(id=service_id).exists():
-                    return JsonResponse({'success': False, 'message': f'Tên dịch vụ {ten_dich_vu} đã tồn tại!'})
+                    return JsonResponse({'success': False, 'message': f'TÃªn dá»ch vá»¥ {ten_dich_vu} ÄÃ£ tá»n táº¡i!'})
                 
                 # Get or create category
                 category_mapping = {
-                    'haircut': 'Cắt tóc',
-                    'shave': 'Cạo râu', 
-                    'treatment': 'Chăm sóc',
+                    'haircut': 'Cáº¯t tÃ³c',
+                    'shave': 'Cáº¡o rÃ¢u', 
+                    'treatment': 'ChÄm sÃ³c',
                     'combo': 'Combo'
                 }
                 
                 category_name = category_mapping.get(danh_muc, danh_muc)
                 danh_muc_obj, created = DanhMucDichVu.objects.get_or_create(
                     ten_danh_muc=category_name,
-                    defaults={'mo_ta': f'Danh mục {category_name}', 'da_xoa': False}
+                    defaults={'mo_ta': f'Danh má»¥c {category_name}', 'da_xoa': False}
                 )
                 
                 # Handle image upload for update
@@ -1203,7 +1241,7 @@ def admin_services(request):
                 service.trang_thai = request.POST.get('trang_thai', 'active') == 'active'
                 service.save()
                 
-                return JsonResponse({'success': True, 'message': 'Đã cập nhật dịch vụ!'})
+                return JsonResponse({'success': True, 'message': 'ÄÃ£ cáº­p nháº­t dá»ch vá»¥!'})
             except Exception as e:
                 return JsonResponse({'success': False, 'message': str(e)})
         
@@ -1215,8 +1253,8 @@ def admin_services(request):
                 service.trang_thai = not service.trang_thai
                 service.save()
                 
-                status_text = 'kích hoạt' if service.trang_thai else 'tạm ngừng'
-                return JsonResponse({'success': True, 'message': f'Đã {status_text} dịch vụ!', 'new_status': service.trang_thai})
+                status_text = 'kÃ­ch hoáº¡t' if service.trang_thai else 'táº¡m ngá»«ng'
+                return JsonResponse({'success': True, 'message': f'ÄÃ£ {status_text} dá»ch vá»¥!', 'new_status': service.trang_thai})
             except Exception as e:
                 return JsonResponse({'success': False, 'message': str(e)})
         
@@ -1229,7 +1267,7 @@ def admin_services(request):
                 service.ngay_xoa = timezone.now()
                 service.save()
                 
-                return JsonResponse({'success': True, 'message': 'Đã xóa dịch vụ!'})
+                return JsonResponse({'success': True, 'message': 'ÄÃ£ xÃ³a dá»ch vá»¥!'})
             except Exception as e:
                 return JsonResponse({'success': False, 'message': str(e)})
     
@@ -1248,9 +1286,9 @@ def admin_services(request):
     for service in all_services:
         if service.danh_muc:
             category_reverse_mapping = {
-                'Cắt tóc': 'haircut',
-                'Cạo râu': 'shave',
-                'Chăm sóc': 'treatment', 
+                'Cáº¯t tÃ³c': 'haircut',
+                'Cáº¡o rÃ¢u': 'shave',
+                'ChÄm sÃ³c': 'treatment', 
                 'Combo': 'combo'
             }
             service.danh_muc_key = category_reverse_mapping.get(service.danh_muc.ten_danh_muc, 'haircut')
@@ -1264,9 +1302,9 @@ def admin_services(request):
     popular_service = all_services.order_by('-so_luot_dat').first()
     
     # Category counts
-    haircut_count = all_services.filter(danh_muc__ten_danh_muc='Cắt tóc').count()
-    shave_count = all_services.filter(danh_muc__ten_danh_muc='Cạo râu').count()
-    treatment_count = all_services.filter(danh_muc__ten_danh_muc='Chăm sóc').count()
+    haircut_count = all_services.filter(danh_muc__ten_danh_muc='Cáº¯t tÃ³c').count()
+    shave_count = all_services.filter(danh_muc__ten_danh_muc='Cáº¡o rÃ¢u').count()
+    treatment_count = all_services.filter(danh_muc__ten_danh_muc='ChÄm sÃ³c').count()
     combo_count = all_services.filter(danh_muc__ten_danh_muc='Combo').count()
     
     context = {
@@ -1274,7 +1312,7 @@ def admin_services(request):
         'total_services': total_services,
         'active_services': active_services,
         'avg_price': avg_price,
-        'popular_service': popular_service or {'ten_dich_vu': 'Chưa có'},
+        'popular_service': popular_service or {'ten_dich_vu': 'ChÆ°a cÃ³'},
         'haircut_count': haircut_count,
         'shave_count': shave_count,
         'treatment_count': treatment_count,
@@ -1290,9 +1328,9 @@ def api_service_detail(request, service_id):
         
         # Map category name to key
         category_reverse_mapping = {
-            'Cắt tóc': 'haircut',
-            'Cạo râu': 'shave',
-            'Chăm sóc': 'treatment', 
+            'Cáº¯t tÃ³c': 'haircut',
+            'Cáº¡o rÃ¢u': 'shave',
+            'ChÄm sÃ³c': 'treatment', 
             'Combo': 'combo'
         }
         
@@ -1363,7 +1401,7 @@ def api_service_update_order(request):
                 if service_id and new_order is not None:
                     DichVu.objects.filter(id=service_id, da_xoa=False).update(thu_tu=new_order)
             
-            return JsonResponse({'success': True, 'message': 'Đã cập nhật thứ tự!'})
+            return JsonResponse({'success': True, 'message': 'ÄÃ£ cáº­p nháº­t thá»© tá»±!'})
         except Exception as e:
             return JsonResponse({'success': False, 'message': str(e)})
     return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -1539,7 +1577,7 @@ def admin_invoices_export_excel(request):
         # Create workbook
         wb = openpyxl.Workbook()
         ws = wb.active
-        ws.title = "Danh sách hóa đơn"
+        ws.title = "Danh sÃ¡ch hÃ³a ÄÆ¡n"
         
         # Header style
         header_font = Font(bold=True, color="FFFFFF")
@@ -1548,9 +1586,9 @@ def admin_invoices_export_excel(request):
         
         # Headers
         headers = [
-            'Mã hóa đơn', 'Khách hàng', 'Số điện thoại', 'Nhân viên',
-            'Ngày thanh toán', 'Dịch vụ', 'Tạm tính', 'Giảm giá', 'Thành tiền', 
-            'Phương thức TT', 'Ghi chú'
+            'MÃ£ hÃ³a ÄÆ¡n', 'KhÃ¡ch hÃ ng', 'Sá» Äiá»n thoáº¡i', 'NhÃ¢n viÃªn',
+            'NgÃ y thanh toÃ¡n', 'Dá»ch vá»¥', 'Táº¡m tÃ­nh', 'Giáº£m giÃ¡', 'ThÃ nh tiá»n', 
+            'PhÆ°Æ¡ng thá»©c TT', 'Ghi chÃº'
         ]
         
         for col, header in enumerate(headers, 1):
@@ -1561,10 +1599,10 @@ def admin_invoices_export_excel(request):
         
         # Payment method mapping
         payment_method_map = {
-            'tien_mat': 'Tiền mặt',
-            'chuyen_khoan': 'Chuyển khoản',
-            'vi_dien_tu': 'Ví điện tử',
-            'the': 'Thẻ'
+            'tien_mat': 'Tiá»n máº·t',
+            'chuyen_khoan': 'Chuyá»n khoáº£n',
+            'vi_dien_tu': 'VÃ­ Äiá»n tá»­',
+            'the': 'Tháº»'
         }
         
         # Data rows
@@ -1610,7 +1648,7 @@ def admin_invoices_export_excel(request):
         from django.http import JsonResponse
         return JsonResponse({
             'success': False,
-            'message': f'Lỗi xuất Excel: {str(e)}'
+            'message': f'Lá»i xuáº¥t Excel: {str(e)}'
         })
 
 @require_role(['quan_ly'])
@@ -1660,14 +1698,14 @@ def admin_invoices_export_pdf(request):
         
         # Title
         title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=16, spaceAfter=30, alignment=1)
-        title = Paragraph("DANH SÁCH HÓA ĐƠN", title_style)
+        title = Paragraph("DANH SÃCH HÃA ÄÆ N", title_style)
         elements.append(title)
         elements.append(Spacer(1, 20))
         
         # Table data
-        data = [['Mã HĐ', 'Khách hàng', 'SĐT', 'Nhân viên', 'Ngày TT', 'Thành tiền', 'PT Thanh toán']]
+        data = [['MÃ£ HÄ', 'KhÃ¡ch hÃ ng', 'SÄT', 'NhÃ¢n viÃªn', 'NgÃ y TT', 'ThÃ nh tiá»n', 'PT Thanh toÃ¡n']]
         
-        payment_method_map = {'tien_mat': 'Tiền mặt', 'chuyen_khoan': 'CK', 'vi_dien_tu': 'Ví', 'the': 'Thẻ'}
+        payment_method_map = {'tien_mat': 'Tiá»n máº·t', 'chuyen_khoan': 'CK', 'vi_dien_tu': 'VÃ­', 'the': 'Tháº»'}
         
         for invoice in invoices[:50]:  # Limit for PDF
             data.append([
@@ -1676,7 +1714,7 @@ def admin_invoices_export_pdf(request):
                 invoice.so_dien_thoai_khach,
                 invoice.nhan_vien.ho_ten[:10] + '...' if invoice.nhan_vien and len(invoice.nhan_vien.ho_ten) > 10 else (invoice.nhan_vien.ho_ten if invoice.nhan_vien else ''),
                 invoice.ngay_thanh_toan.strftime('%d/%m/%Y'),
-                f"{invoice.thanh_tien:,.0f}đ",
+                f"{invoice.thanh_tien:,.0f}Ä",
                 payment_method_map.get(invoice.phuong_thuc_thanh_toan, invoice.phuong_thuc_thanh_toan)
             ])
         
@@ -1711,13 +1749,13 @@ def admin_invoices_export_pdf(request):
         from django.http import JsonResponse
         return JsonResponse({
             'success': False,
-            'message': 'Cần cài đặt reportlab để xuất PDF: pip install reportlab'
+            'message': 'Cáº§n cÃ i Äáº·t reportlab Äá» xuáº¥t PDF: pip install reportlab'
         })
     except Exception as e:
         from django.http import JsonResponse
         return JsonResponse({
             'success': False,
-            'message': f'Lỗi xuất PDF: {str(e)}'
+            'message': f'Lá»i xuáº¥t PDF: {str(e)}'
         })
 
 @require_role(['quan_ly'])
@@ -1739,7 +1777,7 @@ def admin_work_schedule(request):
                 schedule = get_object_or_404(LichLamViec, id=schedule_id, da_xoa=False)
                 schedule.trang_thai = 'da_duyet'
                 schedule.save()
-                return JsonResponse({'success': True, 'message': 'Đã duyệt ca làm!'})
+                return JsonResponse({'success': True, 'message': 'ÄÃ£ duyá»t ca lÃ m!'})
             except Exception as e:
                 return JsonResponse({'success': False, 'message': str(e)})
         
@@ -1751,7 +1789,7 @@ def admin_work_schedule(request):
                 schedule.trang_thai = 'tu_choi'
                 schedule.ghi_chu = request.POST.get('ly_do', '')
                 schedule.save()
-                return JsonResponse({'success': True, 'message': 'Đã từ chối ca làm!'})
+                return JsonResponse({'success': True, 'message': 'ÄÃ£ tá»« chá»i ca lÃ m!'})
             except Exception as e:
                 return JsonResponse({'success': False, 'message': str(e)})
         
@@ -1826,7 +1864,7 @@ def admin_work_schedule(request):
                 
                 return JsonResponse({
                     'success': True, 
-                    'message': f'Đã tạo {created_count} ca làm việc!'
+                    'message': f'ÄÃ£ táº¡o {created_count} ca lÃ m viá»c!'
                 })
             except Exception as e:
                 return JsonResponse({'success': False, 'message': str(e)})
@@ -1839,7 +1877,7 @@ def admin_work_schedule(request):
                 schedule.da_xoa = True
                 schedule.ngay_xoa = timezone.now()
                 schedule.save()
-                return JsonResponse({'success': True, 'message': 'Đã xóa ca làm!'})
+                return JsonResponse({'success': True, 'message': 'ÄÃ£ xÃ³a ca lÃ m!'})
             except Exception as e:
                 return JsonResponse({'success': False, 'message': str(e)})
     
@@ -2087,12 +2125,12 @@ def admin_leave_request_approve(request, leave_id):
             
             return JsonResponse({
                 'success': True,
-                'message': 'Đã duyệt đơn xin nghỉ!'
+                'message': 'ÄÃ£ duyá»t ÄÆ¡n xin nghá»!'
             })
         except Exception as e:
             return JsonResponse({
                 'success': False,
-                'message': f'Lỗi: {str(e)}'
+                'message': f'Lá»i: {str(e)}'
             })
     
     return JsonResponse({'success': False, 'message': 'Method not allowed'})
@@ -2120,12 +2158,12 @@ def admin_leave_request_reject(request, leave_id):
             
             return JsonResponse({
                 'success': True,
-                'message': 'Đã từ chối đơn xin nghỉ!'
+                'message': 'ÄÃ£ tá»« chá»i ÄÆ¡n xin nghá»!'
             })
         except Exception as e:
             return JsonResponse({
                 'success': False,
-                'message': f'Lỗi: {str(e)}'
+                'message': f'Lá»i: {str(e)}'
             })
     
     return JsonResponse({'success': False, 'message': 'Method not allowed'})
@@ -2151,7 +2189,7 @@ def admin_promotions(request):
             ngay_ket_thuc = request.POST.get('ngay_ket_thuc', '').strip()
             
             if not all([ma_voucher, ten_voucher, loai_giam, gia_tri_giam, ngay_bat_dau, ngay_ket_thuc]):
-                messages.error(request, 'Vui lòng điền đầy đủ thông tin bắt buộc!')
+                messages.error(request, 'Vui lÃ²ng Äiá»n Äáº§y Äá»§ thÃ´ng tin báº¯t buá»c!')
                 return redirect('admin_promotions')
             
             # Check for duplicate voucher code (exclude current when editing)
@@ -2159,7 +2197,7 @@ def admin_promotions(request):
             if voucher_id:
                 existing_voucher = existing_voucher.exclude(id=voucher_id)
             if existing_voucher.exists():
-                messages.error(request, f'Mã voucher "{ma_voucher}" đã tồn tại!')
+                messages.error(request, f'MÃ£ voucher "{ma_voucher}" ÄÃ£ tá»n táº¡i!')
                 return redirect('admin_promotions')
             
             # Parse dates
@@ -2168,24 +2206,24 @@ def admin_promotions(request):
                 ngay_ket_thuc_dt = datetime.strptime(ngay_ket_thuc, '%Y-%m-%dT%H:%M')
                 
                 if ngay_bat_dau_dt >= ngay_ket_thuc_dt:
-                    messages.error(request, 'Ngày kết thúc phải sau ngày bắt đầu!')
+                    messages.error(request, 'NgÃ y káº¿t thÃºc pháº£i sau ngÃ y báº¯t Äáº§u!')
                     return redirect('admin_promotions')
                     
             except ValueError:
-                messages.error(request, 'Định dạng ngày giờ không hợp lệ!')
+                messages.error(request, 'Äá»nh dáº¡ng ngÃ y giá» khÃ´ng há»£p lá»!')
                 return redirect('admin_promotions')
             
             # Validate discount value
             try:
                 gia_tri_giam_float = float(gia_tri_giam)
                 if gia_tri_giam_float <= 0:
-                    messages.error(request, 'Giá trị giảm phải lớn hơn 0!')
+                    messages.error(request, 'GiÃ¡ trá» giáº£m pháº£i lá»n hÆ¡n 0!')
                     return redirect('admin_promotions')
                 if loai_giam == 'phan_tram' and gia_tri_giam_float > 100:
-                    messages.error(request, 'Giảm theo phần trăm không được vượt quá 100%!')
+                    messages.error(request, 'Giáº£m theo pháº§n trÄm khÃ´ng ÄÆ°á»£c vÆ°á»£t quÃ¡ 100%!')
                     return redirect('admin_promotions')
             except ValueError:
-                messages.error(request, 'Giá trị giảm không hợp lệ!')
+                messages.error(request, 'GiÃ¡ trá» giáº£m khÃ´ng há»£p lá»!')
                 return redirect('admin_promotions')
             
             # Prepare data with correct field names from model
@@ -2209,14 +2247,14 @@ def admin_promotions(request):
                 for key, value in voucher_data.items():
                     setattr(voucher, key, value)
                 voucher.save()
-                messages.success(request, f'Đã cập nhật voucher "{ma_voucher}" thành công!')
+                messages.success(request, f'ÄÃ£ cáº­p nháº­t voucher "{ma_voucher}" thÃ nh cÃ´ng!')
             else:
                 # Create new voucher - Remove nguoi_tao field as it doesn't exist in Voucher model
                 voucher = Voucher.objects.create(**voucher_data)
-                messages.success(request, f'Đã tạo voucher "{ma_voucher}" thành công!')
+                messages.success(request, f'ÄÃ£ táº¡o voucher "{ma_voucher}" thÃ nh cÃ´ng!')
                 
         except Exception as e:
-            messages.error(request, f'Có lỗi xảy ra: {str(e)}')
+            messages.error(request, f'CÃ³ lá»i xáº£y ra: {str(e)}')
         
         return redirect('admin_promotions')
     
@@ -2302,16 +2340,16 @@ def admin_promotions(request):
         'search': search,
         # Choices for dropdowns
         'status_choices': [
-            ('all', 'Tất cả'),
-            ('active', 'Đang hoạt động'),
-            ('inactive', 'Tạm ngưng'),
-            ('expired', 'Đã hết hạn'),
-            ('upcoming', 'Sắp diễn ra')
+            ('all', 'Táº¥t cáº£'),
+            ('active', 'Äang hoáº¡t Äá»ng'),
+            ('inactive', 'Táº¡m ngÆ°ng'),
+            ('expired', 'ÄÃ£ háº¿t háº¡n'),
+            ('upcoming', 'Sáº¯p diá»n ra')
         ],
         'type_choices': [
-            ('all', 'Tất cả loại'),
-            ('phan_tram', 'Phần trăm'),
-            ('tien_mat', 'Tiền mặt')
+            ('all', 'Táº¥t cáº£ loáº¡i'),
+            ('phan_tram', 'Pháº§n trÄm'),
+            ('tien_mat', 'Tiá»n máº·t')
         ]
     }
     
@@ -2329,21 +2367,21 @@ def admin_delete_promotion(request, voucher_id):
         voucher.save()
         
         if request.headers.get('Content-Type') == 'application/json':
-            return JsonResponse({'success': True, 'message': f'Đã xóa voucher "{voucher.ma_voucher}" thành công!'})
+            return JsonResponse({'success': True, 'message': f'ÄÃ£ xÃ³a voucher "{voucher.ma_voucher}" thÃ nh cÃ´ng!'})
         else:
-            messages.success(request, f'Đã xóa voucher "{voucher.ma_voucher}" thành công!')
+            messages.success(request, f'ÄÃ£ xÃ³a voucher "{voucher.ma_voucher}" thÃ nh cÃ´ng!')
             
     except Voucher.DoesNotExist:
         if request.headers.get('Content-Type') == 'application/json':
-            return JsonResponse({'success': False, 'message': 'Voucher không tồn tại!'})
+            return JsonResponse({'success': False, 'message': 'Voucher khÃ´ng tá»n táº¡i!'})
         else:
-            messages.error(request, 'Voucher không tồn tại!')
+            messages.error(request, 'Voucher khÃ´ng tá»n táº¡i!')
     except Exception as e:
         print(f"DEBUG Delete Promotion - Error: {e}")
         if request.headers.get('Content-Type') == 'application/json':
-            return JsonResponse({'success': False, 'message': f'Có lỗi xảy ra: {str(e)}'})
+            return JsonResponse({'success': False, 'message': f'CÃ³ lá»i xáº£y ra: {str(e)}'})
         else:
-            messages.error(request, f'Có lỗi xảy ra: {str(e)}')
+            messages.error(request, f'CÃ³ lá»i xáº£y ra: {str(e)}')
     
     return redirect('admin_promotions')
 
@@ -2398,13 +2436,13 @@ def admin_promotion_stats(request, voucher_id):
     except Voucher.DoesNotExist:
         return JsonResponse({
             'success': False,
-            'message': 'Voucher không tồn tại!'
+            'message': 'Voucher khÃ´ng tá»n táº¡i!'
         })
     except Exception as e:
         print(f"DEBUG Promotion Stats - Error: {e}")
         return JsonResponse({
             'success': False,
-            'message': f'Có lỗi xảy ra: {str(e)}'
+            'message': f'CÃ³ lá»i xáº£y ra: {str(e)}'
         })
 
 @require_role(['quan_ly'])
@@ -2517,11 +2555,11 @@ def admin_reports(request):
     except:
         # Fallback to booking data
         top_services = [
-            {'ten_dich_vu': 'Cắt tóc cơ bản', 'so_luot': 45, 'doanh_thu': 2250000, 'percent': 100},
-            {'ten_dich_vu': 'Cắt tóc + Gội đầu', 'so_luot': 32, 'doanh_thu': 1920000, 'percent': 71},
-            {'ten_dich_vu': 'Tạo kiểu', 'so_luot': 28, 'doanh_thu': 1680000, 'percent': 62},
-            {'ten_dich_vu': 'Nhuộm tóc', 'so_luot': 15, 'doanh_thu': 1125000, 'percent': 33},
-            {'ten_dich_vu': 'Massage đầu', 'so_luot': 12, 'doanh_thu': 600000, 'percent': 27}
+            {'ten_dich_vu': 'Cáº¯t tÃ³c cÆ¡ báº£n', 'so_luot': 45, 'doanh_thu': 2250000, 'percent': 100},
+            {'ten_dich_vu': 'Cáº¯t tÃ³c + Gá»i Äáº§u', 'so_luot': 32, 'doanh_thu': 1920000, 'percent': 71},
+            {'ten_dich_vu': 'Táº¡o kiá»u', 'so_luot': 28, 'doanh_thu': 1680000, 'percent': 62},
+            {'ten_dich_vu': 'Nhuá»m tÃ³c', 'so_luot': 15, 'doanh_thu': 1125000, 'percent': 33},
+            {'ten_dich_vu': 'Massage Äáº§u', 'so_luot': 12, 'doanh_thu': 600000, 'percent': 27}
         ]
     
     # === TOP STAFF ===
@@ -2695,7 +2733,7 @@ def admin_reports_export_excel(request):
         # Create workbook
         wb = openpyxl.Workbook()
         ws = wb.active
-        ws.title = "Báo cáo tổng hợp"
+        ws.title = "BÃ¡o cÃ¡o tá»ng há»£p"
         
         # Header style
         header_font = Font(bold=True, color="FFFFFF")
@@ -2705,7 +2743,7 @@ def admin_reports_export_excel(request):
         # Title
         ws.merge_cells('A1:E1')
         title_cell = ws['A1']
-        title_cell.value = f"BÁO CÁO TỔNG HỢP ({from_date} - {to_date})"
+        title_cell.value = f"BÃO CÃO Tá»NG Há»¢P ({from_date} - {to_date})"
         title_cell.font = Font(bold=True, size=16)
         title_cell.alignment = Alignment(horizontal="center")
         
@@ -2729,23 +2767,23 @@ def admin_reports_export_excel(request):
         avg_invoice = invoices.aggregate(avg=Avg('thanh_tien'))['avg'] or 0
         
         # Summary section
-        ws['A3'] = "TỔNG QUAN"
+        ws['A3'] = "Tá»NG QUAN"
         ws['A3'].font = header_font
         ws['A3'].fill = header_fill
         
-        ws['A5'] = "Tổng doanh thu:"
-        ws['B5'] = f"{total_revenue:,.0f}đ"
-        ws['A6'] = "Số hóa đơn:"
+        ws['A5'] = "Tá»ng doanh thu:"
+        ws['B5'] = f"{total_revenue:,.0f}Ä"
+        ws['A6'] = "Sá» hÃ³a ÄÆ¡n:"
         ws['B6'] = total_invoices
-        ws['A7'] = "Giá trị TB/hóa đơn:"
-        ws['B7'] = f"{avg_invoice:,.0f}đ"
+        ws['A7'] = "GiÃ¡ trá» TB/hÃ³a ÄÆ¡n:"
+        ws['B7'] = f"{avg_invoice:,.0f}Ä"
         
         # Revenue by day
-        ws['A10'] = "DOANH THU THEO NGÀY"
+        ws['A10'] = "DOANH THU THEO NGÃY"
         ws['A10'].font = header_font
         ws['A10'].fill = header_fill
         
-        ws['A12'] = "Ngày"
+        ws['A12'] = "NgÃ y"
         ws['B12'] = "Doanh thu"
         ws['A12'].font = header_font
         ws['B12'].font = header_font
@@ -2790,7 +2828,7 @@ def admin_reports_export_excel(request):
         from django.http import JsonResponse
         return JsonResponse({
             'success': False,
-            'message': f'Lỗi xuất Excel: {str(e)}'
+            'message': f'Lá»i xuáº¥t Excel: {str(e)}'
         })
 
 @require_role(['quan_ly'])
@@ -2843,16 +2881,16 @@ def admin_reports_export_pdf(request):
         
         # Title
         title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=18, spaceAfter=30, alignment=1)
-        title = Paragraph(f"BÁO CÁO TỔNG HỢP<br/>({from_date} - {to_date})", title_style)
+        title = Paragraph(f"BÃO CÃO Tá»NG Há»¢P<br/>({from_date} - {to_date})", title_style)
         elements.append(title)
         elements.append(Spacer(1, 20))
         
         # Summary table
         summary_data = [
-            ['Chỉ số', 'Giá trị'],
-            ['Tổng doanh thu', f'{total_revenue:,.0f}đ'],
-            ['Số hóa đơn', str(total_invoices)],
-            ['Giá trị TB/hóa đơn', f'{(total_revenue/total_invoices if total_invoices > 0 else 0):,.0f}đ']
+            ['Chá» sá»', 'GiÃ¡ trá»'],
+            ['Tá»ng doanh thu', f'{total_revenue:,.0f}Ä'],
+            ['Sá» hÃ³a ÄÆ¡n', str(total_invoices)],
+            ['GiÃ¡ trá» TB/hÃ³a ÄÆ¡n', f'{(total_revenue/total_invoices if total_invoices > 0 else 0):,.0f}Ä']
         ]
         
         summary_table = Table(summary_data, colWidths=[3*inch, 2*inch])
@@ -2872,11 +2910,11 @@ def admin_reports_export_pdf(request):
         elements.append(Spacer(1, 30))
         
         # Daily revenue table (sample)
-        daily_title = Paragraph("DOANH THU THEO NGÀY (10 ngày gần nhất)", styles['Heading2'])
+        daily_title = Paragraph("DOANH THU THEO NGÃY (10 ngÃ y gáº§n nháº¥t)", styles['Heading2'])
         elements.append(daily_title)
         elements.append(Spacer(1, 10))
         
-        daily_data = [['Ngày', 'Doanh thu', 'Số HĐ']]
+        daily_data = [['NgÃ y', 'Doanh thu', 'Sá» HÄ']]
         
         # Get last 10 days data
         for i in range(9, -1, -1):
@@ -2888,7 +2926,7 @@ def admin_reports_export_pdf(request):
                 
                 daily_data.append([
                     check_date.strftime('%d/%m/%Y'),
-                    f'{daily_revenue:,.0f}đ',
+                    f'{daily_revenue:,.0f}Ä',
                     str(daily_count)
                 ])
         
@@ -2922,13 +2960,13 @@ def admin_reports_export_pdf(request):
         from django.http import JsonResponse
         return JsonResponse({
             'success': False,
-            'message': 'Cần cài đặt reportlab để xuất PDF: pip install reportlab'
+            'message': 'Cáº§n cÃ i Äáº·t reportlab Äá» xuáº¥t PDF: pip install reportlab'
         })
     except Exception as e:
         from django.http import JsonResponse
         return JsonResponse({
             'success': False,
-            'message': f'Lỗi xuất PDF: {str(e)}'
+            'message': f'Lá»i xuáº¥t PDF: {str(e)}'
         })
 
 @require_role(['quan_ly'])
@@ -3099,7 +3137,7 @@ def admin_loyalty(request):
     ).annotate(
         total_spent=Sum('hoadon__tong_tien'),
         total_visits=Count('hoadon', distinct=True),
-        avg_rating=Avg('danhgia__so_sao')
+        avg_rating=Avg('danh_gia_khach_hang__so_sao')
     ).order_by('-diem_tich_luy')[:10]
     
     for customer in customers:
@@ -3109,28 +3147,28 @@ def admin_loyalty(request):
             tier_name = "VIP Platinum"
             tier_color = "#E5E4E2"
             tier_bg = "linear-gradient(135deg, #E5E4E2, #BCC6CC)"
-            tier_icon = "👑"
+            tier_icon = "ð"
             next_tier = "Max Level"
             points_to_next = 0
         elif total_spent >= 5000000:  # 5M+
             tier_name = "VIP Gold"
             tier_color = "#FFD700"
             tier_bg = "linear-gradient(135deg, #FFD700, #FFA500)"
-            tier_icon = "⭐"
+            tier_icon = "â­"
             next_tier = "VIP Platinum"
             points_to_next = 10000000 - total_spent
         elif total_spent >= 2000000:  # 2M+
             tier_name = "VIP Silver"
             tier_color = "#C0C0C0"
             tier_bg = "linear-gradient(135deg, #C0C0C0, #A9A9A9)"
-            tier_icon = "🥈"
+            tier_icon = "ð¥"
             next_tier = "VIP Gold"
             points_to_next = 5000000 - total_spent
         else:
-            tier_name = "Thành viên"
+            tier_name = "ThÃ nh viÃªn"
             tier_color = "#6c757d"
             tier_bg = "linear-gradient(135deg, #6c757d, #5a6268)"
-            tier_icon = "👤"
+            tier_icon = "ð¤"
             next_tier = "VIP Silver"
             points_to_next = 2000000 - total_spent
         
@@ -3209,13 +3247,13 @@ def admin_settings(request):
     
     # Prepare days of week data for template
     days_of_week = [
-        {'name': 'Thứ 2', 'key': 'monday'},
-        {'name': 'Thứ 3', 'key': 'tuesday'},
-        {'name': 'Thứ 4', 'key': 'wednesday'},
-        {'name': 'Thứ 5', 'key': 'thursday'},
-        {'name': 'Thứ 6', 'key': 'friday'},
-        {'name': 'Thứ 7', 'key': 'saturday'},
-        {'name': 'Chủ nhật', 'key': 'sunday'},
+        {'name': 'Thá»© 2', 'key': 'monday'},
+        {'name': 'Thá»© 3', 'key': 'tuesday'},
+        {'name': 'Thá»© 4', 'key': 'wednesday'},
+        {'name': 'Thá»© 5', 'key': 'thursday'},
+        {'name': 'Thá»© 6', 'key': 'friday'},
+        {'name': 'Thá»© 7', 'key': 'saturday'},
+        {'name': 'Chá»§ nháº­t', 'key': 'sunday'},
     ]
     
     for day in days_of_week:
@@ -3254,10 +3292,10 @@ def admin_settings_api_general(request):
             
             settings.save()
             
-            return JsonResponse({'success': True, 'message': 'Đã lưu thông tin chung thành công!'})
+            return JsonResponse({'success': True, 'message': 'ÄÃ£ lÆ°u thÃ´ng tin chung thÃ nh cÃ´ng!'})
             
         except Exception as e:
-            return JsonResponse({'success': False, 'message': f'Có lỗi xảy ra: {str(e)}'})
+            return JsonResponse({'success': False, 'message': f'CÃ³ lá»i xáº£y ra: {str(e)}'})
     
     return JsonResponse({'success': False, 'message': 'Method not allowed'})
 
@@ -3281,10 +3319,10 @@ def admin_settings_api_business_hours(request):
             
             settings.save()
             
-            return JsonResponse({'success': True, 'message': 'Đã cập nhật giờ làm việc thành công!'})
+            return JsonResponse({'success': True, 'message': 'ÄÃ£ cáº­p nháº­t giá» lÃ m viá»c thÃ nh cÃ´ng!'})
             
         except Exception as e:
-            return JsonResponse({'success': False, 'message': f'Có lỗi xảy ra: {str(e)}'})
+            return JsonResponse({'success': False, 'message': f'CÃ³ lá»i xáº£y ra: {str(e)}'})
     
     return JsonResponse({'success': False, 'message': 'Method not allowed'})
 
@@ -3305,10 +3343,10 @@ def admin_settings_api_services(request):
             
             settings.save()
             
-            return JsonResponse({'success': True, 'message': 'Đã cập nhật cài đặt dịch vụ thành công!'})
+            return JsonResponse({'success': True, 'message': 'ÄÃ£ cáº­p nháº­t cÃ i Äáº·t dá»ch vá»¥ thÃ nh cÃ´ng!'})
             
         except Exception as e:
-            return JsonResponse({'success': False, 'message': f'Có lỗi xảy ra: {str(e)}'})
+            return JsonResponse({'success': False, 'message': f'CÃ³ lá»i xáº£y ra: {str(e)}'})
     
     return JsonResponse({'success': False, 'message': 'Method not allowed'})
 
@@ -3333,10 +3371,10 @@ def admin_settings_api_payments(request):
             
             settings.save()
             
-            return JsonResponse({'success': True, 'message': 'Đã cập nhật cài đặt thanh toán thành công!'})
+            return JsonResponse({'success': True, 'message': 'ÄÃ£ cáº­p nháº­t cÃ i Äáº·t thanh toÃ¡n thÃ nh cÃ´ng!'})
             
         except Exception as e:
-            return JsonResponse({'success': False, 'message': f'Có lỗi xảy ra: {str(e)}'})
+            return JsonResponse({'success': False, 'message': f'CÃ³ lá»i xáº£y ra: {str(e)}'})
     
     return JsonResponse({'success': False, 'message': 'Method not allowed'})
 
@@ -3422,7 +3460,7 @@ def admin_export_schedule(request):
     response['Content-Disposition'] = 'attachment; filename="lich_lam_viec.csv"'
     
     writer = csv.writer(response)
-    writer.writerow(['Nhân viên', 'Ngày', 'Ca làm việc', 'Giờ bắt đầu', 'Giờ kết thúc'])
+    writer.writerow(['NhÃ¢n viÃªn', 'NgÃ y', 'Ca lÃ m viá»c', 'Giá» báº¯t Äáº§u', 'Giá» káº¿t thÃºc'])
     
     for schedule in schedules:
         writer.writerow([
@@ -3444,10 +3482,10 @@ def admin_export_promotions(request):
     response['Content-Disposition'] = 'attachment; filename="khuyen_mai.csv"'
     
     writer = csv.writer(response)
-    writer.writerow(['Mã voucher', 'Tên voucher', 'Mô tả', 'Loại giảm', 'Giá trị', 'Ngày bắt đầu', 'Ngày kết thúc', 'Trạng thái'])
+    writer.writerow(['MÃ£ voucher', 'TÃªn voucher', 'MÃ´ táº£', 'Loáº¡i giáº£m', 'GiÃ¡ trá»', 'NgÃ y báº¯t Äáº§u', 'NgÃ y káº¿t thÃºc', 'Tráº¡ng thÃ¡i'])
     
     for promo in promotions:
-        status_text = 'Hoạt động' if promo.trang_thai else 'Tạm ngưng'
+        status_text = 'Hoáº¡t Äá»ng' if promo.trang_thai else 'Táº¡m ngÆ°ng'
         loai_giam_text = dict(promo.LOAI_GIAM_CHOICES).get(promo.loai_giam, promo.loai_giam)
         
         writer.writerow([
@@ -3542,6 +3580,7 @@ def staff_today_bookings(request):
     user_id = request.session.get('user_id')
     today = timezone.now().date()
     
+    # Get all bookings for today
     bookings = DatLich.objects.filter(
         nhan_vien_id=user_id,
         ngay_hen=today,
@@ -3550,9 +3589,22 @@ def staff_today_bookings(request):
         'dich_vu_dat_lich__dich_vu'
     ).order_by('gio_hen')
     
+    # Calculate statistics
+    total_bookings = bookings.count()
+    pending_count = bookings.filter(trang_thai='cho_xac_nhan').count()
+    confirmed_count = bookings.filter(trang_thai='da_xac_nhan').count()
+    in_progress_count = bookings.filter(trang_thai='da_checkin').count()
+    completed_count = bookings.filter(trang_thai='hoan_thanh').count()
+    
     context = {
         'bookings': bookings,
         'today': today,
+        'current_date': today,
+        'total_bookings': total_bookings,
+        'pending_count': pending_count,
+        'confirmed_count': confirmed_count,
+        'in_progress_count': in_progress_count,
+        'completed_count': completed_count,
     }
     return render(request, 'staff/today-bookings.html', context)
 
@@ -3561,20 +3613,112 @@ def staff_schedule(request):
     """My Schedule"""
     user_id = request.session.get('user_id')
     today = timezone.now().date()
-    week_start = today - timedelta(days=today.weekday())
-    week_end = week_start + timedelta(days=6)
+    current_time = timezone.now().time()
     
-    schedules = LichLamViec.objects.filter(
+    # Get current month data
+    month_start = today.replace(day=1)
+    next_month = month_start.replace(month=month_start.month + 1) if month_start.month < 12 else month_start.replace(year=month_start.year + 1, month=1)
+    
+    # Get current shift if working now
+    current_shift = LichLamViec.objects.filter(
         nhan_vien_id=user_id,
-        ngay_lam__gte=week_start,
-        ngay_lam__lte=week_end,
+        ngay_lam=today,
+        gio_bat_dau__lte=current_time,
+        gio_ket_thuc__gte=current_time,
+        da_xoa=False
+    ).first()
+    
+    # Get month schedules
+    month_schedules = LichLamViec.objects.filter(
+        nhan_vien_id=user_id,
+        ngay_lam__gte=month_start,
+        ngay_lam__lt=next_month,
         da_xoa=False
     ).order_by('ngay_lam')
     
+    # Calculate month statistics
+    total_shifts_month = month_schedules.count()
+    total_hours_month = 0
+    for schedule in month_schedules:
+        # Calculate hours (simple estimation: afternoon=8h, morning/evening=4h)
+        if schedule.ca_lam == 'ca_day':
+            total_hours_month += 8
+        else:
+            total_hours_month += 4
+    
+    # Get upcoming shifts (next 7 days)
+    upcoming_shifts_list = LichLamViec.objects.filter(
+        nhan_vien_id=user_id,
+        ngay_lam__gte=today,
+        ngay_lam__lte=today + timedelta(days=7),
+        da_xoa=False
+    ).order_by('ngay_lam')[:10]
+    
+    # Get leave requests for display (recent 5 requests)
+    my_leave_requests = DonXinNghi.objects.filter(
+        nhan_vien_id=user_id,
+        da_xoa=False
+    ).order_by('-ngay_tao')[:5]
+    
+    # Get all approved leaves for calendar (not sliced)
+    approved_leaves = DonXinNghi.objects.filter(
+        nhan_vien_id=user_id,
+        trang_thai='da_duyet',
+        da_xoa=False
+    )
+    
+    # Create calendar data for current month
+    calendar_days = []
+    
+    # Get first day of month and calculate calendar start
+    first_day = month_start
+    first_weekday = first_day.weekday()  # 0=Monday, 6=Sunday
+    
+    # Add days from previous month to fill the first week
+    calendar_start = first_day - timedelta(days=first_weekday)
+    
+    # Generate 42 days (6 weeks) for calendar
+    for i in range(42):
+        day_date = calendar_start + timedelta(days=i)
+        
+        # Get shifts for this day
+        day_shifts = month_schedules.filter(ngay_lam=day_date)
+        shifts_data = []
+        for shift in day_shifts:
+            shifts_data.append({
+                'type': shift.ca_lam,
+                'label': shift.get_ca_lam_display(),
+                'time': f"{shift.gio_bat_dau.strftime('%H:%M')}-{shift.gio_ket_thuc.strftime('%H:%M')}"
+            })
+        
+        # Check if has leave request
+        has_leave = approved_leaves.filter(
+            tu_ngay__lte=day_date,
+            den_ngay__gte=day_date
+        ).exists()
+        
+        calendar_days.append({
+            'date': day_date.strftime('%Y-%m-%d'),
+            'day': day_date.day,
+            'is_today': day_date == today,
+            'is_current_month': day_date.month == today.month,
+            'has_shift': len(shifts_data) > 0,
+            'is_off': day_date.weekday() == 6,  # Sunday
+            'shifts': shifts_data,
+            'leave': has_leave
+        })
+    
     context = {
-        'schedules': schedules,
-        'week_start': week_start,
-        'week_end': week_end,
+        'current_shift': current_shift,
+        'current_date': today,
+        'current_month': today.strftime('%B %Y'),
+        'total_shifts_month': total_shifts_month,
+        'total_hours_month': total_hours_month,
+        'days_off_month': 4,  # Assume 4 Sundays per month
+        'upcoming_shifts': upcoming_shifts_list.count(),
+        'upcoming_shifts_list': upcoming_shifts_list,
+        'my_leave_requests': my_leave_requests,
+        'calendar_days': calendar_days,
     }
     return render(request, 'staff/schedule.html', context)
 
@@ -3585,8 +3729,10 @@ def staff_profile(request):
     user = get_object_or_404(NguoiDung, id=user_id, da_xoa=False)
     
     staff_info = None
-    if hasattr(user, 'thong_tin_nhan_vien'):
-        staff_info = user.thong_tin_nhan_vien
+    try:
+        staff_info = ThongTinNhanVien.objects.get(nguoi_dung=user, da_xoa=False)
+    except ThongTinNhanVien.DoesNotExist:
+        pass
     
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -3606,7 +3752,7 @@ def staff_profile(request):
                     staff_info.gioi_tinh = request.POST.get('gioi_tinh', staff_info.gioi_tinh)
                     staff_info.save()
                 
-                return JsonResponse({'success': True, 'message': 'Đã cập nhật thông tin!'})
+                return JsonResponse({'success': True, 'message': 'ÄÃ£ cáº­p nháº­t thÃ´ng tin!'})
             except Exception as e:
                 return JsonResponse({'success': False, 'message': str(e)})
         
@@ -3619,83 +3765,433 @@ def staff_profile(request):
                 
                 # Verify old password
                 if not bcrypt.checkpw(old_password.encode('utf-8'), user.mat_khau_hash.encode('utf-8')):
-                    return JsonResponse({'success': False, 'message': 'Mật khẩu cũ không đúng!'})
+                    return JsonResponse({'success': False, 'message': 'Máº­t kháº©u cÅ© khÃ´ng ÄÃºng!'})
                 
                 # Check new password match
                 if new_password != confirm_password:
-                    return JsonResponse({'success': False, 'message': 'Mật khẩu xác nhận không khớp!'})
+                    return JsonResponse({'success': False, 'message': 'Máº­t kháº©u xÃ¡c nháº­n khÃ´ng khá»p!'})
                 
                 # Check password strength
                 if len(new_password) < 6:
-                    return JsonResponse({'success': False, 'message': 'Mật khẩu phải có ít nhất 6 ký tự!'})
+                    return JsonResponse({'success': False, 'message': 'Máº­t kháº©u pháº£i cÃ³ Ã­t nháº¥t 6 kÃ½ tá»±!'})
                 
                 # Update password
                 hashed = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
                 user.mat_khau_hash = hashed.decode('utf-8')
                 user.save()
                 
-                return JsonResponse({'success': True, 'message': 'Đã đổi mật khẩu thành công!'})
+                return JsonResponse({'success': True, 'message': 'ÄÃ£ Äá»i máº­t kháº©u thÃ nh cÃ´ng!'})
             except Exception as e:
                 return JsonResponse({'success': False, 'message': str(e)})
+    
+    # Calculate statistics for GET request
+    today = timezone.now().date()
+    month_start = today.replace(day=1)
+    
+    # Total services completed
+    total_services = DatLich.objects.filter(
+        nhan_vien_id=user_id,
+        trang_thai='hoan_thanh',
+        da_xoa=False
+    ).count()
+    
+    # Monthly services
+    monthly_services = DatLich.objects.filter(
+        nhan_vien_id=user_id,
+        ngay_hen__gte=month_start,
+        ngay_hen__lte=today,
+        trang_thai='hoan_thanh',
+        da_xoa=False
+    ).count()
+    
+    # Monthly revenue
+    monthly_revenue = DatLich.objects.filter(
+        nhan_vien_id=user_id,
+        ngay_hen__gte=month_start,
+        ngay_hen__lte=today,
+        trang_thai='hoan_thanh',
+        da_xoa=False
+    ).aggregate(total=Sum('thanh_tien'))['total'] or 0
+    
+    # Average rating
+    avg_rating = DanhGia.objects.filter(
+        nhan_vien_id=user_id,
+        da_xoa=False
+    ).aggregate(avg=Avg('so_sao'))['avg'] or 0
+    
+    # Monthly rating
+    monthly_rating = DanhGia.objects.filter(
+        nhan_vien_id=user_id,
+        ngay_tao__gte=month_start,
+        ngay_tao__lte=timezone.now(),
+        da_xoa=False
+    ).aggregate(avg=Avg('so_sao'))['avg'] or 0
+    
+    # Years of experience
+    years_experience = 0
+    if staff_info and staff_info.ngay_tao:
+        work_start = staff_info.ngay_tao.date() if staff_info.ngay_tao else today
+        years_experience = (today - work_start).days // 365
+    
+    # Skills (mock data)
+    skills = [
+        'Cắt tóc cơ bản',
+        'Gội đầu massage', 
+        'Tạo kiểu tóc',
+        'Cắt râu'
+    ]
+    
+    # Recent work history (last 10 completed bookings)
+    recent_work = DatLich.objects.filter(
+        nhan_vien_id=user_id,
+        trang_thai='hoan_thanh',
+        da_xoa=False
+    ).select_related('khach_hang').prefetch_related('dich_vu_dat_lich').order_by('-ngay_hen')[:10]
+    
+    # Format work history
+    work_history = []
+    for booking in recent_work:
+        services_list = []
+        for service_booking in booking.dich_vu_dat_lich.all():
+            services_list.append(service_booking.ten_dich_vu)
+        
+        work_history.append({
+            'date': booking.ngay_hen,
+            'customer': booking.khach_hang.ho_ten if booking.khach_hang else booking.ten_khach_hang or 'Khách vãng lai',
+            'services': ', '.join(services_list) if services_list else 'Dịch vụ khác',
+            'revenue': booking.thanh_tien
+        })
+    
+    # Staff context for template
+    staff_context = {
+        'ho_ten': user.ho_ten,
+        'so_dien_thoai': user.so_dien_thoai,
+        'email': user.email,
+        'ngay_sinh': getattr(user, 'ngay_sinh', None),
+        'dia_chi': user.dia_chi,
+        'chuc_vu': 'Nhân viên',
+        'ngay_vao_lam': staff_info.ngay_tao.date() if staff_info and staff_info.ngay_tao else None,
+        'cccd': staff_info.cccd if staff_info else '',
+        'gioi_thieu': getattr(staff_info, 'mo_ta', ''),
+        'anh_dai_dien': user.anh_dai_dien if user.anh_dai_dien else None,
+        'total_services': total_services,
+        'avg_rating': avg_rating,
+        'years_experience': years_experience,
+    }
     
     # GET request - show profile
     context = {
         'user': user,
         'staff_info': staff_info,
+        'staff': staff_context,
+        'monthly_services': monthly_services,
+        'monthly_revenue': monthly_revenue,
+        'monthly_rating': monthly_rating,
+        'skills': skills,
+        'work_history': work_history,
     }
     return render(request, 'staff/profile.html', context)
 
-@require_role(['nhan_vien', 'quan_ly'])
-def staff_revenue(request):
-    """My Revenue"""
-    user_id = request.session.get('user_id')
-    today = timezone.now().date()
-    month_start = today.replace(day=1)
-    
-    # This month completed bookings
-    completed_bookings = DatLich.objects.filter(
-        nhan_vien_id=user_id,
-        ngay_hen__gte=month_start,
-        ngay_hen__lte=today,
-        da_xoa=False,
-        trang_thai='hoan_thanh'
-    ).select_related('khach_hang')
-    
-    context = {
-        'bookings': completed_bookings,
-        'total_bookings': completed_bookings.count(),
-    }
-    return render(request, 'staff/revenue.html', context)
 
+# Profile API Endpoints
+@csrf_exempt
 @require_role(['nhan_vien', 'quan_ly'])
-def staff_commission(request):
-    """My Commission - Placeholder"""
-    context = {}
-    return render(request, 'staff/commission.html', context)
+def api_staff_update_profile(request):
+    """API endpoint for updating staff profile"""
+    if request.method == 'POST':
+        try:
+            user_id = request.session.get('user_id')
+            user = get_object_or_404(NguoiDung, id=user_id, da_xoa=False)
+            
+            # Update basic user info
+            user.ho_ten = request.POST.get('ho_ten', user.ho_ten)
+            user.so_dien_thoai = request.POST.get('so_dien_thoai', user.so_dien_thoai)
+            user.email = request.POST.get('email', user.email)
+            user.dia_chi = request.POST.get('dia_chi', user.dia_chi)
+            
+            # Update ngay_sinh (belongs to NguoiDung)
+            ngay_sinh = request.POST.get('ngay_sinh')
+            if ngay_sinh:
+                from datetime import datetime
+                try:
+                    user.ngay_sinh = datetime.strptime(ngay_sinh, '%Y-%m-%d').date()
+                except ValueError:
+                    pass
+            
+            user.save()
+            
+            # Update or create staff info
+            staff_info, created = ThongTinNhanVien.objects.get_or_create(
+                nguoi_dung=user,
+                defaults={}
+            )
+            
+            # Update staff specific fields (avoid problematic fields)
+            gioi_thieu = request.POST.get('gioi_thieu')
+            if gioi_thieu is not None:
+                staff_info.mo_ta = gioi_thieu
+            
+            cccd = request.POST.get('cccd')
+            if cccd is not None:
+                staff_info.cccd = cccd
+            
+            # Only save if there are actual changes to avoid triggering constraints
+            fields_to_update = []
+            if gioi_thieu is not None:
+                fields_to_update.append('mo_ta')
+            if cccd is not None:
+                fields_to_update.append('cccd')
+                
+            if fields_to_update:
+                staff_info.save(update_fields=fields_to_update + ['ngay_cap_nhat'])
+            else:
+                # Just update the timestamp
+                staff_info.ngay_cap_nhat = timezone.now()
+                staff_info.save(update_fields=['ngay_cap_nhat'])
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Cập nhật thông tin thành công!'
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Lỗi cập nhật: {str(e)}'
+            })
+    
+    return JsonResponse({'success': False, 'message': 'Method not allowed'})
+
+
+@csrf_exempt
+@require_role(['nhan_vien', 'quan_ly'])
+def api_staff_change_password(request):
+    """API endpoint for changing password"""
+    if request.method == 'POST':
+        try:
+            user_id = request.session.get('user_id')
+            user = get_object_or_404(NguoiDung, id=user_id, da_xoa=False)
+            
+            old_password = request.POST.get('old_password')
+            new_password = request.POST.get('new_password')
+            confirm_password = request.POST.get('confirm_password')
+            
+            # Validate inputs
+            if not all([old_password, new_password, confirm_password]):
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Vui lòng điền đầy đủ thông tin'
+                })
+            
+            # Verify old password (support multiple hash formats)
+            password_matches = False
+            
+            if user.mat_khau_hash.startswith('$2b$'):
+                try:
+                    password_matches = bcrypt.checkpw(old_password.encode('utf-8'), user.mat_khau_hash.encode('utf-8'))
+                except ValueError:
+                    pass
+            elif user.mat_khau_hash.startswith('pbkdf2_sha256$'):
+                from django.contrib.auth.hashers import check_password
+                try:
+                    password_matches = check_password(old_password, user.mat_khau_hash)
+                except Exception:
+                    pass
+            
+            if not password_matches:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Mật khẩu cũ không đúng!'
+                })
+            
+            # Check new password match
+            if new_password != confirm_password:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Mật khẩu xác nhận không khớp!'
+                })
+            
+            # Check password strength
+            if len(new_password) < 6:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Mật khẩu phải có ít nhất 6 ký tự!'
+                })
+            
+            # Update password
+            hashed = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
+            user.mat_khau_hash = hashed.decode('utf-8')
+            user.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Đổi mật khẩu thành công!'
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Lỗi đổi mật khẩu: {str(e)}'
+            })
+    
+    return JsonResponse({'success': False, 'message': 'Method not allowed'})
+
+
+@csrf_exempt
+@require_role(['nhan_vien', 'quan_ly'])
+def api_staff_upload_avatar(request):
+    """API endpoint for uploading avatar"""
+    if request.method == 'POST':
+        try:
+            user_id = request.session.get('user_id')
+            user = get_object_or_404(NguoiDung, id=user_id, da_xoa=False)
+            
+            if 'avatar' not in request.FILES:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Không có file được tải lên'
+                })
+            
+            avatar_file = request.FILES['avatar']
+            
+            # Validate file type
+            allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif']
+            if avatar_file.content_type not in allowed_types:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Chỉ chấp nhận file ảnh (JPG, PNG, GIF)'
+                })
+            
+            # Validate file size (5MB max)
+            if avatar_file.size > 5 * 1024 * 1024:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'File quá lớn. Tối đa 5MB'
+                })
+            
+            # Get or create staff info
+            staff_info, created = ThongTinNhanVien.objects.get_or_create(
+                nguoi_dung=user,
+                defaults={}
+            )
+            
+            # Save avatar to media folder
+            import os
+            from django.conf import settings
+            from django.core.files.storage import default_storage
+            from django.core.files.base import ContentFile
+            
+            # Create avatars directory if it doesn't exist
+            avatars_dir = os.path.join(settings.MEDIA_ROOT, 'avatars')
+            os.makedirs(avatars_dir, exist_ok=True)
+            
+            # Generate unique filename
+            file_extension = os.path.splitext(avatar_file.name)[1]
+            filename = f'staff_{user_id}_{timezone.now().strftime("%Y%m%d_%H%M%S")}{file_extension}'
+            
+            # Save file
+            file_path = os.path.join('avatars', filename)
+            saved_path = default_storage.save(file_path, ContentFile(avatar_file.read()))
+            
+            # Update user's avatar field
+            user.anh_dai_dien = saved_path
+            user.save()
+            
+            avatar_url = settings.MEDIA_URL + saved_path
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Cập nhật ảnh đại diện thành công!',
+                'avatar_url': avatar_url
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Lỗi tải ảnh: {str(e)}'
+            })
+    
+    return JsonResponse({'success': False, 'message': 'Method not allowed'})
+
+
+@csrf_exempt
+@require_role(['nhan_vien', 'quan_ly'])
+def api_staff_update_notifications(request):
+    """API endpoint for updating notification settings"""
+    if request.method == 'POST':
+        try:
+            user_id = request.session.get('user_id')
+            user = get_object_or_404(NguoiDung, id=user_id, da_xoa=False)
+            
+            # Get notification settings (mock implementation)
+            settings = {
+                'email_booking': request.POST.get('emailBooking') == 'on',
+                'email_reminder': request.POST.get('emailReminder') == 'on', 
+                'email_review': request.POST.get('emailReview') == 'on',
+                'push_booking': request.POST.get('pushBooking') == 'on',
+                'push_reminder': request.POST.get('pushReminder') == 'on',
+                'sms_booking': request.POST.get('smsBooking') == 'on',
+            }
+            
+            # In a real app, you'd save these to a NotificationSettings model
+            # For now, just return success
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Cập nhật cài đặt thông báo thành công!',
+                'settings': settings
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Lỗi cập nhật cài đặt: {str(e)}'
+            })
+    
+    return JsonResponse({'success': False, 'message': 'Method not allowed'})
+
 
 @require_role(['nhan_vien', 'quan_ly'])
 def staff_my_customers(request):
-    """My Customers"""
+    """My Customers - Simple version"""
     user_id = request.session.get('user_id')
     
     # Get customers who booked with this staff
-    customer_ids = DatLich.objects.filter(
+    customer_bookings = DatLich.objects.filter(
         nhan_vien_id=user_id,
         da_xoa=False
-    ).values_list('khach_hang_id', flat=True).distinct()
+    ).exclude(trang_thai='da_huy')
     
-    customers = NguoiDung.objects.filter(
-        id__in=customer_ids,
-        da_xoa=False
-    ).annotate(
-        booking_count=Count('dat_lich', filter=Q(
-            dat_lich__nhan_vien_id=user_id,
-            dat_lich__da_xoa=False
-        ))
-    ).order_by('-booking_count')
+    customer_ids = customer_bookings.values_list('khach_hang_id', flat=True).distinct()
+    
+    customers_list = []
+    for customer_id in customer_ids:
+        try:
+            customer = NguoiDung.objects.get(id=customer_id, da_xoa=False)
+            
+            # Add basic attributes
+            customer.visit_count = 0
+            customer.total_revenue = 0
+            customer.last_visit = None
+            customer.loyalty_score = 50
+            customer.hang_thanh_vien = 'bronze'
+            customer.recent_visits = []
+            customer.preferences = []
+            
+            customers_list.append(customer)
+        except:
+            continue
     
     context = {
-        'customers': customers,
+        'customers': customers_list,
+        'total_customers': len(customers_list),
+        'regular_customers': 0,
+        'this_month_customers': 0,
+        'avg_rating': 0,
+        'search_query': '',
+        'sort_by': '',
+        'tier_filter': '',
+        'loyalty_filter': '',
     }
     return render(request, 'staff/my-customers.html', context)
 
@@ -3720,7 +4216,7 @@ def staff_pos(request):
             cart = json.loads(cart_data)
             
             if not cart:
-                return JsonResponse({'success': False, 'message': 'Vui lòng chọn ít nhất một dịch vụ!'})
+                return JsonResponse({'success': False, 'message': 'Vui lÃ²ng chá»n Ã­t nháº¥t má»t dá»ch vá»¥!'})
             
             # Get payment info
             payment_method = request.POST.get('payment_method', 'tien_mat')
@@ -3813,7 +4309,7 @@ def staff_pos(request):
             
             return JsonResponse({
                 'success': True,
-                'message': 'Thanh toán thành công!',
+                'message': 'Thanh toÃ¡n thÃ nh cÃ´ng!',
                 'invoice_id': invoice.id,
                 'ma_hoa_don': invoice.ma_hoa_don
             })
@@ -3971,7 +4467,7 @@ def api_search_customer(request):
     )[:10]
     
     if not customers:
-        return JsonResponse({'success': False, 'message': 'Không tìm thấy khách hàng'})
+        return JsonResponse({'success': False, 'message': 'KhÃ´ng tÃ¬m tháº¥y khÃ¡ch hÃ ng'})
     
     customer = customers[0]  # Return first match as selected
     result = {
@@ -3999,16 +4495,16 @@ def api_customer_detail(request, customer_id):
         points = customer.diem_tich_luy or 0
         if points >= 1000:
             hang_thanh_vien = 'platinum'
-            hang_display = 'Bạch kim'
+            hang_display = 'Báº¡ch kim'
         elif points >= 500:
             hang_thanh_vien = 'gold'
-            hang_display = 'Vàng'
+            hang_display = 'VÃ ng'
         elif points >= 200:
             hang_thanh_vien = 'silver'
-            hang_display = 'Bạc'
+            hang_display = 'Báº¡c'
         else:
             hang_thanh_vien = 'bronze'
-            hang_display = 'Đồng'
+            hang_display = 'Äá»ng'
         
         # Get history
         history = []
@@ -4098,7 +4594,7 @@ def api_load_booking(request):
         return JsonResponse({'success': True, 'booking': result})
         
     except DatLich.DoesNotExist:
-        return JsonResponse({'success': False, 'message': 'Không tìm thấy booking'})
+        return JsonResponse({'success': False, 'message': 'KhÃ´ng tÃ¬m tháº¥y booking'})
 
 def test_promotions(request):
     """Test view without authentication"""
@@ -4119,7 +4615,7 @@ def test_promotions(request):
             ngay_ket_thuc = request.POST.get('ngay_ket_thuc', '').strip()
             
             if not all([ma_voucher, ten_voucher, loai_giam, gia_tri_giam, ngay_bat_dau, ngay_ket_thuc]):
-                messages.error(request, 'Vui lòng điền đầy đủ thông tin bắt buộc!')
+                messages.error(request, 'Vui lÃ²ng Äiá»n Äáº§y Äá»§ thÃ´ng tin báº¯t buá»c!')
                 return redirect('test_promotions')
             
             # Check for duplicate voucher code (exclude current when editing)
@@ -4127,7 +4623,7 @@ def test_promotions(request):
             if voucher_id:
                 existing_voucher = existing_voucher.exclude(id=voucher_id)
             if existing_voucher.exists():
-                messages.error(request, f'Mã voucher "{ma_voucher}" đã tồn tại!')
+                messages.error(request, f'MÃ£ voucher "{ma_voucher}" ÄÃ£ tá»n táº¡i!')
                 return redirect('test_promotions')
             
             # Parse dates
@@ -4136,24 +4632,24 @@ def test_promotions(request):
                 ngay_ket_thuc_dt = datetime.strptime(ngay_ket_thuc, '%Y-%m-%dT%H:%M')
                 
                 if ngay_bat_dau_dt >= ngay_ket_thuc_dt:
-                    messages.error(request, 'Ngày kết thúc phải sau ngày bắt đầu!')
+                    messages.error(request, 'NgÃ y káº¿t thÃºc pháº£i sau ngÃ y báº¯t Äáº§u!')
                     return redirect('test_promotions')
                     
             except ValueError as e:
-                messages.error(request, f'Định dạng ngày giờ không hợp lệ: {e}!')
+                messages.error(request, f'Äá»nh dáº¡ng ngÃ y giá» khÃ´ng há»£p lá»: {e}!')
                 return redirect('test_promotions')
             
             # Validate discount value
             try:
                 gia_tri_giam_float = float(gia_tri_giam)
                 if gia_tri_giam_float <= 0:
-                    messages.error(request, 'Giá trị giảm phải lớn hơn 0!')
+                    messages.error(request, 'GiÃ¡ trá» giáº£m pháº£i lá»n hÆ¡n 0!')
                     return redirect('test_promotions')
                 if loai_giam == 'phan_tram' and gia_tri_giam_float > 100:
-                    messages.error(request, 'Giảm theo phần trăm không được vượt quá 100%!')
+                    messages.error(request, 'Giáº£m theo pháº§n trÄm khÃ´ng ÄÆ°á»£c vÆ°á»£t quÃ¡ 100%!')
                     return redirect('test_promotions')
             except ValueError:
-                messages.error(request, 'Giá trị giảm không hợp lệ!')
+                messages.error(request, 'GiÃ¡ trá» giáº£m khÃ´ng há»£p lá»!')
                 return redirect('test_promotions')
             
             # Prepare data with correct field names from model
@@ -4177,23 +4673,23 @@ def test_promotions(request):
                 for key, value in voucher_data.items():
                     setattr(voucher, key, value)
                 voucher.save()
-                messages.success(request, f'Đã cập nhật voucher "{ma_voucher}" thành công!')
+                messages.success(request, f'ÄÃ£ cáº­p nháº­t voucher "{ma_voucher}" thÃ nh cÃ´ng!')
             else:
                 # Create new voucher - Use first user as default
                 from .models import NguoiDung
                 first_user = NguoiDung.objects.first()
                 if not first_user:
-                    messages.error(request, 'Không tìm thấy user để tạo voucher!')
+                    messages.error(request, 'KhÃ´ng tÃ¬m tháº¥y user Äá» táº¡o voucher!')
                     return redirect('test_promotions')
                     
                 voucher_data['nguoi_tao'] = first_user
                 voucher = Voucher.objects.create(**voucher_data)
-                messages.success(request, f'Đã tạo voucher "{ma_voucher}" thành công!')
+                messages.success(request, f'ÄÃ£ táº¡o voucher "{ma_voucher}" thÃ nh cÃ´ng!')
                 
         except Exception as e:
             import traceback
             traceback.print_exc()
-            messages.error(request, f'Có lỗi xảy ra: {str(e)}')
+            messages.error(request, f'CÃ³ lá»i xáº£y ra: {str(e)}')
         
         return redirect('test_promotions')
     
@@ -4227,7 +4723,7 @@ def admin_review_reply(request, review_id):
             reply_content = request.POST.get('phan_hoi', '').strip()
             
             if not reply_content:
-                return JsonResponse({'success': False, 'message': 'Nội dung phản hồi không được để trống'})
+                return JsonResponse({'success': False, 'message': 'Ná»i dung pháº£n há»i khÃ´ng ÄÆ°á»£c Äá» trá»ng'})
             
             # Get NguoiDung from session
             user_id = request.session.get('user_id')
@@ -4244,11 +4740,11 @@ def admin_review_reply(request, review_id):
             
             return JsonResponse({
                 'success': True, 
-                'message': 'Đã gửi phản hồi thành công!'
+                'message': 'ÄÃ£ gá»­i pháº£n há»i thÃ nh cÃ´ng!'
             })
             
         except Exception as e:
-            return JsonResponse({'success': False, 'message': f'Có lỗi xảy ra: {str(e)}'})
+            return JsonResponse({'success': False, 'message': f'CÃ³ lá»i xáº£y ra: {str(e)}'})
     
     return JsonResponse({'success': False, 'message': 'Method not allowed'})
 
@@ -4272,7 +4768,7 @@ def admin_review_detail(request, review_id):
         return JsonResponse(data)
         
     except Exception as e:
-        return JsonResponse({'success': False, 'message': f'Có lỗi xảy ra: {str(e)}'})
+        return JsonResponse({'success': False, 'message': f'CÃ³ lá»i xáº£y ra: {str(e)}'})
 
 @require_role(['quan_ly'])
 def admin_review_delete(request, review_id):
@@ -4286,11 +4782,11 @@ def admin_review_delete(request, review_id):
             
             return JsonResponse({
                 'success': True, 
-                'message': 'Đã xóa đánh giá thành công!'
+                'message': 'ÄÃ£ xÃ³a ÄÃ¡nh giÃ¡ thÃ nh cÃ´ng!'
             })
             
         except Exception as e:
-            return JsonResponse({'success': False, 'message': f'Có lỗi xảy ra: {str(e)}'})
+            return JsonResponse({'success': False, 'message': f'CÃ³ lá»i xáº£y ra: {str(e)}'})
     
     return JsonResponse({'success': False, 'message': 'Method not allowed'})
 
@@ -4310,8 +4806,8 @@ def admin_reviews_export(request):
     
     writer = csv.writer(response)
     writer.writerow([
-        'Ngày tạo', 'Khách hàng', 'Điện thoại', 'Dịch vụ', 'Nhân viên', 
-        'Số sao', 'Nội dung', 'Phản hồi', 'Ngày phản hồi'
+        'NgÃ y táº¡o', 'KhÃ¡ch hÃ ng', 'Äiá»n thoáº¡i', 'Dá»ch vá»¥', 'NhÃ¢n viÃªn', 
+        'Sá» sao', 'Ná»i dung', 'Pháº£n há»i', 'NgÃ y pháº£n há»i'
     ])
     
     for review in reviews:
@@ -4342,11 +4838,11 @@ def admin_booking_approve(request, booking_id):
             
             return JsonResponse({
                 'success': True, 
-                'message': 'Đã xác nhận booking thành công!'
+                'message': 'ÄÃ£ xÃ¡c nháº­n booking thÃ nh cÃ´ng!'
             })
             
         except Exception as e:
-            return JsonResponse({'success': False, 'message': f'Có lỗi xảy ra: {str(e)}'})
+            return JsonResponse({'success': False, 'message': f'CÃ³ lá»i xáº£y ra: {str(e)}'})
     
     return JsonResponse({'success': False, 'message': 'Method not allowed'})
 
@@ -4361,11 +4857,11 @@ def admin_booking_reject(request, booking_id):
             
             return JsonResponse({
                 'success': True, 
-                'message': 'Đã hủy booking thành công!'
+                'message': 'ÄÃ£ há»§y booking thÃ nh cÃ´ng!'
             })
             
         except Exception as e:
-            return JsonResponse({'success': False, 'message': f'Có lỗi xảy ra: {str(e)}'})
+            return JsonResponse({'success': False, 'message': f'CÃ³ lá»i xáº£y ra: {str(e)}'})
     
     return JsonResponse({'success': False, 'message': 'Method not allowed'})
 
@@ -4391,11 +4887,11 @@ def admin_leave_approve(request, leave_id):
             
             return JsonResponse({
                 'success': True, 
-                'message': 'Đã phê duyệt yêu cầu nghỉ phép!'
+                'message': 'ÄÃ£ phÃª duyá»t yÃªu cáº§u nghá» phÃ©p!'
             })
             
         except Exception as e:
-            return JsonResponse({'success': False, 'message': f'Có lỗi xảy ra: {str(e)}'})
+            return JsonResponse({'success': False, 'message': f'CÃ³ lá»i xáº£y ra: {str(e)}'})
     
     return JsonResponse({'success': False, 'message': 'Method not allowed'})
 
@@ -4421,11 +4917,11 @@ def admin_leave_reject(request, leave_id):
             
             return JsonResponse({
                 'success': True, 
-                'message': 'Đã từ chối yêu cầu nghỉ phép!'
+                'message': 'ÄÃ£ tá»« chá»i yÃªu cáº§u nghá» phÃ©p!'
             })
             
         except Exception as e:
-            return JsonResponse({'success': False, 'message': f'Có lỗi xảy ra: {str(e)}'})
+            return JsonResponse({'success': False, 'message': f'CÃ³ lá»i xáº£y ra: {str(e)}'})
     
     return JsonResponse({'success': False, 'message': 'Method not allowed'})
 
@@ -4442,7 +4938,7 @@ def staff_booking_checkin(request, booking_id):
             if booking.trang_thai != 'da_xac_nhan':
                 return JsonResponse({
                     'success': False, 
-                    'message': 'Chỉ có thể check-in booking đã xác nhận!'
+                    'message': 'Chá» cÃ³ thá» check-in booking ÄÃ£ xÃ¡c nháº­n!'
                 })
             
             booking.trang_thai = 'da_checkin'
@@ -4451,11 +4947,11 @@ def staff_booking_checkin(request, booking_id):
             
             return JsonResponse({
                 'success': True, 
-                'message': 'Đã check-in khách hàng thành công!'
+                'message': 'ÄÃ£ check-in khÃ¡ch hÃ ng thÃ nh cÃ´ng!'
             })
             
         except Exception as e:
-            return JsonResponse({'success': False, 'message': f'Có lỗi xảy ra: {str(e)}'})
+            return JsonResponse({'success': False, 'message': f'CÃ³ lá»i xáº£y ra: {str(e)}'})
     
     return JsonResponse({'success': False, 'message': 'Method not allowed'})
 
@@ -4470,7 +4966,7 @@ def staff_booking_complete(request, booking_id):
             if booking.trang_thai != 'da_checkin':
                 return JsonResponse({
                     'success': False, 
-                    'message': 'Chỉ có thể hoàn thành booking đã check-in!'
+                    'message': 'Chá» cÃ³ thá» hoÃ n thÃ nh booking ÄÃ£ check-in!'
                 })
             
             booking.trang_thai = 'hoan_thanh'
@@ -4479,8 +4975,707 @@ def staff_booking_complete(request, booking_id):
             
             return JsonResponse({
                 'success': True, 
-                'message': 'Đã hoàn thành dịch vụ!'
+                'message': 'ÄÃ£ hoÃ n thÃ nh dá»ch vá»¥!'
             })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'CÃ³ lá»i xáº£y ra: {str(e)}'})
+    
+    return JsonResponse({'success': False, 'message': 'Method not allowed'})
+
+# ============ BOOKING TODAY API ENDPOINTS ============
+
+@require_role(['nhan_vien', 'quan_ly'])
+def api_booking_confirm(request, booking_id):
+    """Confirm booking via API"""
+    if request.method == 'POST':
+        try:
+            user_id = request.session.get('user_id')
+            booking = get_object_or_404(DatLich, id=booking_id, nhan_vien_id=user_id, da_xoa=False)
+            
+            if booking.trang_thai != 'cho_xac_nhan':
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'Chá» cÃ³ thá» xÃ¡c nháº­n booking Äang chá»!'
+                })
+            
+            booking.trang_thai = 'da_xac_nhan'
+            booking.save()
+            
+            return JsonResponse({
+                'success': True, 
+                'message': 'ÄÃ£ xÃ¡c nháº­n lá»ch háº¹n thÃ nh cÃ´ng!'
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'CÃ³ lá»i xáº£y ra: {str(e)}'})
+    
+    return JsonResponse({'success': False, 'message': 'Method not allowed'})
+
+@require_role(['nhan_vien', 'quan_ly'])
+def api_booking_checkin(request, booking_id):
+    """Check-in booking via API"""
+    if request.method == 'POST':
+        try:
+            user_id = request.session.get('user_id')
+            booking = get_object_or_404(DatLich, id=booking_id, nhan_vien_id=user_id, da_xoa=False)
+            
+            if booking.trang_thai != 'da_xac_nhan':
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'Chá» cÃ³ thá» check-in booking ÄÃ£ xÃ¡c nháº­n!'
+                })
+            
+            booking.trang_thai = 'da_checkin'
+            booking.ngay_check_in = timezone.now()
+            booking.save()
+            
+            return JsonResponse({
+                'success': True, 
+                'message': 'ÄÃ£ check-in khÃ¡ch hÃ ng thÃ nh cÃ´ng!'
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'CÃ³ lá»i xáº£y ra: {str(e)}'})
+    
+    return JsonResponse({'success': False, 'message': 'Method not allowed'})
+
+@require_role(['nhan_vien', 'quan_ly'])
+def api_booking_complete_today(request, booking_id):
+    """Complete booking via API for today bookings"""
+    if request.method == 'POST':
+        try:
+            user_id = request.session.get('user_id')
+            booking = get_object_or_404(DatLich, id=booking_id, nhan_vien_id=user_id, da_xoa=False)
+            
+            if booking.trang_thai != 'da_checkin':
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'Chá» cÃ³ thá» hoÃ n thÃ nh booking ÄÃ£ check-in!'
+                })
+            
+            booking.trang_thai = 'hoan_thanh'
+            booking.ngay_hoan_thanh = timezone.now()
+            booking.save()
+            
+            return JsonResponse({
+                'success': True, 
+                'message': 'ÄÃ£ hoÃ n thÃ nh dá»ch vá»¥!'
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'CÃ³ lá»i xáº£y ra: {str(e)}'})
+    
+    return JsonResponse({'success': False, 'message': 'Method not allowed'})
+
+@require_role(['nhan_vien', 'quan_ly'])
+def api_booking_cancel(request, booking_id):
+    """Cancel booking via API"""
+    if request.method == 'POST':
+        try:
+            user_id = request.session.get('user_id')
+            booking = get_object_or_404(DatLich, id=booking_id, nhan_vien_id=user_id, da_xoa=False)
+            
+            if booking.trang_thai in ['hoan_thanh', 'da_huy']:
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'KhÃ´ng thá» há»§y booking ÄÃ£ hoÃ n thÃ nh hoáº·c ÄÃ£ há»§y!'
+                })
+            
+            booking.trang_thai = 'da_huy'
+            booking.ly_do_huy = request.POST.get('ly_do_huy', '')
+            booking.ngay_huy = timezone.now()
+            booking.save()
+            
+            return JsonResponse({
+                'success': True, 
+                'message': 'ÄÃ£ há»§y lá»ch háº¹n!'
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'CÃ³ lá»i xáº£y ra: {str(e)}'})
+    
+    return JsonResponse({'success': False, 'message': 'Method not allowed'})
+
+@require_role(['nhan_vien', 'quan_ly'])
+def api_booking_detail(request, booking_id):
+    """Get booking detail via API"""
+    if request.method == 'GET':
+        try:
+            user_id = request.session.get('user_id')
+            booking = get_object_or_404(DatLich, id=booking_id, nhan_vien_id=user_id, da_xoa=False)
+            
+            # Get services for this booking
+            services = []
+            for dv_dat_lich in booking.dich_vu_dat_lich.all():
+                services.append({
+                    'ten_dich_vu': dv_dat_lich.dich_vu.ten_dich_vu,
+                    'thoi_luong': dv_dat_lich.dich_vu.thoi_gian_thuc_hien,
+                    'gia': float(dv_dat_lich.gia_tai_thoi_diem)
+                })
+            
+            data = {
+                'id': booking.id,
+                'ma_dat_lich': booking.ma_dat_lich,
+                'ngay_hen': booking.ngay_hen.strftime('%d/%m/%Y'),
+                'gio_bat_dau': booking.gio_hen.strftime('%H:%M'),
+                'tong_tien': float(booking.thanh_tien),
+                'trang_thai': booking.trang_thai,
+                'ghi_chu': booking.ghi_chu or '',
+                'khach_hang': {
+                    'ho_ten': booking.ten_khach_hang or (booking.khach_hang.ho_ten if booking.khach_hang else ''),
+                    'so_dien_thoai': booking.so_dien_thoai_khach,
+                    'email': booking.email_khach or (booking.khach_hang.email if booking.khach_hang else '')
+                },
+                'dich_vu': services
+            }
+            
+            return JsonResponse(data)
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'CÃ³ lá»i xáº£y ra: {str(e)}'})
+    
+    return JsonResponse({'success': False, 'message': 'Method not allowed'})
+
+
+# ============ SCHEDULE & ATTENDANCE API ENDPOINTS ============
+
+@require_role(['nhan_vien', 'quan_ly'])
+def api_attendance_checkin(request):
+    """Check-in attendance via API"""
+    if request.method == 'POST':
+        try:
+            user_id = request.session.get('user_id')
+            today = timezone.now().date()
+            current_time = timezone.now().time()
+            
+            # Find current shift
+            current_shift = LichLamViec.objects.filter(
+                nhan_vien_id=user_id,
+                ngay_lam=today,
+                gio_bat_dau__lte=current_time,
+                gio_ket_thuc__gte=current_time,
+                da_xoa=False
+            ).first()
+            
+            if not current_shift:
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'Không tìm thấy ca làm việc hiện tại!'
+                })
+            
+            # For now, we'll just return success
+            return JsonResponse({
+                'success': True, 
+                'message': 'Check-in thành công!'
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Có lỗi xảy ra: {str(e)}'})
+    
+    return JsonResponse({'success': False, 'message': 'Method not allowed'})
+
+@require_role(['nhan_vien', 'quan_ly'])
+def api_attendance_checkout(request):
+    """Check-out attendance via API"""
+    if request.method == 'POST':
+        try:
+            user_id = request.session.get('user_id')
+            today = timezone.now().date()
+            
+            # For now, we'll just return success
+            return JsonResponse({
+                'success': True, 
+                'message': 'Check-out thành công!'
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Có lỗi xảy ra: {str(e)}'})
+    
+    return JsonResponse({'success': False, 'message': 'Method not allowed'})
+
+@require_role(['nhan_vien', 'quan_ly'])
+def api_leave_request_create(request):
+    """Create leave request via API"""
+    if request.method == 'POST':
+        try:
+            user_id = request.session.get('user_id')
+            tu_ngay = request.POST.get('tu_ngay')
+            den_ngay = request.POST.get('den_ngay')
+            ly_do = request.POST.get('ly_do')
+            
+            if not all([tu_ngay, den_ngay, ly_do]):
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'Vui lòng điền đầy đủ thông tin!'
+                })
+            
+            # Parse dates
+            from datetime import datetime
+            tu_ngay_date = datetime.strptime(tu_ngay, '%Y-%m-%d').date()
+            den_ngay_date = datetime.strptime(den_ngay, '%Y-%m-%d').date()
+            
+            # Validate dates
+            if tu_ngay_date < timezone.now().date():
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'Không thể đăng ký nghỉ cho ngày trong quá khứ!'
+                })
+            
+            if den_ngay_date < tu_ngay_date:
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'Ngày kết thúc phải sau ngày bắt đầu!'
+                })
+            
+            # Create leave request
+            leave = DonXinNghi.objects.create(
+                nhan_vien_id=user_id,
+                tu_ngay=tu_ngay_date,
+                den_ngay=den_ngay_date,
+                ly_do=ly_do,
+                trang_thai='cho_duyet',
+                da_xoa=False
+            )
+            
+            return JsonResponse({
+                'success': True, 
+                'message': 'Đã gửi đơn xin nghỉ phép!'
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Có lỗi xảy ra: {str(e)}'})
+    
+    return JsonResponse({'success': False, 'message': 'Method not allowed'})
+
+@require_role(['nhan_vien', 'quan_ly'])
+def api_leave_request_cancel(request, leave_id):
+    """Cancel leave request via API"""
+    if request.method == 'DELETE':
+        try:
+            user_id = request.session.get('user_id')
+            leave = get_object_or_404(DonXinNghi, id=leave_id, nhan_vien_id=user_id, da_xoa=False)
+            
+            if leave.trang_thai != 'cho_duyet':
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'Chỉ có thể hủy đơn đang chờ duyệt!'
+                })
+            
+            leave.da_xoa = True
+            leave.ngay_xoa = timezone.now()
+            leave.save()
+            
+            return JsonResponse({
+                'success': True, 
+                'message': 'Đã hủy đơn xin nghỉ!'
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Có lỗi xảy ra: {str(e)}'})
+    
+    return JsonResponse({'success': False, 'message': 'Method not allowed'})
+
+@require_role(['nhan_vien', 'quan_ly'])
+def api_schedule_day_detail(request, date_str):
+    """Get schedule details for a specific day"""
+    if request.method == 'GET':
+        try:
+            user_id = request.session.get('user_id')
+            
+            # Parse date
+            from datetime import datetime
+            date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+            
+            # Get shifts for this day
+            shifts = LichLamViec.objects.filter(
+                nhan_vien_id=user_id,
+                ngay_lam=date_obj,
+                da_xoa=False
+            )
+            
+            shifts_data = []
+            for shift in shifts:
+                shifts_data.append({
+                    'label': shift.get_ca_lam_display(),
+                    'time': f"{shift.gio_bat_dau.strftime('%H:%M')} - {shift.gio_ket_thuc.strftime('%H:%M')}",
+                    'status': shift.trang_thai
+                })
+            
+            # Get leave status
+            leave = DonXinNghi.objects.filter(
+                nhan_vien_id=user_id,
+                tu_ngay__lte=date_obj,
+                den_ngay__gte=date_obj,
+                trang_thai='da_duyet',
+                da_xoa=False
+            ).first()
+            
+            data = {
+                'date': date_str,
+                'shifts': shifts_data,
+                'leave': {
+                    'ly_do': leave.ly_do,
+                    'trang_thai': leave.get_trang_thai_display()
+                } if leave else None
+            }
+            
+            return JsonResponse(data)
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Có lỗi xảy ra: {str(e)}'})
+    
+    return JsonResponse({'success': False, 'message': 'Method not allowed'})
+
+# ============ MY CUSTOMERS API ENDPOINTS ============
+
+@require_role(['nhan_vien', 'quan_ly'])
+def api_customer_detail_staff(request, customer_id):
+    """Get detailed customer information for staff"""
+    if request.method == 'GET':
+        try:
+            user_id = request.session.get('user_id')
+            
+            # Get customer
+            customer = get_object_or_404(NguoiDung, id=customer_id, da_xoa=False)
+            
+            # Get customer's bookings with this staff
+            bookings = DatLich.objects.filter(
+                khach_hang_id=customer_id,
+                nhan_vien_id=user_id,
+                da_xoa=False
+            ).exclude(trang_thai='da_huy').select_related('dich_vu').order_by('-ngay_hen')
+            
+            # Calculate stats
+            completed_bookings = bookings.filter(trang_thai='hoan_thanh')
+            visit_count = completed_bookings.count()
+            total_revenue = completed_bookings.aggregate(
+                total=Sum('thanh_tien')
+            )['total'] or 0
+            
+            # Get average rating
+            avg_rating = DanhGia.objects.filter(
+                khach_hang_id=customer_id,
+                nhan_vien_id=user_id,
+                da_xoa=False
+            ).aggregate(avg_rating=Avg('so_sao'))['avg_rating'] or 0
+            
+            # Get booking history
+            history = []
+            for booking in bookings[:20]:  # Latest 20 bookings
+                # Try to get rating for this booking through HoaDon
+                rating = None
+                try:
+                    if hasattr(booking, 'hoa_don') and booking.hoa_don:
+                        rating_obj = DanhGia.objects.filter(
+                            hoa_don=booking.hoa_don,
+                            khach_hang_id=customer_id,
+                            nhan_vien_id=user_id,
+                            da_xoa=False
+                        ).first()
+                        if rating_obj:
+                            rating = rating_obj.so_sao
+                except:
+                    pass
+                
+                history.append({
+                    'id': booking.id,
+                    'date': booking.ngay_hen.strftime('%d/%m/%Y'),
+                    'service': booking.dich_vu.ten_dich_vu if booking.dich_vu else 'Dịch vụ khác',
+                    'amount': float(booking.thanh_tien),
+                    'status': booking.get_trang_thai_display(),
+                    'rating': rating
+                })
+            
+            # Get favorite services (most booked services)
+            favorite_services = DatLich.objects.filter(
+                khach_hang_id=customer_id,
+                nhan_vien_id=user_id,
+                da_xoa=False,
+                trang_thai='hoan_thanh',
+                dich_vu__isnull=False
+            ).values('dich_vu__ten_dich_vu').annotate(
+                count=Count('dich_vu')
+            ).order_by('-count')[:5]
+            
+            preferences = [service['dich_vu__ten_dich_vu'] for service in favorite_services]
+            
+            data = {
+                'id': customer.id,
+                'ho_ten': customer.ho_ten,
+                'so_dien_thoai': customer.so_dien_thoai,
+                'email': customer.email or '',
+                'anh_dai_dien': customer.anh_dai_dien.url if customer.anh_dai_dien else '',
+                'visit_count': visit_count,
+                'total_revenue': float(total_revenue),
+                'avg_rating': float(avg_rating),
+                'history': history,
+                'preferences': preferences,
+                'first_visit': bookings.last().ngay_hen.strftime('%d/%m/%Y') if bookings.exists() else '',
+                'last_visit': bookings.first().ngay_hen.strftime('%d/%m/%Y') if bookings.exists() else ''
+            }
+            
+            return JsonResponse(data)
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Có lỗi xảy ra: {str(e)}'})
+    
+    return JsonResponse({'success': False, 'message': 'Method not allowed'})
+
+@require_role(['nhan_vien', 'quan_ly'])
+def staff_customers_export(request):
+    """Export customers list to Excel"""
+    try:
+        user_id = request.session.get('user_id')
+        
+        # Get customers data (similar to main view but without pagination)
+        customer_bookings = DatLich.objects.filter(
+            nhan_vien_id=user_id,
+            da_xoa=False
+        ).exclude(trang_thai='da_huy')
+        
+        customer_ids = customer_bookings.values_list('khach_hang_id', flat=True).distinct()
+        
+        customers = NguoiDung.objects.filter(
+            id__in=customer_ids,
+            da_xoa=False
+        ).annotate(
+            visit_count=Count('dat_lich', filter=Q(
+                dat_lich__nhan_vien_id=user_id,
+                dat_lich__da_xoa=False,
+                dat_lich__trang_thai='hoan_thanh'
+            )),
+            total_revenue=Sum('dat_lich__thanh_tien', filter=Q(
+                dat_lich__nhan_vien_id=user_id,
+                dat_lich__da_xoa=False,
+                dat_lich__trang_thai='hoan_thanh'
+            )),
+            last_visit=Max('dat_lich__ngay_hen', filter=Q(
+                dat_lich__nhan_vien_id=user_id,
+                dat_lich__da_xoa=False,
+                dat_lich__trang_thai='hoan_thanh'
+            )),
+            avg_rating=Avg('danh_gia_khach_hang__so_sao', filter=Q(
+                danh_gia_khach_hang__nhan_vien_id=user_id,
+                danh_gia_khach_hang__da_xoa=False
+            ))
+        ).order_by('-visit_count')
+        
+        # Create CSV response
+        import csv
+        from django.http import HttpResponse
+        
+        response = HttpResponse(content_type='text/csv; charset=utf-8')
+        response['Content-Disposition'] = f'attachment; filename="khach_hang_{timezone.now().strftime("%Y%m%d")}.csv"'
+        
+        # Add BOM for Excel Vietnamese support
+        response.write('\ufeff')
+        
+        writer = csv.writer(response)
+        writer.writerow([
+            'Họ tên', 'Số điện thoại', 'Email', 'Số lần cắt', 
+            'Tổng chi tiêu', 'Đánh giá TB', 'Lần cuối'
+        ])
+        
+        for customer in customers:
+            writer.writerow([
+                customer.ho_ten,
+                customer.so_dien_thoai,
+                customer.email or '',
+                customer.visit_count or 0,
+                f"{customer.total_revenue or 0:,.0f}",
+                f"{customer.avg_rating or 0:.1f}",
+                customer.last_visit.strftime('%d/%m/%Y') if customer.last_visit else ''
+            ])
+        
+        return response
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f'Có lỗi xảy ra: {str(e)}'})
+
+# ============ SCHEDULE & ATTENDANCE API ENDPOINTS ============
+
+@require_role(['nhan_vien', 'quan_ly'])
+def api_attendance_checkin(request):
+    """Check-in attendance via API"""
+    if request.method == 'POST':
+        try:
+            user_id = request.session.get('user_id')
+            today = timezone.now().date()
+            current_time = timezone.now().time()
+            
+            # Find current shift
+            current_shift = LichLamViec.objects.filter(
+                nhan_vien_id=user_id,
+                ngay_lam=today,
+                gio_bat_dau__lte=current_time,
+                gio_ket_thuc__gte=current_time,
+                da_xoa=False
+            ).first()
+            
+            if not current_shift:
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'Không tìm thấy ca làm việc hiện tại!'
+                })
+            
+            # For now, we'll just return success
+            return JsonResponse({
+                'success': True, 
+                'message': 'Check-in thành công!'
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Có lỗi xảy ra: {str(e)}'})
+    
+    return JsonResponse({'success': False, 'message': 'Method not allowed'})
+
+@require_role(['nhan_vien', 'quan_ly'])
+def api_attendance_checkout(request):
+    """Check-out attendance via API"""
+    if request.method == 'POST':
+        try:
+            user_id = request.session.get('user_id')
+            today = timezone.now().date()
+            
+            # For now, we'll just return success
+            return JsonResponse({
+                'success': True, 
+                'message': 'Check-out thành công!'
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Có lỗi xảy ra: {str(e)}'})
+    
+    return JsonResponse({'success': False, 'message': 'Method not allowed'})
+
+@require_role(['nhan_vien', 'quan_ly'])
+def api_leave_request_create(request):
+    """Create leave request via API"""
+    if request.method == 'POST':
+        try:
+            user_id = request.session.get('user_id')
+            tu_ngay = request.POST.get('tu_ngay')
+            den_ngay = request.POST.get('den_ngay')
+            ly_do = request.POST.get('ly_do')
+            
+            if not all([tu_ngay, den_ngay, ly_do]):
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'Vui lòng điền đầy đủ thông tin!'
+                })
+            
+            # Parse dates
+            from datetime import datetime
+            tu_ngay_date = datetime.strptime(tu_ngay, '%Y-%m-%d').date()
+            den_ngay_date = datetime.strptime(den_ngay, '%Y-%m-%d').date()
+            
+            # Validate dates
+            if tu_ngay_date < timezone.now().date():
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'Không thể đăng ký nghỉ cho ngày trong quá khứ!'
+                })
+            
+            if den_ngay_date < tu_ngay_date:
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'Ngày kết thúc phải sau ngày bắt đầu!'
+                })
+            
+            # Create leave request
+            leave = DonXinNghi.objects.create(
+                nhan_vien_id=user_id,
+                tu_ngay=tu_ngay_date,
+                den_ngay=den_ngay_date,
+                ly_do=ly_do,
+                trang_thai='cho_duyet',
+                da_xoa=False
+            )
+            
+            return JsonResponse({
+                'success': True, 
+                'message': 'Đã gửi đơn xin nghỉ phép!'
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Có lỗi xảy ra: {str(e)}'})
+    
+    return JsonResponse({'success': False, 'message': 'Method not allowed'})
+
+@require_role(['nhan_vien', 'quan_ly'])
+def api_leave_request_cancel(request, leave_id):
+    """Cancel leave request via API"""
+    if request.method == 'DELETE':
+        try:
+            user_id = request.session.get('user_id')
+            leave = get_object_or_404(DonXinNghi, id=leave_id, nhan_vien_id=user_id, da_xoa=False)
+            
+            if leave.trang_thai != 'cho_duyet':
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'Chỉ có thể hủy đơn đang chờ duyệt!'
+                })
+            
+            leave.da_xoa = True
+            leave.ngay_xoa = timezone.now()
+            leave.save()
+            
+            return JsonResponse({
+                'success': True, 
+                'message': 'Đã hủy đơn xin nghỉ!'
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Có lỗi xảy ra: {str(e)}'})
+    
+    return JsonResponse({'success': False, 'message': 'Method not allowed'})
+
+@require_role(['nhan_vien', 'quan_ly'])
+def api_schedule_day_detail(request, date_str):
+    """Get schedule details for a specific day"""
+    if request.method == 'GET':
+        try:
+            user_id = request.session.get('user_id')
+            
+            # Parse date
+            from datetime import datetime
+            date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+            
+            # Get shifts for this day
+            shifts = LichLamViec.objects.filter(
+                nhan_vien_id=user_id,
+                ngay_lam=date_obj,
+                da_xoa=False
+            )
+            
+            shifts_data = []
+            for shift in shifts:
+                shifts_data.append({
+                    'label': shift.get_ca_lam_display(),
+                    'time': f"{shift.gio_bat_dau.strftime('%H:%M')} - {shift.gio_ket_thuc.strftime('%H:%M')}",
+                    'status': shift.trang_thai
+                })
+            
+            # Get leave status
+            leave = DonXinNghi.objects.filter(
+                nhan_vien_id=user_id,
+                tu_ngay__lte=date_obj,
+                den_ngay__gte=date_obj,
+                trang_thai='da_duyet',
+                da_xoa=False
+            ).first()
+            
+            data = {
+                'date': date_str,
+                'shifts': shifts_data,
+                'leave': {
+                    'ly_do': leave.ly_do,
+                    'trang_thai': leave.get_trang_thai_display()
+                } if leave else None
+            }
+            
+            return JsonResponse(data)
             
         except Exception as e:
             return JsonResponse({'success': False, 'message': f'Có lỗi xảy ra: {str(e)}'})

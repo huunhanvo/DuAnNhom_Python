@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Avatar Display</title>
+</head>
+<body>
+    <h1>Test Avatar Display</h1>
+    
+    <!-- Test MEDIA_URL -->
+    <p>MEDIA_URL test: "{{ MEDIA_URL }}"</p>
+    
+    <!-- Test user avatar field -->
+    {% if user %}
+    <p>User found: {{ user.ho_ten }}</p>
+    <p>Avatar field: {{ user.anh_dai_dien }}</p>
+    {% endif %}
+    
+    <!-- Test staff context -->
+    {% if staff %}
+    <p>Staff found: {{ staff.ho_ten }}</p>
+    <p>Staff avatar: {{ staff.anh_dai_dien }}</p>
+    {% endif %}
+    
+    <!-- Test avatar image -->
+    {% if staff.anh_dai_dien %}
+    <h3>Avatar should display:</h3>
+    <img src="{{ MEDIA_URL }}{{ staff.anh_dai_dien }}" alt="Avatar" style="width: 100px; height: 100px; border-radius: 50%;">
+    <p>Full URL: {{ MEDIA_URL }}{{ staff.anh_dai_dien }}</p>
+    {% else %}
+    <h3>No avatar found</h3>
+    <img src="/static/img/avatar-default.png" alt="Default Avatar" style="width: 100px; height: 100px; border-radius: 50%;">
+    {% endif %}
+    
+</body>
+</html>
