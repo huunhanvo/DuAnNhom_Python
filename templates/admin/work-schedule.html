@@ -314,7 +314,7 @@
                 <div class="calendar-cell">
                     {% for shift in day.morning_shifts %}
                     <div class="shift-block shift-morning" onclick="viewShift({{ shift.id }})">
-                        <img src="{{ shift.nhan_vien.anh_dai_dien }}" class="staff-avatar-sm">
+                        <img src="{% if shift.nhan_vien.anh_dai_dien %}{{ MEDIA_URL }}{{ shift.nhan_vien.anh_dai_dien }}{% else %}/static/img/avatar-default.png{% endif %}" class="staff-avatar-sm">
                         {{ shift.nhan_vien.ho_ten|truncatewords:2 }}
                         {% if shift.count > 1 %}
                         <span class="shift-count">+{{ shift.count|add:"-1" }}</span>
@@ -335,7 +335,7 @@
                 <div class="calendar-cell">
                     {% for shift in day.afternoon_shifts %}
                     <div class="shift-block shift-afternoon" onclick="viewShift({{ shift.id }})">
-                        <img src="{{ shift.nhan_vien.anh_dai_dien }}" class="staff-avatar-sm">
+                        <img src="{% if shift.nhan_vien.anh_dai_dien %}{{ MEDIA_URL }}{{ shift.nhan_vien.anh_dai_dien }}{% else %}/static/img/avatar-default.png{% endif %}" class="staff-avatar-sm">
                         {{ shift.nhan_vien.ho_ten|truncatewords:2 }}
                         {% if shift.count > 1 %}
                         <span class="shift-count">+{{ shift.count|add:"-1" }}</span>
@@ -351,7 +351,7 @@
                 <div class="calendar-cell">
                     {% for shift in day.evening_shifts %}
                     <div class="shift-block shift-evening" onclick="viewShift({{ shift.id }})">
-                        <img src="{{ shift.nhan_vien.anh_dai_dien }}" class="staff-avatar-sm">
+                        <img src="{% if shift.nhan_vien.anh_dai_dien %}{{ MEDIA_URL }}{{ shift.nhan_vien.anh_dai_dien }}{% else %}/static/img/avatar-default.png{% endif %}" class="staff-avatar-sm">
                         {{ shift.nhan_vien.ho_ten|truncatewords:2 }}
                         {% if shift.count > 1 %}
                         <span class="shift-count">+{{ shift.count|add:"-1" }}</span>
@@ -367,7 +367,7 @@
                 <div class="calendar-cell">
                     {% for shift in day.fullday_shifts %}
                     <div class="shift-block shift-fullday" onclick="viewShift({{ shift.id }})">
-                        <img src="{{ shift.nhan_vien.anh_dai_dien }}" class="staff-avatar-sm">
+                        <img src="{% if shift.nhan_vien.anh_dai_dien %}{{ MEDIA_URL }}{{ shift.nhan_vien.anh_dai_dien }}{% else %}/static/img/avatar-default.png{% endif %}" class="staff-avatar-sm">
                         {{ shift.nhan_vien.ho_ten|truncatewords:2 }}
                     </div>
                     {% endfor %}
@@ -397,7 +397,7 @@
                         {% for staff in staff_list %}
                         <tr>
                             <td>
-                                <img src="{{ staff.anh_dai_dien }}" class="staff-avatar-sm">
+                                <img src="{% if staff.anh_dai_dien %}{{ MEDIA_URL }}{{ staff.anh_dai_dien }}{% else %}/static/img/avatar-default.png{% endif %}" class="staff-avatar-sm">
                                 {{ staff.ho_ten }}
                             </td>
                             {% for day in staff.week_schedule %}

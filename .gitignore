@@ -1,0 +1,50 @@
+# Python
+__pycache__/**
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+.env
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Media files (uploaded by users)
+media/
+
+# Static files (collected)
+staticfiles/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+temp_*
+test_*
+debug_*
+check_*
+fix_*
+cleanup_*
+
+# Backup files
+*_backup.*
+*.bak
+
+# Documentation drafts
+DRAFT_*
+TODO_*

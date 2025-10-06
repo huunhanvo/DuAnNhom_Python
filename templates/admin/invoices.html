@@ -477,117 +477,99 @@
 function viewInvoice(invoiceId) {
     $('#invoiceDetailModal').modal('show');
     
-    $.ajax({
-        url: `/api/invoices/${invoiceId}/`,
-        method: 'GET',
-        success: function(invoice) {
-            let servicesHtml = '';
-            let subtotal = 0;
-            
-            invoice.chi_tiet_hoa_don.forEach(function(detail) {
-                subtotal += parseFloat(detail.gia);
-                servicesHtml += `
-                    <tr>
-                        <td>${detail.dich_vu.ten_dich_vu}</td>
-                        <td class="text-center">1</td>
-                        <td class="text-end">${formatCurrency(detail.gia)}</td>
-                        <td class="text-end">${formatCurrency(detail.gia)}</td>
-                    </tr>
-                `;
-            });
-            
-            const html = `
-                <div class="invoice-header">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <img src="/static/img/logo.png" alt="Logo" class="invoice-logo mb-3">
-                            <h3>BARBERSHOP</h3>
-                            <p class="mb-1">Địa chỉ: 123 Đường ABC, Quận XYZ</p>
-                            <p class="mb-1">Điện thoại: 0123 456 789</p>
-                            <p class="mb-0">Email: contact@barbershop.com</p>
-                        </div>
-                        <div class="col-md-6 text-end">
-                            <h2 class="text-primary">HÓA ĐƠN</h2>
-                            <p class="mb-1"><strong>Mã HĐ:</strong> #${invoice.ma_hoa_don}</p>
-                            <p class="mb-1"><strong>Ngày:</strong> ${invoice.ngay_tao}</p>
-                            <p class="mb-0"><strong>Nhân viên:</strong> ${invoice.nhan_vien.ho_ten}</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="row mb-4">
-                    <div class="col-md-6">
-                        <h6>Thông tin khách hàng</h6>
-                        ${invoice.khach_hang ? `
-                            <p class="mb-1"><strong>Họ tên:</strong> ${invoice.khach_hang.ho_ten}</p>
-                            <p class="mb-1"><strong>SĐT:</strong> ${invoice.khach_hang.so_dien_thoai}</p>
-                            <p class="mb-0"><strong>Email:</strong> ${invoice.khach_hang.email || 'N/A'}</p>
-                        ` : '<p class="text-muted">Khách vãng lai</p>'}
-                    </div>
-                    <div class="col-md-6">
-                        <h6>Phương thức thanh toán</h6>
-                        <p class="mb-0">${getPaymentMethodText(invoice.phuong_thuc_thanh_toan)}</p>
-                    </div>
-                </div>
-                
-                <table class="invoice-detail-table">
-                    <thead>
-                        <tr>
-                            <th>Dịch vụ</th>
-                            <th class="text-center">SL</th>
-                            <th class="text-end">Đơn giá</th>
-                            <th class="text-end">Thành tiền</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${servicesHtml}
-                    </tbody>
-                    <tfoot>
-                        <tr>
-                            <td colspan="3" class="text-end"><strong>Tạm tính:</strong></td>
-                            <td class="text-end"><strong>${formatCurrency(subtotal)}</strong></td>
-                        </tr>
-                        ${invoice.voucher ? `
-                            <tr>
-                                <td colspan="3" class="text-end">
-                                    Voucher (${invoice.voucher.ma_voucher}):
-                                </td>
-                                <td class="text-end text-danger">-${formatCurrency(invoice.tien_giam_voucher)}</td>
-                            </tr>
-                        ` : ''}
-                        ${invoice.diem_su_dung > 0 ? `
-                            <tr>
-                                <td colspan="3" class="text-end">
-                                    Điểm tích lũy (${invoice.diem_su_dung} điểm):
-                                </td>
-                                <td class="text-end text-danger">-${formatCurrency(invoice.tien_giam_diem)}</td>
-                            </tr>
-                        ` : ''}
-                    </tfoot>
-                </table>
-                
-                <div class="invoice-total text-center">
-                    TỔNG CỘNG: ${formatCurrency(invoice.tong_tien_sau_giam)}
-                </div>
-                
-                ${invoice.diem_tich_luy > 0 ? `
-                    <div class="alert alert-success mt-3">
-                        <i class="fas fa-gift"></i> Khách hàng được cộng <strong>${invoice.diem_tich_luy}</strong> điểm tích lũy
-                    </div>
-                ` : ''}
-                
-                <div class="text-center mt-4">
-                    <p class="mb-1">Cảm ơn quý khách đã sử dụng dịch vụ!</p>
-                    <p class="mb-0"><em>Hẹn gặp lại quý khách!</em></p>
-                </div>
+    // Get invoice info from the DOM row
+    const row = $(`tr[onclick*="${invoiceId}"]`);
+    const maHoaDon = row.find('td:eq(0) strong').text();
+    const ngayGio = row.find('td:eq(1)').text().trim().replace(/\s+/g, ' ');
+    const khachHang = row.find('td:eq(2) strong').text();
+    const sdt = row.find('td:eq(2) small').text();
+    const nhanVien = row.find('td:eq(3) strong').text();
+    const chucVu = row.find('td:eq(3) small').text();
+    const phuongThuc = row.find('td:eq(5)').text().trim();
+    const tongTien = row.find('td:eq(6) strong').text();
+    
+    // Get services from row
+    let servicesHtml = '';
+    const services = row.find('td:eq(4) > div > div');
+    services.each(function() {
+        const serviceText = $(this).text().trim();
+        const match = serviceText.match(/(.+)\((.+)\)/);
+        if (match) {
+            const serviceName = match[1].trim();
+            const price = match[2];
+            servicesHtml += `
+                <tr>
+                    <td>${serviceName}</td>
+                    <td class="text-center">1</td>
+                    <td class="text-end">${price}</td>
+                    <td class="text-end">${price}</td>
+                </tr>
             `;
-            
-            $('#printContent').html(html);
-        },
-        error: function() {
-            $('#printContent').html('<p class="text-danger text-center">Không thể tải thông tin hóa đơn</p>');
         }
     });
+    
+    const html = `
+        <div class="invoice-header">
+            <div class="row">
+                <div class="col-md-6">
+                    <h3>BARBERSHOP HOÀNG GIA</h3>
+                    <p class="mb-1">Địa chỉ: 123 Đường ABC, Quận XYZ</p>
+                    <p class="mb-1">Điện thoại: 0123 456 789</p>
+                    <p class="mb-0">Email: contact@barbershop.com</p>
+                </div>
+                <div class="col-md-6 text-end">
+                    <h2 class="text-primary">HÓA ĐƠN</h2>
+                    <p class="mb-1"><strong>Mã HĐ:</strong> ${maHoaDon}</p>
+                    <p class="mb-1"><strong>Ngày:</strong> ${ngayGio}</p>
+                    <p class="mb-0"><strong>Nhân viên:</strong> ${nhanVien}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <h6>Thông tin khách hàng</h6>
+                <p class="mb-1"><strong>Họ tên:</strong> ${khachHang}</p>
+                <p class="mb-1"><strong>SĐT:</strong> ${sdt}</p>
+                <p class="mb-0"><strong>Email:</strong> N/A</p>
+            </div>
+            <div class="col-md-6">
+                <h6>Phương thức thanh toán</h6>
+                <p class="mb-0">${phuongThuc}</p>
+            </div>
+        </div>
+        
+        <table class="invoice-detail-table">
+            <thead>
+                <tr>
+                    <th>Dịch vụ</th>
+                    <th class="text-center">SL</th>
+                    <th class="text-end">Đơn giá</th>
+                    <th class="text-end">Thành tiền</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${servicesHtml}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="3" class="text-end"><strong>Tổng cộng:</strong></td>
+                    <td class="text-end"><strong>${tongTien}</strong></td>
+                </tr>
+            </tfoot>
+        </table>
+        
+        <div class="invoice-total text-center">
+            TỔNG CỘNG: ${tongTien}
+        </div>
+        
+        <div class="text-center mt-4">
+            <p class="mb-1">Cảm ơn quý khách đã sử dụng dịch vụ!</p>
+            <p class="mb-0"><em>Hẹn gặp lại quý khách!</em></p>
+        </div>
+    `;
+    
+    $('#printContent').html(html);
 }
 
 function printInvoice(invoiceId) {
@@ -599,19 +581,8 @@ function printInvoice(invoiceId) {
 
 function sendInvoiceEmail(invoiceId) {
     if (confirm('Gửi hóa đơn qua email cho khách hàng?')) {
-        $.ajax({
-            url: `/api/invoices/${invoiceId}/send-email/`,
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            success: function(response) {
-                alert('Đã gửi email thành công!');
-            },
-            error: function(xhr) {
-                alert('Có lỗi xảy ra: ' + xhr.responseJSON.message);
-            }
-        });
+        // For now, just show success message
+        alert('Chức năng gửi email đang được phát triển');
     }
 }
 

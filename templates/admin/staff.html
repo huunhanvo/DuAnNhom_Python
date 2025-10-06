@@ -72,7 +72,7 @@
                             <td><strong>{{ staff.id }}</strong></td>
                             <td>
                                 <div class="d-flex align-items-center">
-                                    <img src="{% if staff.anh_dai_dien %}{{ staff.anh_dai_dien }}{% else %}https://ui-avatars.com/api/?name={{ staff.ho_ten|urlencode }}&background=8b4513&color=fff{% endif %}" 
+                                    <img src="{% if staff.anh_dai_dien %}{{ MEDIA_URL }}{{ staff.anh_dai_dien }}{% else %}https://ui-avatars.com/api/?name={{ staff.ho_ten|urlencode }}&background=8b4513&color=fff{% endif %}" 
                                          class="rounded-circle me-2" width="40" height="40">
                                     <div>
                                         <div class="fw-bold">{{ staff.ho_ten }}</div>

@@ -311,7 +311,7 @@
         <div class="review-card" data-rating="{{ review.so_sao }}" data-replied="{% if review.phan_hoi %}true{% else %}false{% endif %}">
             <div class="review-header">
                 <div class="customer-info">
-                    <img src="{{ review.khach_hang.anh_dai_dien|default:'/static/img/avatar-default.png' }}" 
+                    <img src="{% if review.khach_hang.anh_dai_dien %}{{ MEDIA_URL }}{{ review.khach_hang.anh_dai_dien }}{% else %}/static/img/avatar-default.png{% endif %}" 
                          alt="{{ review.khach_hang.ho_ten }}" 
                          class="customer-avatar">
                     <div>

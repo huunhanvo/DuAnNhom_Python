@@ -7,7 +7,11 @@
 {% block extra_css %}
 <style>
     .customer-card {
-        transition: all 0.3s ease;
+        transition: all                    <div class="card-body text-center">
+                        <img src="{% if customer.anh_dai_dien %}{{ MEDIA_URL }}{{ customer.anh_dai_dien }}{% else %}/static/img/avatar-default.png{% endif %}" 
+                             alt="{{ customer.ho_ten }}" 
+                             class="customer-avatar-large mb-3">
+                         ease;
         border-left: 4px solid #8b4513;
     }
     
@@ -317,7 +321,7 @@
                             <tr>
                                 <td>
                                     <div class="d-flex align-items-center">
-                                        <img src="{{ customer.anh_dai_dien|default:'/static/img/avatar-default.png' }}" 
+                                        <img src="{% if customer.anh_dai_dien %}{{ MEDIA_URL }}{{ customer.anh_dai_dien }}{% else %}/static/img/avatar-default.png{% endif %}" 
                                              alt="{{ customer.ho_ten }}" 
                                              style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;"
                                              class="me-2">
@@ -482,7 +486,7 @@ function viewCustomer(customerId) {
             const html = `
                 <div class="row">
                     <div class="col-md-4 text-center border-end">
-                        <img src="${customer.anh_dai_dien || '/static/img/avatar-default.png'}" 
+                        <img src="${customer.anh_dai_dien ? '{{ MEDIA_URL }}' + customer.anh_dai_dien : '/static/img/avatar-default.png'}" 
                              class="customer-avatar-large mb-3">
                         <h4>${customer.ho_ten}</h4>
                         <span class="tier-badge tier-${customer.hang_thanh_vien}">

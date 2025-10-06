@@ -356,7 +356,7 @@
                     {% for staff in top_staff %}
                     <li class="top-list-item">
                         <div class="rank-badge rank-{{ forloop.counter }}">{{ forloop.counter }}</div>
-                        <img src="{{ staff.anh_dai_dien }}" 
+                        <img src="{% if staff.anh_dai_dien %}{{ MEDIA_URL }}{{ staff.anh_dai_dien }}{% else %}/static/img/avatar-default.png{% endif %}" 
                              style="width: 40px; height: 40px; border-radius: 50%; margin-right: 15px;">
                         <div class="flex-grow-1">
                             <strong>{{ staff.ho_ten }}</strong>

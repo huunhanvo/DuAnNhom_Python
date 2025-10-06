@@ -6,7 +6,6 @@ from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
 from barbershop import views
-import test_avatar_views
 
 urlpatterns = [
     path('admin-panel/', admin.site.urls),
@@ -119,9 +118,6 @@ urlpatterns = [
     path('api/staff/change-password/', views.api_staff_change_password, name='api_staff_change_password'),
     path('api/staff/upload-avatar/', views.api_staff_upload_avatar, name='api_staff_upload_avatar'),
     path('api/staff/update-notifications/', views.api_staff_update_notifications, name='api_staff_update_notifications'),
-    
-    # Test URLs
-    path('test/avatar/', test_avatar_views.test_avatar, name='test_avatar'),
 ]
 
 # Serve media files in development

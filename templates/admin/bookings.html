@@ -352,7 +352,7 @@
                                 <td>
                                     <div class="customer-info">
                                         {% if booking.khach_hang.anh_dai_dien %}
-                                        <img src="{{ booking.khach_hang.anh_dai_dien }}" 
+                                        <img src="{{ MEDIA_URL }}{{ booking.khach_hang.anh_dai_dien }}" 
                                              alt="{{ booking.ten_khach_hang }}" 
                                              class="customer-avatar">
                                         {% else %}

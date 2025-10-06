@@ -33,7 +33,7 @@
             <div class="card">
                 <div class="card-body text-center">
                     <div class="mb-3">
-                        <img src="{% if staff.anh_dai_dien %}{{ staff.anh_dai_dien }}{% else %}https://ui-avatars.com/api/?name={{ staff.ho_ten|urlencode }}&size=150&background=0D6EFD&color=fff{% endif %}" 
+                        <img src="{% if staff.anh_dai_dien %}{{ MEDIA_URL }}{{ staff.anh_dai_dien }}{% else %}https://ui-avatars.com/api/?name={{ staff.ho_ten|urlencode }}&size=150&background=0D6EFD&color=fff{% endif %}" 
                              class="rounded-circle" alt="{{ staff.ho_ten }}" style="width: 150px; height: 150px;">
                     </div>
                     <h4 class="mb-1">{{ staff.ho_ten }}</h4>

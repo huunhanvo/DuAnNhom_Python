@@ -285,7 +285,7 @@
                             {% endif %}
                         </td>
                         <td>
-                            <img src="{{ staff.anh_dai_dien|default:'/static/img/avatar-default.png' }}" 
+                            <img src="{% if staff.anh_dai_dien %}{{ MEDIA_URL }}{{ staff.anh_dai_dien }}{% else %}/static/img/avatar-default.png{% endif %}" 
                                  style="width: 30px; height: 30px; border-radius: 50%;" 
                                  class="me-2">
                             <strong>{{ staff.ho_ten }}</strong>
