@@ -1,0 +1,446 @@
+{% extends 'customer/base_customer.html' %}
+{% load static %}
+
+{% block title %}Đặt lịch - Bước 3: Thông tin khách hàng{% endblock %}
+
+{% block content %}
+<section class="py-5 bg-light">
+    <div class="container">
+        <!-- Booking Wizard -->
+        <div class="booking-wizard mb-5">
+            <div class="wizard-step completed">
+                <div class="step-number"><i class="fas fa-check"></i></div>
+                <div class="step-title">Chọn dịch vụ</div>
+            </div>
+            <div class="wizard-step completed">
+                <div class="step-number"><i class="fas fa-check"></i></div>
+                <div class="step-title">Chọn thợ & thời gian</div>
+            </div>
+            <div class="wizard-step active">
+                <div class="step-number">3</div>
+                <div class="step-title">Thông tin</div>
+            </div>
+            <div class="wizard-step">
+                <div class="step-number">4</div>
+                <div class="step-title">Xác nhận</div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Customer Information Form -->
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white py-3">
+                        <h4 class="mb-0">
+                            <i class="fas fa-user-circle me-2 text-warning"></i> Thông tin khách hàng
+                        </h4>
+                    </div>
+                    <div class="card-body p-4">
+                        <form id="customerInfoForm">
+                            {% csrf_token %}
+                            
+                            {% if user.is_authenticated and user.vai_tro == 'khach_hang' %}
+                            <!-- Logged in customer -->
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Thông tin của bạn đã được lưu. Bạn có thể cập nhật nếu cần.
+                            </div>
+                            
+                            <input type="hidden" name="customer_id" value="{{ user.id }}">
+                            {% endif %}
+                            
+                            <!-- Full Name -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="ho_ten" class="form-label">
+                                        Họ và tên <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" id="ho_ten" name="ho_ten" 
+                                           value="{% if user.is_authenticated %}{{ user.ho_ten }}{% endif %}" 
+                                           placeholder="Nguyễn Văn A" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="so_dien_thoai" class="form-label">
+                                        Số điện thoại <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="tel" class="form-control" id="so_dien_thoai" name="so_dien_thoai" 
+                                           value="{% if user.is_authenticated %}{{ user.so_dien_thoai }}{% endif %}" 
+                                           placeholder="0901234567" pattern="[0-9]{10}" required>
+                                </div>
+                            </div>
+                            
+                            <!-- Email (Optional) -->
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email (Nhận thông báo)</label>
+                                <input type="email" class="form-control" id="email" name="email" 
+                                       value="{% if user.is_authenticated %}{{ user.email }}{% endif %}" 
+                                       placeholder="email@example.com">
+                                <small class="text-muted">Chúng tôi sẽ gửi xác nhận đặt lịch qua email</small>
+                            </div>
+                            
+                            <!-- Note -->
+                            <div class="mb-3">
+                                <label for="ghi_chu" class="form-label">
+                                    <i class="fas fa-comment-dots me-1"></i> Ghi chú
+                                </label>
+                                <textarea class="form-control" id="ghi_chu" name="ghi_chu" rows="3" 
+                                          placeholder="Yêu cầu đặc biệt hoặc ghi chú khác..."></textarea>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Voucher Section (for logged-in customers) -->
+                {% if user.is_authenticated and user.vai_tro == 'khach_hang' %}
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white py-3">
+                        <h5 class="mb-0">
+                            <i class="fas fa-gift me-2 text-warning"></i> Áp dụng ưu đãi
+                        </h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <!-- Voucher Input -->
+                        <div class="mb-3">
+                            <label for="voucher_code" class="form-label">Mã voucher</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="voucher_code" 
+                                       placeholder="Nhập mã voucher">
+                                <button class="btn btn-outline-primary" type="button" id="applyVoucher">
+                                    <i class="fas fa-check me-1"></i> Áp dụng
+                                </button>
+                            </div>
+                            <div id="voucherResult" class="mt-2"></div>
+                        </div>
+
+                        <!-- Available Vouchers -->
+                        <div class="mb-3">
+                            <h6 class="fw-bold mb-3">Voucher khả dụng:</h6>
+                            <div id="availableVouchers">
+                                {% for voucher in available_vouchers %}
+                                <div class="voucher-card mb-2" data-voucher-id="{{ voucher.id }}" 
+                                     data-discount="{{ voucher.gia_tri }}">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">{{ voucher.ten }}</h6>
+                                            <p class="small text-muted mb-0">
+                                                Giảm {{ voucher.gia_tri }}{% if voucher.loai == 'phan_tram' %}%{% else %}đ{% endif %}
+                                            </p>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-primary select-voucher">
+                                            Chọn
+                                        </button>
+                                    </div>
+                                </div>
+                                {% empty %}
+                                <p class="text-muted small mb-0">Không có voucher khả dụng</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Points Redemption -->
+                        <div>
+                            <h6 class="fw-bold mb-3">
+                                Sử dụng điểm thưởng 
+                                <span class="badge bg-warning text-dark">
+                                    {{ user.diem_tich_luy|default:0 }} điểm
+                                </span>
+                            </h6>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="points_to_use" 
+                                       placeholder="Số điểm muốn sử dụng" 
+                                       min="0" max="{{ user.diem_tich_luy|default:0 }}">
+                                <button class="btn btn-outline-primary" type="button" id="usePoints">
+                                    <i class="fas fa-coins me-1"></i> Sử dụng
+                                </button>
+                            </div>
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                100 điểm = 10,000đ
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Walk-in Customer Registration -->
+                {% if not user.is_authenticated %}
+                <div class="card border-0 shadow-sm bg-light">
+                    <div class="card-body p-4">
+                        <h6 class="fw-bold mb-3">
+                            <i class="fas fa-gift text-warning me-2"></i> 
+                            Đăng ký để nhận ưu đãi
+                        </h6>
+                        <ul class="mb-3">
+                            <li>Nhận 100 điểm thưởng khi đăng ký</li>
+                            <li>Tích điểm mỗi lần sử dụng dịch vụ</li>
+                            <li>Ưu đãi độc quyền cho thành viên</li>
+                        </ul>
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'accounts:register' %}?next={{ request.path }}" 
+                               class="btn btn-primary">
+                                <i class="fas fa-user-plus me-2"></i> Đăng ký ngay
+                            </a>
+                            <a href="{% url 'login' %}?next={{ request.path }}" 
+                               class="btn btn-outline-primary">
+                                <i class="fas fa-sign-in-alt me-2"></i> Đăng nhập
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Summary Sidebar -->
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm sticky-top" style="top: 100px;">
+                    <div class="card-header bg-warning text-dark py-3">
+                        <h5 class="mb-0">
+                            <i class="fas fa-receipt me-2"></i> Tổng kết đặt lịch
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Services -->
+                        <h6 class="fw-bold mb-2">Dịch vụ:</h6>
+                        <div id="servicesSummary" class="mb-3"></div>
+
+                        <hr>
+
+                        <!-- Booking Details -->
+                        <div class="mb-2">
+                            <small class="text-muted">Thợ cắt:</small>
+                            <div id="selectedStylist" class="fw-bold"></div>
+                        </div>
+
+                        <div class="mb-2">
+                            <small class="text-muted">Ngày giờ:</small>
+                            <div id="selectedDateTime" class="fw-bold"></div>
+                        </div>
+
+                        <hr>
+
+                        <!-- Price Breakdown -->
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Tổng dịch vụ:</span>
+                            <strong id="subtotal">0đ</strong>
+                        </div>
+
+                        <div class="d-flex justify-content-between mb-2 text-success" id="discountRow" style="display: none !important;">
+                            <span>Giảm giá:</span>
+                            <strong id="discount">-0đ</strong>
+                        </div>
+
+                        <div class="d-flex justify-content-between mb-2 text-info" id="pointsRow" style="display: none !important;">
+                            <span>Điểm thưởng:</span>
+                            <strong id="pointsDiscount">-0đ</strong>
+                        </div>
+
+                        <hr>
+
+                        <div class="d-flex justify-content-between mb-3">
+                            <span class="fw-bold fs-5">Tổng thanh toán:</span>
+                            <strong class="text-success fs-4" id="totalPrice">0đ</strong>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-outline-secondary" onclick="history.back()">
+                                <i class="fas fa-arrow-left me-2"></i> Quay lại
+                            </button>
+                            <button type="button" class="btn btn-gold" id="nextBtn">
+                                Tiếp tục <i class="fas fa-arrow-right ms-2"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    let bookingData = {};
+    let subtotalAmount = 0;
+    let discountAmount = 0;
+    let pointsDiscountAmount = 0;
+    let selectedVoucher = null;
+    let usedPoints = 0;
+
+    // Load booking data from session storage
+    const savedData = sessionStorage.getItem('bookingData');
+    if (savedData) {
+        bookingData = JSON.parse(savedData);
+        displayBookingSummary();
+    } else {
+        window.location.href = "{% url 'bookings:booking_step1' %}";
+    }
+
+    // Display booking summary
+    function displayBookingSummary() {
+        // Services
+        let servicesHtml = '';
+        subtotalAmount = 0;
+        
+        bookingData.services.forEach(service => {
+            servicesHtml += `
+                <div class="d-flex justify-content-between mb-1">
+                    <span class="small">${service.name}</span>
+                    <span class="small text-success">${formatMoney(service.price)}</span>
+                </div>
+            `;
+            subtotalAmount += service.price;
+        });
+        $('#servicesSummary').html(servicesHtml);
+
+        // Stylist
+        $('#selectedStylist').text(bookingData.stylist_id === 'any' ? 'Thợ bất kỳ' : 'Thợ đã chọn');
+
+        // DateTime
+        const dateTime = `${bookingData.date} - ${bookingData.time}`;
+        $('#selectedDateTime').text(dateTime);
+
+        // Update prices
+        updatePrices();
+    }
+
+    // Apply voucher
+    $('#applyVoucher').click(function() {
+        const code = $('#voucher_code').val().trim();
+        if (!code) {
+            showVoucherResult('Vui lòng nhập mã voucher', 'danger');
+            return;
+        }
+
+        // AJAX to validate voucher
+        $.ajax({
+            url: "{% url 'bookings:validate_voucher' %}",
+            method: 'POST',
+            data: {
+                code: code,
+                total: subtotalAmount,
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if (response.success) {
+                    selectedVoucher = response.voucher;
+                    discountAmount = response.discount;
+                    showVoucherResult(`Đã áp dụng voucher: -${formatMoney(discountAmount)}`, 'success');
+                    updatePrices();
+                } else {
+                    showVoucherResult(response.message || 'Mã voucher không hợp lệ', 'danger');
+                }
+            },
+            error: function() {
+                showVoucherResult('Có lỗi xảy ra', 'danger');
+            }
+        });
+    });
+
+    // Select voucher from list
+    $('.select-voucher').click(function() {
+        const voucherCard = $(this).closest('.voucher-card');
+        const voucherId = voucherCard.data('voucher-id');
+        const discount = parseFloat(voucherCard.data('discount'));
+        
+        selectedVoucher = { id: voucherId };
+        discountAmount = discount;
+        
+        $('.voucher-card').removeClass('border-success');
+        voucherCard.addClass('border-success');
+        
+        showVoucherResult(`Đã chọn voucher: -${formatMoney(discountAmount)}`, 'success');
+        updatePrices();
+    });
+
+    // Use points
+    $('#usePoints').click(function() {
+        usedPoints = parseInt($('#points_to_use').val()) || 0;
+        const maxPoints = {{ user.diem_tich_luy|default:0 }};
+        
+        if (usedPoints > maxPoints) {
+            alert('Số điểm không đủ');
+            return;
+        }
+        
+        // 100 points = 10,000đ
+        pointsDiscountAmount = (usedPoints / 100) * 10000;
+        updatePrices();
+    });
+
+    // Update prices
+    function updatePrices() {
+        $('#subtotal').text(formatMoney(subtotalAmount));
+        
+        if (discountAmount > 0) {
+            $('#discountRow').show();
+            $('#discount').text('-' + formatMoney(discountAmount));
+        } else {
+            $('#discountRow').hide();
+        }
+        
+        if (pointsDiscountAmount > 0) {
+            $('#pointsRow').show();
+            $('#pointsDiscount').text('-' + formatMoney(pointsDiscountAmount));
+        } else {
+            $('#pointsRow').hide();
+        }
+        
+        const total = Math.max(0, subtotalAmount - discountAmount - pointsDiscountAmount);
+        $('#totalPrice').text(formatMoney(total));
+    }
+
+    // Show voucher result
+    function showVoucherResult(message, type) {
+        $('#voucherResult').html(`
+            <div class="alert alert-${type} py-2 mb-0">
+                <small>${message}</small>
+            </div>
+        `);
+    }
+
+    // Next button
+    $('#nextBtn').click(function() {
+        // Validate form
+        if (!$('#customerInfoForm')[0].checkValidity()) {
+            $('#customerInfoForm')[0].reportValidity();
+            return;
+        }
+
+        // Get customer info
+        const customerInfo = {
+            ho_ten: $('#ho_ten').val(),
+            so_dien_thoai: $('#so_dien_thoai').val(),
+            email: $('#email').val(),
+            ghi_chu: $('#ghi_chu').val()
+        };
+
+        // Save complete booking data
+        const completeBooking = {
+            ...bookingData,
+            customer: customerInfo,
+            voucher: selectedVoucher,
+            points_used: usedPoints,
+            subtotal: subtotalAmount,
+            discount: discountAmount,
+            points_discount: pointsDiscountAmount,
+            total: subtotalAmount - discountAmount - pointsDiscountAmount
+        };
+
+        sessionStorage.setItem('finalBooking', JSON.stringify(completeBooking));
+        
+        // Redirect to step 4
+        window.location.href = "{% url 'bookings:booking_step4' %}";
+    });
+
+    // Format money
+    function formatMoney(amount) {
+        return new Intl.NumberFormat('vi-VN', {
+            style: 'currency',
+            currency: 'VND'
+        }).format(amount);
+    }
+});
+</script>
+{% endblock %}

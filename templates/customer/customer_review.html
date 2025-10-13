@@ -1,0 +1,491 @@
+{% extends 'customer/base_customer.html' %}
+{% load static %}
+
+{% block title %}Đánh giá dịch vụ - Barbershop Hoàng Gia{% endblock %}
+
+{% block content %}
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <!-- Back Button -->
+                <div class="mb-4">
+                    <a href="{% url 'core:customer_booking_detail' booking.id %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i> Quay lại
+                    </a>
+                </div>
+
+                <!-- Review Form Card -->
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-warning text-dark py-3">
+                        <h5 class="mb-0 fw-bold">
+                            <i class="fas fa-star me-2"></i> Đánh Giá Dịch Vụ
+                        </h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <!-- Booking Info -->
+                        <div class="booking-info-card mb-4">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <h6 class="fw-bold mb-2">
+                                        <i class="fas fa-calendar-check text-primary me-2"></i>
+                                        {{ booking.ma_dat_lich }}
+                                    </h6>
+                                    <p class="mb-1">
+                                        <i class="far fa-calendar me-2"></i>
+                                        {{ booking.ngay_gio|date:"d/m/Y - H:i" }}
+                                    </p>
+                                    <p class="mb-0">
+                                        <i class="fas fa-user-tie me-2"></i>
+                                        {{ booking.nhan_vien.ho_ten }}
+                                    </p>
+                                </div>
+                                <div class="col-md-4 text-md-end">
+                                    <div class="badge bg-success fs-6">Đã hoàn thành</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Review Form -->
+                        <form id="reviewForm" method="POST" action="{% url 'core:customer_review' booking.id %}" enctype="multipart/form-data">
+                            {% csrf_token %}
+
+                            <!-- Overall Rating -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">
+                                    Đánh giá tổng thể <span class="text-danger">*</span>
+                                </label>
+                                <div class="rating-selector">
+                                    <input type="hidden" id="overall_rating" name="overall_rating" value="0" required>
+                                    <div class="stars-container" data-rating-type="overall">
+                                        {% for i in "12345" %}
+                                        <i class="far fa-star" data-rating="{{ i }}"></i>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="rating-text mt-2">
+                                        <span id="overall_rating_text" class="text-muted">Chọn số sao đánh giá</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr>
+
+                            <!-- Stylist Rating -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">
+                                    Đánh giá thợ cắt <span class="text-danger">*</span>
+                                </label>
+                                <div class="rating-selector">
+                                    <input type="hidden" id="stylist_rating" name="stylist_rating" value="0" required>
+                                    <div class="stars-container" data-rating-type="stylist">
+                                        {% for i in "12345" %}
+                                        <i class="far fa-star" data-rating="{{ i }}"></i>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="rating-text mt-2">
+                                        <span id="stylist_rating_text" class="text-muted">Đánh giá kỹ năng và thái độ phục vụ</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr>
+
+                            <!-- Service Quality Checklist -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold mb-3">
+                                    Chất lượng dịch vụ
+                                </label>
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="check_professional" name="professional">
+                                            <label class="form-check-label" for="check_professional">
+                                                <i class="fas fa-user-tie text-primary me-2"></i> Chuyên nghiệp
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="check_friendly" name="friendly">
+                                            <label class="form-check-label" for="check_friendly">
+                                                <i class="fas fa-smile text-success me-2"></i> Thân thiện
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="check_clean" name="clean">
+                                            <label class="form-check-label" for="check_clean">
+                                                <i class="fas fa-broom text-info me-2"></i> Sạch sẽ
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="check_punctual" name="punctual">
+                                            <label class="form-check-label" for="check_punctual">
+                                                <i class="fas fa-clock text-warning me-2"></i> Đúng giờ
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr>
+
+                            <!-- Review Content -->
+                            <div class="mb-4">
+                                <label for="review_content" class="form-label fw-bold">
+                                    Nhận xét chi tiết <span class="text-danger">*</span>
+                                </label>
+                                <textarea class="form-control" id="review_content" name="review_content" 
+                                          rows="5" placeholder="Chia sẻ trải nghiệm của bạn (tối thiểu 10 ký tự)" 
+                                          minlength="10" required></textarea>
+                                <div class="form-text">
+                                    <span id="charCount">0</span>/500 ký tự
+                                </div>
+                            </div>
+
+                            <!-- Photo Upload -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">
+                                    Thêm hình ảnh <span class="text-muted">(Tùy chọn)</span>
+                                </label>
+                                <div class="upload-area" id="uploadArea">
+                                    <input type="file" id="review_photos" name="review_photos" 
+                                           accept="image/*" multiple class="d-none">
+                                    <div class="upload-placeholder">
+                                        <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                                        <p class="mb-2">Kéo thả hoặc nhấn để chọn ảnh</p>
+                                        <small class="text-muted">Tối đa 5 ảnh, mỗi ảnh < 5MB</small>
+                                    </div>
+                                </div>
+                                <div class="photo-preview mt-3" id="photoPreview"></div>
+                            </div>
+
+                            <!-- Guidelines -->
+                            <div class="alert alert-info">
+                                <h6 class="alert-heading">
+                                    <i class="fas fa-info-circle me-2"></i> Hướng dẫn viết đánh giá:
+                                </h6>
+                                <ul class="mb-0 small">
+                                    <li>Chia sẻ trải nghiệm thực tế, trung thực</li>
+                                    <li>Tránh ngôn từ thô tục, xúc phạm</li>
+                                    <li>Tập trung vào chất lượng dịch vụ</li>
+                                    <li>Đánh giá công bằng để giúp người khác lựa chọn</li>
+                                </ul>
+                            </div>
+
+                            <!-- Submit Button -->
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-gold btn-lg" id="submitBtn">
+                                    <i class="fas fa-paper-plane me-2"></i> Gửi đánh giá
+                                </button>
+                                <a href="{% url 'core:customer_booking_detail' booking.id %}" class="btn btn-outline-secondary">
+                                    Hủy
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+.booking-info-card {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.rating-selector {
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.stars-container {
+    font-size: 3rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+.stars-container i {
+    color: #ddd;
+    transition: all 0.2s;
+    margin: 0 5px;
+}
+
+.stars-container i:hover,
+.stars-container i.hover {
+    color: #ffc107;
+    transform: scale(1.1);
+}
+
+.stars-container i.selected {
+    color: #ffc107;
+}
+
+.rating-text {
+    font-size: 1.1rem;
+    min-height: 30px;
+}
+
+.upload-area {
+    border: 2px dashed #ddd;
+    border-radius: 8px;
+    padding: 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.upload-area:hover {
+    border-color: #d4af37;
+    background: #f8f9fa;
+}
+
+.upload-area.dragover {
+    border-color: #d4af37;
+    background: #fff8e1;
+}
+
+.photo-preview {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.preview-item {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.preview-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.preview-item .remove-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 25px;
+    height: 25px;
+    background: rgba(220, 53, 69, 0.9);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+}
+
+.preview-item .remove-btn:hover {
+    background: #dc3545;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    const ratingTexts = {
+        1: 'Rất không hài lòng',
+        2: 'Không hài lòng',
+        3: 'Bình thường',
+        4: 'Hài lòng',
+        5: 'Rất hài lòng'
+    };
+
+    let selectedPhotos = [];
+
+    // Star rating functionality
+    $('.stars-container').each(function() {
+        const container = $(this);
+        const ratingType = container.data('rating-type');
+        const stars = container.find('i');
+        
+        stars.hover(
+            function() {
+                const rating = $(this).data('rating');
+                stars.each(function(index) {
+                    if (index < rating) {
+                        $(this).addClass('hover');
+                    } else {
+                        $(this).removeClass('hover');
+                    }
+                });
+            },
+            function() {
+                stars.removeClass('hover');
+            }
+        );
+        
+        stars.click(function() {
+            const rating = $(this).data('rating');
+            const inputId = `#${ratingType}_rating`;
+            const textId = `#${ratingType}_rating_text`;
+            
+            $(inputId).val(rating);
+            
+            stars.each(function(index) {
+                if (index < rating) {
+                    $(this).removeClass('far').addClass('fas selected');
+                } else {
+                    $(this).removeClass('fas selected').addClass('far');
+                }
+            });
+            
+            $(textId).text(ratingTexts[rating]).removeClass('text-muted').addClass('text-warning fw-bold');
+        });
+    });
+
+    // Character count
+    $('#review_content').on('input', function() {
+        const count = $(this).val().length;
+        $('#charCount').text(count);
+        
+        if (count > 500) {
+            $(this).val($(this).val().substring(0, 500));
+            $('#charCount').text(500);
+        }
+    });
+
+    // Photo upload
+    $('#uploadArea').click(function() {
+        $('#review_photos').click();
+    });
+
+    // Drag and drop
+    $('#uploadArea')
+        .on('dragover', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $(this).addClass('dragover');
+        })
+        .on('dragleave', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $(this).removeClass('dragover');
+        })
+        .on('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $(this).removeClass('dragover');
+            
+            const files = e.originalEvent.dataTransfer.files;
+            handleFiles(files);
+        });
+
+    $('#review_photos').change(function() {
+        handleFiles(this.files);
+    });
+
+    function handleFiles(files) {
+        if (selectedPhotos.length + files.length > 5) {
+            alert('Chỉ được tải lên tối đa 5 ảnh');
+            return;
+        }
+
+        Array.from(files).forEach(file => {
+            if (!file.type.startsWith('image/')) {
+                alert('Chỉ chấp nhận file ảnh');
+                return;
+            }
+
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Mỗi ảnh không được vượt quá 5MB');
+                return;
+            }
+
+            selectedPhotos.push(file);
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = $(`
+                    <div class="preview-item">
+                        <img src="${e.target.result}" alt="Preview">
+                        <button type="button" class="remove-btn" data-index="${selectedPhotos.length - 1}">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `);
+                $('#photoPreview').append(preview);
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // Remove photo
+    $(document).on('click', '.remove-btn', function() {
+        const index = $(this).data('index');
+        selectedPhotos.splice(index, 1);
+        $(this).closest('.preview-item').remove();
+        
+        // Update indices
+        $('.remove-btn').each(function(i) {
+            $(this).data('index', i);
+        });
+    });
+
+    // Form submission
+    $('#reviewForm').submit(function(e) {
+        e.preventDefault();
+        
+        // Validate ratings
+        if ($('#overall_rating').val() == 0) {
+            alert('Vui lòng đánh giá tổng thể');
+            return false;
+        }
+        
+        if ($('#stylist_rating').val() == 0) {
+            alert('Vui lòng đánh giá thợ cắt');
+            return false;
+        }
+
+        // Create FormData
+        const formData = new FormData(this);
+        
+        // Remove default file input and add selected photos
+        formData.delete('review_photos');
+        selectedPhotos.forEach((photo, index) => {
+            formData.append(`photo_${index}`, photo);
+        });
+
+        // Submit
+        $('#submitBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i> Đang gửi...');
+
+        $.ajax({
+            url: $(this).attr('action'),
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    alert('Cảm ơn bạn đã đánh giá!');
+                    window.location.href = '{% url "core:customer_booking_detail" booking.id %}';
+                } else {
+                    alert(response.message || 'Có lỗi xảy ra');
+                    $('#submitBtn').prop('disabled', false).html('<i class="fas fa-paper-plane me-2"></i> Gửi đánh giá');
+                }
+            },
+            error: function() {
+                alert('Có lỗi xảy ra. Vui lòng thử lại!');
+                $('#submitBtn').prop('disabled', false).html('<i class="fas fa-paper-plane me-2"></i> Gửi đánh giá');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

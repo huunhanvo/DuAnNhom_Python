@@ -11,17 +11,17 @@
             <h2><i class="fas fa-user-tie me-2"></i>Chi tiết nhân viên</h2>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'admin_staff' %}">Nhân viên</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'core:admin_dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'accounts:admin_staff' %}">Nhân viên</a></li>
                     <li class="breadcrumb-item active">{{ staff.ho_ten }}</li>
                 </ol>
             </nav>
         </div>
         <div>
-            <a href="{% url 'admin_staff_edit' staff.id %}" class="btn btn-primary">
+            <a href="{% url 'accounts:admin_staff_edit' staff.id %}" class="btn btn-primary">
                 <i class="fas fa-edit me-1"></i>Chỉnh sửa
             </a>
-            <a href="{% url 'admin_staff' %}" class="btn btn-secondary">
+            <a href="{% url 'accounts:admin_staff' %}" class="btn btn-secondary">
                 <i class="fas fa-arrow-left me-1"></i>Quay lại
             </a>
         </div>

@@ -197,7 +197,7 @@
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-search"></i> Lọc
                         </button>
-                        <a href="{% url 'staff_my_customers' %}" class="btn btn-outline-secondary">
+                        <a href="{% url 'accounts:staff_my_customers' %}" class="btn btn-outline-secondary">
                             <i class="fas fa-times"></i> Xóa bộ lọc
                         </a>
                     </div>
@@ -377,7 +377,7 @@ $(document).ready(function() {
 });
 
 function createBooking(customerId) {
-    window.location.href = `{% url 'staff_bookings_create' %}?customer_id=${customerId}`;
+    window.location.href = `{% url 'bookings:staff_bookings_create' %}?customer_id=${customerId}`;
 }
 
 function viewDetail(customerId) {

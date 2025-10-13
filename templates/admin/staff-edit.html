@@ -37,9 +37,9 @@
             <h3 class="mb-0">Chỉnh sửa nhân viên</h3>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'admin_staff' %}">Nhân viên</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'admin_staff_detail' staff.id %}">{{ staff.ho_ten }}</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'core:admin_dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'accounts:admin_staff' %}">Nhân viên</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'accounts:admin_staff_detail' staff.id %}">{{ staff.ho_ten }}</a></li>
                     <li class="breadcrumb-item active">Chỉnh sửa</li>
                 </ol>
             </nav>
@@ -125,7 +125,7 @@
                         </div>
                         
                         <div class="d-flex justify-content-between mt-4">
-                            <a href="{% url 'admin_staff_detail' staff.id %}" class="btn btn-secondary">
+                            <a href="{% url 'accounts:admin_staff_detail' staff.id %}" class="btn btn-secondary">
                                 <i class="fas fa-times me-1"></i> Hủy
                             </a>
                             <button type="submit" class="btn btn-primary">

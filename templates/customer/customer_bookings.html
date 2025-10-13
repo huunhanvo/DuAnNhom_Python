@@ -1,0 +1,370 @@
+{% extends 'customer/base_customer.html' %}
+{% load static %}
+
+{% block title %}Lịch hẹn của tôi - Barbershop Hoàng Gia{% endblock %}
+
+{% block content %}
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-lg-3 mb-4">
+                {% include 'customer/includes/dashboard_sidebar.html' with active='bookings' %}
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-lg-9">
+                <!-- Page Header -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h3 class="fw-bold mb-1">Lịch Hẹn Của Tôi</h3>
+                        <p class="text-muted mb-0">Quản lý tất cả lịch hẹn của bạn</p>
+                    </div>
+                    <a href="{% url 'bookings:booking_step1' %}" class="btn btn-gold">
+                        <i class="fas fa-plus-circle me-2"></i> Đặt lịch mới
+                    </a>
+                </div>
+
+                <!-- Filter Tabs -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body p-3">
+                        <ul class="nav nav-pills booking-tabs" id="bookingTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="upcoming-tab" data-bs-toggle="pill" 
+                                        data-bs-target="#upcoming" type="button" role="tab">
+                                    <i class="fas fa-calendar-alt me-2"></i> Sắp tới
+                                    <span class="badge bg-primary ms-2">{{ upcoming_count }}</span>
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="pending-tab" data-bs-toggle="pill" 
+                                        data-bs-target="#pending" type="button" role="tab">
+                                    <i class="fas fa-clock me-2"></i> Chờ xác nhận
+                                    <span class="badge bg-warning ms-2">{{ pending_count }}</span>
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="completed-tab" data-bs-toggle="pill" 
+                                        data-bs-target="#completed" type="button" role="tab">
+                                    <i class="fas fa-check-circle me-2"></i> Đã hoàn thành
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="cancelled-tab" data-bs-toggle="pill" 
+                                        data-bs-target="#cancelled" type="button" role="tab">
+                                    <i class="fas fa-times-circle me-2"></i> Đã hủy
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Tab Content -->
+                <div class="tab-content" id="bookingTabsContent">
+                    <!-- Upcoming Bookings -->
+                    <div class="tab-pane fade show active" id="upcoming" role="tabpanel">
+                        {% if upcoming_bookings %}
+                        <div class="row g-4">
+                            {% for booking in upcoming_bookings %}
+                            <div class="col-12">
+                                <div class="booking-card-detail">
+                                    <div class="booking-header">
+                                        <div class="booking-code">
+                                            <small class="text-muted">Mã đặt lịch</small>
+                                            <h6 class="fw-bold mb-0">#{{ booking.ma_dat_lich }}</h6>
+                                        </div>
+                                        <span class="badge badge-{{ booking.trang_thai }}">
+                                            {{ booking.get_trang_thai_display }}
+                                        </span>
+                                    </div>
+
+                                    <div class="booking-body">
+                                        <div class="row g-3">
+                                            <div class="col-md-8">
+                                                <!-- Date & Time -->
+                                                <div class="booking-datetime mb-3">
+                                                    <i class="fas fa-calendar-alt text-primary me-2"></i>
+                                                    <strong>{{ booking.ngay_hen|date:'l, d/m/Y' }}</strong>
+                                                    <span class="mx-2">•</span>
+                                                    <i class="far fa-clock text-success me-2"></i>
+                                                    <strong>{{ booking.gio_hen }}</strong>
+                                                </div>
+
+                                                <!-- Stylist -->
+                                                <div class="mb-3">
+                                                    <small class="text-muted d-block mb-1">Thợ cắt tóc:</small>
+                                                    <div class="d-flex align-items-center">
+                                                        {% if booking.nhan_vien.anh_dai_dien %}
+                                                        <img src="{{ booking.nhan_vien.anh_dai_dien.url }}" 
+                                                             class="rounded-circle me-2" 
+                                                             style="width: 30px; height: 30px; object-fit: cover;">
+                                                        {% endif %}
+                                                        <strong>
+                                                            {% if booking.nhan_vien %}
+                                                                {{ booking.nhan_vien.ho_ten }}
+                                                            {% else %}
+                                                                Thợ bất kỳ
+                                                            {% endif %}
+                                                        </strong>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Services -->
+                                                <div class="mb-3">
+                                                    <small class="text-muted d-block mb-2">Dịch vụ:</small>
+                                                    {% for service in booking.dichvudatlich_set.all %}
+                                                    <span class="badge bg-light text-dark me-2 mb-1">
+                                                        <i class="fas fa-cut me-1"></i> {{ service.dich_vu.ten }}
+                                                    </span>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-4 text-md-end">
+                                                <!-- Price -->
+                                                <div class="mb-3">
+                                                    <small class="text-muted d-block mb-1">Tổng tiền:</small>
+                                                    <h4 class="text-success mb-0">
+                                                        {{ booking.tong_tien|floatformat:0 }}đ
+                                                    </h4>
+                                                </div>
+
+                                                <!-- Actions -->
+                                                <div class="d-grid gap-2">
+                                                    <a href="{% url 'core:customer_booking_detail' booking.id %}" 
+                                                       class="btn btn-outline-primary btn-sm">
+                                                        <i class="fas fa-eye me-1"></i> Chi tiết
+                                                    </a>
+                                                    {% if booking.trang_thai == 'cho_xac_nhan' or booking.trang_thai == 'da_xac_nhan' %}
+                                                    <button type="button" class="btn btn-outline-danger btn-sm cancel-booking" 
+                                                            data-booking-id="{{ booking.id }}">
+                                                        <i class="fas fa-times me-1"></i> Hủy lịch
+                                                    </button>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Countdown Timer -->
+                                    {% if booking.trang_thai == 'da_xac_nhan' %}
+                                    <div class="booking-footer bg-light">
+                                        <i class="fas fa-hourglass-half text-warning me-2"></i>
+                                        <span class="countdown-timer" 
+                                              data-booking-datetime="{{ booking.ngay_hen|date:'Y-m-d' }} {{ booking.gio_hen }}">
+                                            Đang tính toán...
+                                        </span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Pagination -->
+                        {% if is_paginated %}
+                        <nav class="mt-4">
+                            <ul class="pagination justify-content-center">
+                                {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1">Đầu</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Trước</a>
+                                </li>
+                                {% endif %}
+
+                                <li class="page-item active">
+                                    <span class="page-link">{{ page_obj.number }}</span>
+                                </li>
+
+                                {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.next_page_number }}">Sau</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Cuối</a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+                        {% else %}
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body text-center py-5">
+                                <i class="far fa-calendar-times fa-4x text-muted mb-3"></i>
+                                <h5 class="mb-3">Không có lịch hẹn sắp tới</h5>
+                                <p class="text-muted mb-4">Đặt lịch ngay để trải nghiệm dịch vụ của chúng tôi</p>
+                                <a href="{% url 'bookings:booking_step1' %}" class="btn btn-gold">
+                                    <i class="fas fa-plus-circle me-2"></i> Đặt lịch ngay
+                                </a>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Pending Bookings -->
+                    <div class="tab-pane fade" id="pending" role="tabpanel">
+                        <!-- Similar structure as upcoming -->
+                        <p class="text-muted">Danh sách lịch hẹn chờ xác nhận...</p>
+                    </div>
+
+                    <!-- Completed Bookings -->
+                    <div class="tab-pane fade" id="completed" role="tabpanel">
+                        <!-- Similar structure as upcoming -->
+                        <p class="text-muted">Danh sách lịch hẹn đã hoàn thành...</p>
+                    </div>
+
+                    <!-- Cancelled Bookings -->
+                    <div class="tab-pane fade" id="cancelled" role="tabpanel">
+                        <!-- Similar structure as upcoming -->
+                        <p class="text-muted">Danh sách lịch hẹn đã hủy...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Cancel Booking Modal -->
+<div class="modal fade" id="cancelBookingModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Xác nhận hủy lịch</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Bạn có chắc chắn muốn hủy lịch hẹn này?</p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Lưu ý:</strong> Hủy lịch trong vòng 2 giờ trước giờ hẹn sẽ bị tính phí 50%.
+                </div>
+                <div class="mb-3">
+                    <label for="cancelReason" class="form-label">Lý do hủy:</label>
+                    <textarea class="form-control" id="cancelReason" rows="3" 
+                              placeholder="Nhập lý do hủy lịch (không bắt buộc)"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-danger" id="confirmCancel">Xác nhận hủy</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.booking-tabs .nav-link {
+    border-radius: 10px;
+    padding: 12px 20px;
+    color: #666;
+    border: none;
+}
+
+.booking-tabs .nav-link.active {
+    background: linear-gradient(135deg, #d4af37, #8b7355);
+    color: white;
+}
+
+.booking-card-detail {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    transition: all 0.3s;
+}
+
+.booking-card-detail:hover {
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+}
+
+.booking-header {
+    background: #f8f9fa;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.booking-body {
+    padding: 20px;
+}
+
+.booking-footer {
+    padding: 12px 20px;
+    border-top: 1px solid #e9ecef;
+    font-size: 0.9rem;
+}
+
+.booking-datetime {
+    font-size: 1.1rem;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    let bookingToCancel = null;
+
+    // Cancel booking button
+    $('.cancel-booking').click(function() {
+        bookingToCancel = $(this).data('booking-id');
+        const modal = new bootstrap.Modal('#cancelBookingModal');
+        modal.show();
+    });
+
+    // Confirm cancel
+    $('#confirmCancel').click(function() {
+        const reason = $('#cancelReason').val();
+        
+        $.ajax({
+            url: `/customer/bookings/${bookingToCancel}/cancel/`,
+            method: 'POST',
+            data: {
+                reason: reason,
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if (response.success) {
+                    location.reload();
+                } else {
+                    alert(response.message || 'Có lỗi xảy ra');
+                }
+            },
+            error: function() {
+                alert('Có lỗi xảy ra. Vui lòng thử lại!');
+            }
+        });
+    });
+
+    // Countdown timer
+    $('.countdown-timer').each(function() {
+        const $this = $(this);
+        const bookingDateTime = new Date($this.data('booking-datetime'));
+        
+        setInterval(function() {
+            const now = new Date();
+            const diff = bookingDateTime - now;
+            
+            if (diff <= 0) {
+                $this.html('<span class="text-danger">Đã đến giờ hẹn</span>');
+                return;
+            }
+            
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            
+            let text = 'Còn ';
+            if (days > 0) text += `${days} ngày `;
+            text += `${hours} giờ ${minutes} phút`;
+            
+            $this.text(text);
+        }, 1000);
+    });
+});
+</script>
+{% endblock %}

@@ -247,7 +247,7 @@
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-filter"></i> Lọc
                         </button>
-                        <a href="{% url 'admin_work_schedule' %}" class="btn btn-secondary">
+                        <a href="{% url 'attendance:admin_work_schedule' %}" class="btn btn-secondary">
                             <i class="fas fa-redo"></i> Đặt lại
                         </a>
                     </div>
@@ -654,7 +654,7 @@ function saveShift() {
     saveBtn.disabled = true;
     
     $.ajax({
-        url: '{% url "admin_work_schedule" %}',
+        url: '{% url "attendance:admin_work_schedule" %}',
         method: 'POST',
         headers: {
             'X-CSRFToken': getCookie('csrftoken')

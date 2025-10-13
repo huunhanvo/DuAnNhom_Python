@@ -1,0 +1,312 @@
+{% extends 'customer/base_customer.html' %}
+{% load static %}
+
+{% block title %}Đặt lịch thành công - Barbershop Hoàng Gia{% endblock %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <!-- Success Card -->
+                <div class="card border-0 shadow-lg text-center">
+                    <div class="card-body p-5">
+                        <!-- Success Icon -->
+                        <div class="success-icon mb-4">
+                            <i class="fas fa-check-circle text-success" style="font-size: 5rem;"></i>
+                        </div>
+
+                        <!-- Success Message -->
+                        <h2 class="fw-bold mb-3">Đặt Lịch Thành Công!</h2>
+                        <p class="text-muted mb-4">
+                            Cảm ơn bạn đã đặt lịch tại Barbershop Hoàng Gia. 
+                            Chúng tôi đã gửi email xác nhận đến địa chỉ của bạn.
+                        </p>
+
+                        <!-- Booking Code -->
+                        <div class="mb-4 p-4 bg-light rounded">
+                            <h5 class="fw-bold mb-3">Mã đặt lịch của bạn:</h5>
+                            <div class="booking-code-display mb-3">
+                                <h1 class="text-warning fw-bold mb-0" id="bookingCode">{{ booking.ma_dat_lich }}</h1>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="copyCodeBtn">
+                                <i class="far fa-copy me-1"></i> Sao chép mã
+                            </button>
+                            <p class="text-muted small mt-2 mb-0">
+                                Vui lòng cung cấp mã này khi đến tiệm
+                            </p>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Booking Details -->
+                        <div class="text-start mb-4">
+                            <h5 class="fw-bold mb-3">Chi tiết đặt lịch:</h5>
+                            
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-start">
+                                        <i class="fas fa-user-circle text-primary me-3 mt-1"></i>
+                                        <div>
+                                            <small class="text-muted d-block">Khách hàng</small>
+                                            <strong>{{ booking.khach_hang.ho_ten }}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-start">
+                                        <i class="fas fa-phone text-success me-3 mt-1"></i>
+                                        <div>
+                                            <small class="text-muted d-block">Số điện thoại</small>
+                                            <strong>{{ booking.khach_hang.so_dien_thoai }}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-start">
+                                        <i class="fas fa-calendar text-warning me-3 mt-1"></i>
+                                        <div>
+                                            <small class="text-muted d-block">Ngày hẹn</small>
+                                            <strong>{{ booking.ngay_hen|date:'d/m/Y' }}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-start">
+                                        <i class="fas fa-clock text-info me-3 mt-1"></i>
+                                        <div>
+                                            <small class="text-muted d-block">Giờ hẹn</small>
+                                            <strong>{{ booking.gio_hen }}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-start">
+                                        <i class="fas fa-user-tie text-secondary me-3 mt-1"></i>
+                                        <div>
+                                            <small class="text-muted d-block">Thợ cắt</small>
+                                            <strong>
+                                                {% if booking.nhan_vien %}
+                                                    {{ booking.nhan_vien.ho_ten }}
+                                                {% else %}
+                                                    Thợ bất kỳ
+                                                {% endif %}
+                                            </strong>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-start">
+                                        <i class="fas fa-money-bill-wave text-success me-3 mt-1"></i>
+                                        <div>
+                                            <small class="text-muted d-block">Tổng tiền</small>
+                                            <strong class="text-success">{{ booking.tong_tien|floatformat:0 }}đ</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Services -->
+                            <div class="mt-4">
+                                <small class="text-muted d-block mb-2">Dịch vụ đã chọn:</small>
+                                <div class="list-group">
+                                    {% for service in booking.dichvudatlich_set.all %}
+                                    <div class="list-group-item">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span>
+                                                <i class="fas fa-cut text-warning me-2"></i>
+                                                {{ service.dich_vu.ten }}
+                                            </span>
+                                            <strong class="text-success">{{ service.gia|floatformat:0 }}đ</strong>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Address & Map -->
+                        <div class="mb-4">
+                            <h5 class="fw-bold mb-3">
+                                <i class="fas fa-map-marker-alt text-danger me-2"></i>
+                                Địa chỉ cửa hàng
+                            </h5>
+                            <p class="mb-3">
+                                <strong>Barbershop Hoàng Gia</strong><br>
+                                123 Đường ABC, Quận 1, TP. HCM<br>
+                                Hotline: <a href="tel:0901234567">0901 234 567</a>
+                            </p>
+                            <div class="d-flex gap-2 justify-content-center">
+                                <a href="https://maps.google.com/?q=10.762622,106.660172" 
+                                   target="_blank" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-map-marked-alt me-1"></i> Xem bản đồ
+                                </a>
+                                <a href="https://maps.google.com/?daddr=10.762622,106.660172" 
+                                   target="_blank" class="btn btn-outline-success btn-sm">
+                                    <i class="fas fa-directions me-1"></i> Chỉ đường
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-grid gap-3">
+                            <button type="button" class="btn btn-warning btn-lg" id="addToCalendar">
+                                <i class="far fa-calendar-plus me-2"></i> Thêm vào lịch
+                            </button>
+                            
+                            {% if user.is_authenticated %}
+                            <a href="{% url 'core:customer_dashboard' %}" class="btn btn-outline-primary">
+                                <i class="fas fa-th-large me-2"></i> Xem trang quản lý
+                            </a>
+                            {% endif %}
+                            
+                            <a href="{% url 'core:home' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-home me-2"></i> Về trang chủ
+                            </a>
+                        </div>
+
+                        <!-- Important Notes -->
+                        <div class="alert alert-warning text-start mt-4">
+                            <h6 class="alert-heading fw-bold">
+                                <i class="fas fa-exclamation-triangle me-2"></i> Lưu ý:
+                            </h6>
+                            <ul class="mb-0 small">
+                                <li>Vui lòng đến đúng giờ. Muộn quá 15 phút có thể bị hủy lịch.</li>
+                                <li>Hủy lịch miễn phí trước 2 giờ bằng cách gọi: <strong>0901 234 567</strong></li>
+                                <li>Mang theo mã đặt lịch <strong>{{ booking.ma_dat_lich }}</strong> khi đến</li>
+                            </ul>
+                        </div>
+
+                        <!-- Share -->
+                        <div class="text-center mt-4">
+                            <p class="text-muted mb-2">Chia sẻ trải nghiệm của bạn:</p>
+                            <div class="d-flex gap-2 justify-content-center">
+                                <a href="#" class="btn btn-outline-primary btn-sm rounded-circle" style="width: 40px; height: 40px;">
+                                    <i class="fab fa-facebook-f"></i>
+                                </a>
+                                <a href="#" class="btn btn-outline-info btn-sm rounded-circle" style="width: 40px; height: 40px;">
+                                    <i class="fab fa-twitter"></i>
+                                </a>
+                                <a href="#" class="btn btn-outline-danger btn-sm rounded-circle" style="width: 40px; height: 40px;">
+                                    <i class="fab fa-instagram"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Promotion Card -->
+                <div class="card border-0 shadow-sm mt-4">
+                    <div class="card-body p-4 text-center bg-light">
+                        <i class="fas fa-gift fa-2x text-warning mb-3"></i>
+                        <h5 class="fw-bold mb-2">Nhận thêm ưu đãi!</h5>
+                        <p class="text-muted mb-3">
+                            {% if user.is_authenticated %}
+                                Bạn đã nhận được <strong class="text-success">{{ points_earned }} điểm</strong> từ lần đặt lịch này!
+                            {% else %}
+                                Đăng ký tài khoản để tích điểm và nhận ưu đãi độc quyền
+                            {% endif %}
+                        </p>
+                        {% if not user.is_authenticated %}
+                        <a href="{% url 'accounts:register' %}" class="btn btn-gold">
+                            <i class="fas fa-user-plus me-2"></i> Đăng ký ngay
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Confetti Animation -->
+<style>
+@keyframes confetti-fall {
+    to {
+        transform: translateY(100vh) rotate(360deg);
+    }
+}
+
+.confetti {
+    position: fixed;
+    width: 10px;
+    height: 10px;
+    background: #f0f;
+    top: -10px;
+    animation: confetti-fall 3s linear;
+    z-index: 9999;
+}
+
+.success-icon i {
+    animation: scaleIn 0.5s ease-out;
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0);
+    }
+    to {
+        transform: scale(1);
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Confetti effect
+    createConfetti();
+
+    // Copy booking code
+    $('#copyCodeBtn').click(function() {
+        const code = $('#bookingCode').text();
+        navigator.clipboard.writeText(code).then(() => {
+            $(this).html('<i class="fas fa-check me-1"></i> Đã sao chép');
+            setTimeout(() => {
+                $(this).html('<i class="far fa-copy me-1"></i> Sao chép mã');
+            }, 2000);
+        });
+    });
+
+    // Add to calendar
+    $('#addToCalendar').click(function() {
+        const title = "Hẹn cắt tóc - Barbershop Hoàng Gia";
+        const description = "Mã đặt lịch: {{ booking.ma_dat_lich }}";
+        const location = "123 Đường ABC, Quận 1, TP. HCM";
+        
+        // Format date time for calendar
+        const startDate = "{{ booking.ngay_hen|date:'Ymd' }}T{{ booking.gio_hen|slice:':2' }}{{ booking.gio_hen|slice:'3:5' }}00";
+        
+        // Google Calendar URL
+        const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${startDate}/${startDate}&details=${encodeURIComponent(description)}&location=${encodeURIComponent(location)}`;
+        
+        window.open(url, '_blank');
+    });
+
+    // Confetti animation
+    function createConfetti() {
+        const colors = ['#ffd700', '#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24'];
+        for (let i = 0; i < 50; i++) {
+            const confetti = $('<div class="confetti"></div>');
+            confetti.css({
+                left: Math.random() * 100 + '%',
+                background: colors[Math.floor(Math.random() * colors.length)],
+                animationDelay: Math.random() * 3 + 's',
+                animationDuration: (Math.random() * 2 + 2) + 's'
+            });
+            $('body').append(confetti);
+            
+            setTimeout(() => confetti.remove(), 5000);
+        }
+    }
+});
+</script>
+{% endblock %}

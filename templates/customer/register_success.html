@@ -1,0 +1,244 @@
+{% extends 'customer/base_customer.html' %}
+{% load static %}
+
+{% block title %}Đăng ký thành công - Barbershop Hoàng Gia{% endblock %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-6 col-md-8">
+                <!-- Success Card -->
+                <div class="card border-0 shadow-lg">
+                    <div class="card-body p-5 text-center">
+                        <!-- Success Animation -->
+                        <div class="success-animation mb-4">
+                            <div class="checkmark-circle">
+                                <div class="background"></div>
+                                <div class="checkmark">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Success Message -->
+                        <h2 class="fw-bold text-success mb-3">Đăng Ký Thành Công!</h2>
+                        <p class="lead text-muted mb-4">
+                            Chào mừng <strong>{{ user_name }}</strong> đến với Barbershop Hoàng Gia!
+                        </p>
+
+                        <!-- Welcome Bonus -->
+                        <div class="alert alert-warning bg-warning bg-opacity-10 border-warning mb-4">
+                            <h5 class="alert-heading mb-3">
+                                <i class="fas fa-gift me-2"></i> Phần thưởng chào mừng
+                            </h5>
+                            <div class="d-flex justify-content-center align-items-center gap-4">
+                                <div>
+                                    <div class="display-6 fw-bold text-warning">100</div>
+                                    <small class="text-muted">Điểm thưởng</small>
+                                </div>
+                                <div class="text-muted">+</div>
+                                <div>
+                                    <div class="display-6 fw-bold text-warning">10%</div>
+                                    <small class="text-muted">Giảm giá lần đầu</small>
+                                </div>
+                            </div>
+                            <p class="mb-0 mt-3 small">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Sử dụng ngay cho lần đặt lịch đầu tiên!
+                            </p>
+                        </div>
+
+                        <!-- Member Benefits -->
+                        <div class="text-start mb-4 p-4 bg-light rounded">
+                            <h6 class="fw-bold mb-3">
+                                <i class="fas fa-crown text-warning me-2"></i> 
+                                Đặc quyền thành viên của bạn:
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <div class="d-flex align-items-start">
+                                        <i class="fas fa-check-circle text-success me-2 mt-1"></i>
+                                        <small>Tích điểm mỗi lần dịch vụ</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="d-flex align-items-start">
+                                        <i class="fas fa-check-circle text-success me-2 mt-1"></i>
+                                        <small>Ưu đãi thành viên VIP</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="d-flex align-items-start">
+                                        <i class="fas fa-check-circle text-success me-2 mt-1"></i>
+                                        <small>Voucher sinh nhật hàng năm</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="d-flex align-items-start">
+                                        <i class="fas fa-check-circle text-success me-2 mt-1"></i>
+                                        <small>Ưu tiên đặt lịch</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="d-flex align-items-start">
+                                        <i class="fas fa-check-circle text-success me-2 mt-1"></i>
+                                        <small>Quản lý lịch sử dịch vụ</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="d-flex align-items-start">
+                                        <i class="fas fa-check-circle text-success me-2 mt-1"></i>
+                                        <small>Đánh giá & nhận điểm</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'bookings:booking_step1' %}" class="btn btn-warning btn-lg">
+                                <i class="fas fa-calendar-plus me-2"></i> Đặt Lịch Ngay
+                            </a>
+                            <a href="{% url 'core:customer_dashboard' %}" class="btn btn-outline-primary btn-lg">
+                                <i class="fas fa-tachometer-alt me-2"></i> Vào Trang Cá Nhân
+                            </a>
+                            <a href="{% url 'core:home' %}" class="btn btn-link text-muted">
+                                <i class="fas fa-arrow-left me-2"></i> Về Trang Chủ
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Start Guide -->
+                <div class="card border-0 shadow-sm mt-4">
+                    <div class="card-body p-4">
+                        <h6 class="fw-bold mb-3">
+                            <i class="fas fa-rocket text-primary me-2"></i> 
+                            Bắt đầu nhanh:
+                        </h6>
+                        <div class="d-flex gap-3 mb-3">
+                            <div class="text-center flex-fill">
+                                <div class="rounded-circle bg-primary bg-opacity-10 mx-auto mb-2" 
+                                     style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">
+                                    <span class="fw-bold text-primary">1</span>
+                                </div>
+                                <small class="d-block">Chọn dịch vụ <br>yêu thích</small>
+                            </div>
+                            <div class="text-center flex-fill">
+                                <div class="rounded-circle bg-primary bg-opacity-10 mx-auto mb-2" 
+                                     style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">
+                                    <span class="fw-bold text-primary">2</span>
+                                </div>
+                                <small class="d-block">Chọn stylist & <br>thời gian</small>
+                            </div>
+                            <div class="text-center flex-fill">
+                                <div class="rounded-circle bg-primary bg-opacity-10 mx-auto mb-2" 
+                                     style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">
+                                    <span class="fw-bold text-primary">3</span>
+                                </div>
+                                <small class="d-block">Xác nhận & <br>check-in</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+/* Success Animation */
+.success-animation {
+    position: relative;
+    height: 150px;
+}
+
+.checkmark-circle {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto;
+    position: relative;
+    animation: scaleIn 0.5s ease-in-out;
+}
+
+.checkmark-circle .background {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    position: absolute;
+}
+
+.checkmark-circle .checkmark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 3rem;
+    animation: checkmarkIn 0.3s 0.3s ease-in-out both;
+}
+
+@keyframes scaleIn {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes checkmarkIn {
+    0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 0;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+}
+
+/* Card hover effect */
+.card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+    border: none;
+    font-weight: 600;
+}
+
+.btn-warning:hover {
+    background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 193, 7, 0.3);
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Confetti effect (optional)
+    console.log('🎉 Đăng ký thành công!');
+    
+    // Auto redirect after 30 seconds if no action
+    let autoRedirectTimer = setTimeout(function() {
+        window.location.href = '{% url "bookings:booking_step1" %}';
+    }, 30000);
+    
+    // Cancel auto redirect on any button click
+    document.querySelectorAll('.btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            clearTimeout(autoRedirectTimer);
+        });
+    });
+});
+</script>
+{% endblock %}

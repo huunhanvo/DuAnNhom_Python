@@ -1,0 +1,337 @@
+{% extends 'customer/base_customer.html' %}
+{% load static %}
+
+{% block title %}Thợ cắt yêu thích - Barbershop Hoàng Gia{% endblock %}
+
+{% block content %}
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-lg-3 mb-4">
+                {% include 'customer/includes/dashboard_sidebar.html' with active='favorite_stylists' %}
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-lg-9">
+                <!-- Page Header -->
+                <div class="mb-4 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="fw-bold mb-1">Thợ Cắt Yêu Thích</h3>
+                        <p class="text-muted mb-0">Quản lý danh sách thợ cắt bạn yêu thích</p>
+                    </div>
+                    <a href="{% url 'core:stylists' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-plus me-2"></i> Thêm mới
+                    </a>
+                </div>
+
+                {% if favorite_stylists %}
+                <!-- Favorites Grid -->
+                <div class="row g-4">
+                    {% for stylist in favorite_stylists %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="stylist-card">
+                            <div class="position-relative">
+                                {% if stylist.anh_dai_dien %}
+                                <img src="{{ stylist.anh_dai_dien.url }}" alt="{{ stylist.ho_ten }}" class="stylist-image">
+                                {% else %}
+                                <div class="stylist-image-placeholder">
+                                    <i class="fas fa-user-tie fa-4x text-muted"></i>
+                                </div>
+                                {% endif %}
+                                
+                                <!-- Favorite Badge -->
+                                <div class="favorite-badge">
+                                    <button type="button" class="btn-favorite active" 
+                                            data-stylist-id="{{ stylist.id }}" title="Bỏ yêu thích">
+                                        <i class="fas fa-heart"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Status Badge -->
+                                {% if stylist.dang_lam_viec %}
+                                <span class="badge bg-success position-absolute top-0 end-0 m-2">
+                                    <i class="fas fa-circle me-1" style="font-size: 6px;"></i> Đang làm việc
+                                </span>
+                                {% else %}
+                                <span class="badge bg-secondary position-absolute top-0 end-0 m-2">
+                                    Không làm việc
+                                </span>
+                                {% endif %}
+                            </div>
+
+                            <div class="stylist-info">
+                                <h5 class="stylist-name">{{ stylist.ho_ten }}</h5>
+                                
+                                <!-- Rating -->
+                                <div class="stylist-rating mb-2">
+                                    {% for i in "12345" %}
+                                    <i class="fas fa-star {% if forloop.counter <= stylist.rating %}text-warning{% else %}text-muted{% endif %}"></i>
+                                    {% endfor %}
+                                    <span class="ms-1">({{ stylist.total_reviews }})</span>
+                                </div>
+
+                                <!-- Specialty -->
+                                <p class="stylist-specialty mb-2">
+                                    <i class="fas fa-scissors text-primary me-1"></i>
+                                    {{ stylist.chuyen_mon|default:"Tổng hợp" }}
+                                </p>
+
+                                <!-- Stats -->
+                                <div class="stylist-stats">
+                                    <div class="stat-item">
+                                        <i class="fas fa-check-circle text-success"></i>
+                                        <span>{{ stylist.completed_bookings }} lượt</span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <i class="fas fa-clock text-warning"></i>
+                                        <span>{{ stylist.years_experience }} năm KN</span>
+                                    </div>
+                                </div>
+
+                                <!-- Actions -->
+                                <div class="stylist-actions">
+                                    <a href="{% url 'core:stylist_detail' stylist.id %}" class="btn btn-outline-primary btn-sm flex-grow-1">
+                                        <i class="fas fa-info-circle me-1"></i> Chi tiết
+                                    </a>
+                                    <a href="{% url 'bookings:booking_step1' %}?stylist={{ stylist.id }}" class="btn btn-gold btn-sm flex-grow-1">
+                                        <i class="fas fa-calendar-check me-1"></i> Đặt lịch
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Pagination -->
+                {% if is_paginated %}
+                <nav aria-label="Phân trang" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1">
+                                <i class="fas fa-angle-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                                <i class="fas fa-angle-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                        {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                                <i class="fas fa-angle-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">
+                                <i class="fas fa-angle-double-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+
+                {% else %}
+                <!-- Empty State -->
+                <div class="empty-state">
+                    <i class="fas fa-heart-broken fa-4x text-muted mb-3"></i>
+                    <h4 class="fw-bold mb-2">Chưa có thợ cắt yêu thích</h4>
+                    <p class="text-muted mb-4">
+                        Hãy thêm các thợ cắt bạn yêu thích để dễ dàng đặt lịch sau này!
+                    </p>
+                    <a href="{% url 'core:stylists' %}" class="btn btn-gold btn-lg">
+                        <i class="fas fa-search me-2"></i> Khám phá thợ cắt
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+.stylist-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.stylist-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.stylist-image {
+    width: 100%;
+    height: 250px;
+    object-fit: cover;
+}
+
+.stylist-image-placeholder {
+    width: 100%;
+    height: 250px;
+    background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.favorite-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+}
+
+.btn-favorite {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.9);
+    color: #ccc;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-favorite:hover {
+    background: white;
+    transform: scale(1.1);
+}
+
+.btn-favorite.active {
+    color: #dc3545;
+    animation: heartbeat 0.3s;
+}
+
+@keyframes heartbeat {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
+
+.stylist-info {
+    padding: 20px;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.stylist-name {
+    font-size: 1.25rem;
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #2c2c2c;
+}
+
+.stylist-rating {
+    font-size: 0.9rem;
+}
+
+.stylist-rating i {
+    font-size: 14px;
+}
+
+.stylist-specialty {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.stylist-stats {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.stat-item i {
+    font-size: 14px;
+}
+
+.stylist-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: auto;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 80px 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Toggle favorite
+    $('.btn-favorite').click(function() {
+        const btn = $(this);
+        const stylistId = btn.data('stylist-id');
+        const isActive = btn.hasClass('active');
+        
+        $.ajax({
+            url: '/customer/favorites/' + stylistId + '/toggle/',
+            method: 'POST',
+            data: {
+                csrfmiddlewaretoken: '{{ csrf_token }}',
+                stylist_id: stylistId
+            },
+            success: function(response) {
+                if (response.success) {
+                    if (isActive) {
+                        // Remove from favorites - hide card with animation
+                        btn.closest('.col-md-6').fadeOut(400, function() {
+                            $(this).remove();
+                            
+                            // Check if no more favorites
+                            if ($('.stylist-card').length === 0) {
+                                location.reload();
+                            }
+                        });
+                    } else {
+                        btn.addClass('active');
+                    }
+                }
+            },
+            error: function() {
+                alert('Có lỗi xảy ra. Vui lòng thử lại!');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

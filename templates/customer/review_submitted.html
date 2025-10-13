@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Đã gửi đánh giá - Barbershop{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-body text-center py-5">
+                    <div class="mb-4">
+                        <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+                    </div>
+                    <h2 class="mb-3">Cảm ơn bạn đã đánh giá!</h2>
+                    <p class="text-muted mb-4">
+                        Bạn đã gửi đánh giá cho lịch hẹn này rồi. 
+                        Đánh giá của bạn đang chờ phê duyệt.
+                    </p>
+                    
+                    {% if review %}
+                    <div class="alert alert-info mx-auto" style="max-width: 500px;">
+                        <h6 class="mb-2">Thông tin đánh giá của bạn:</h6>
+                        <div class="d-flex justify-content-center mb-2">
+                            {% for i in "12345" %}
+                                {% if forloop.counter <= review.so_sao %}
+                                    <i class="bi bi-star-fill text-warning"></i>
+                                {% else %}
+                                    <i class="bi bi-star text-warning"></i>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        <p class="mb-1 small"><strong>Nội dung:</strong> {{ review.noi_dung|truncatewords:20 }}</p>
+                        <p class="mb-0 small text-muted">Ngày gửi: {{ review.ngay_tao|date:"d/m/Y H:i" }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mt-4">
+                        <a href="{% url 'core:customer_history' %}" class="btn btn-primary me-2">
+                            <i class="bi bi-clock-history"></i> Lịch sử dịch vụ
+                        </a>
+                        <a href="{% url 'core:customer_dashboard' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-house"></i> Về trang chủ
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

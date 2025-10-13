@@ -26,7 +26,15 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'barbershop',  # App của chúng ta
+    'barbershop',  # App chính (models, context_processors)
+    # 7 modular apps
+    'core',        # Dashboard, Settings, Decorators
+    'accounts',    # Staff, Customers, Profile
+    'services',    # Services, Promotions, Vouchers
+    'bookings',    # Bookings, Invoices, POS
+    'attendance',  # Work Schedule, Leave Requests, Check-in/out, Salary
+    'reports',     # Analytics, Exports (Excel/PDF)
+    'reviews',     # Reviews, Loyalty program
 ]
 
 MIDDLEWARE = [

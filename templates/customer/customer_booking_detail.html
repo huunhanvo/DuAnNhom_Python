@@ -1,0 +1,410 @@
+{% extends 'customer/base_customer.html' %}
+{% load static %}
+
+{% block title %}Chi tiết lịch hẹn - Barbershop Hoàng Gia{% endblock %}
+
+{% block content %}
+<section class="py-5 bg-light">
+    <div class="container">
+        <!-- Back Button -->
+        <div class="mb-4">
+            <a href="{% url 'core:customer_bookings' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i> Quay lại danh sách
+            </a>
+        </div>
+
+        <div class="row">
+            <!-- Main Content -->
+            <div class="col-lg-8">
+                <!-- Booking Status Card -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-start mb-4">
+                            <div>
+                                <h4 class="fw-bold mb-2">Chi Tiết Lịch Hẹn</h4>
+                                <p class="text-muted mb-0">Mã đặt lịch: <strong>#{{ booking.ma_dat_lich }}</strong></p>
+                            </div>
+                            <span class="badge badge-{{ booking.trang_thai }} fs-6">
+                                {{ booking.get_trang_thai_display }}
+                            </span>
+                        </div>
+
+                        <!-- Progress Timeline -->
+                        <div class="booking-timeline mb-4">
+                            <div class="timeline-item {% if booking.trang_thai != 'da_huy' %}completed{% endif %}">
+                                <div class="timeline-icon">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                                <div class="timeline-content">
+                                    <h6>Đặt lịch</h6>
+                                    <small class="text-muted">{{ booking.ngay_tao|date:'d/m/Y H:i' }}</small>
+                                </div>
+                            </div>
+
+                            <div class="timeline-item {% if booking.trang_thai in 'da_xac_nhan,dang_thuc_hien,hoan_thanh' %}completed{% endif %}">
+                                <div class="timeline-icon">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <div class="timeline-content">
+                                    <h6>Xác nhận</h6>
+                                    <small class="text-muted">
+                                        {% if booking.ngay_xac_nhan %}
+                                            {{ booking.ngay_xac_nhan|date:'d/m/Y H:i' }}
+                                        {% else %}
+                                            Chờ xác nhận
+                                        {% endif %}
+                                    </small>
+                                </div>
+                            </div>
+
+                            <div class="timeline-item {% if booking.trang_thai in 'dang_thuc_hien,hoan_thanh' %}completed{% endif %}">
+                                <div class="timeline-icon">
+                                    <i class="fas fa-cut"></i>
+                                </div>
+                                <div class="timeline-content">
+                                    <h6>Thực hiện</h6>
+                                    <small class="text-muted">{{ booking.ngay_hen|date:'d/m/Y' }} {{ booking.gio_hen }}</small>
+                                </div>
+                            </div>
+
+                            <div class="timeline-item {% if booking.trang_thai == 'hoan_thanh' %}completed{% endif %}">
+                                <div class="timeline-icon">
+                                    <i class="fas fa-flag-checkered"></i>
+                                </div>
+                                <div class="timeline-content">
+                                    <h6>Hoàn thành</h6>
+                                    <small class="text-muted">
+                                        {% if booking.ngay_hoan_thanh %}
+                                            {{ booking.ngay_hoan_thanh|date:'d/m/Y H:i' }}
+                                        {% else %}
+                                            Chưa hoàn thành
+                                        {% endif %}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- Booking Details -->
+                        <h5 class="fw-bold mb-3">Thông tin lịch hẹn</h5>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <div class="detail-item">
+                                    <i class="fas fa-calendar text-primary me-2"></i>
+                                    <div>
+                                        <small class="text-muted d-block">Ngày hẹn</small>
+                                        <strong>{{ booking.ngay_hen|date:'l, d/m/Y' }}</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="detail-item">
+                                    <i class="fas fa-clock text-success me-2"></i>
+                                    <div>
+                                        <small class="text-muted d-block">Giờ hẹn</small>
+                                        <strong>{{ booking.gio_hen }}</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="detail-item">
+                                    <i class="fas fa-user-tie text-warning me-2"></i>
+                                    <div>
+                                        <small class="text-muted d-block">Thợ cắt tóc</small>
+                                        <strong>
+                                            {% if booking.nhan_vien %}
+                                                {{ booking.nhan_vien.ho_ten }}
+                                            {% else %}
+                                                Thợ bất kỳ
+                                            {% endif %}
+                                        </strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="detail-item">
+                                    <i class="fas fa-hourglass-half text-info me-2"></i>
+                                    <div>
+                                        <small class="text-muted d-block">Thời gian dự kiến</small>
+                                        <strong>{{ total_duration }} phút</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Services -->
+                        <h5 class="fw-bold mb-3">Dịch vụ đã chọn</h5>
+                        <div class="table-responsive mb-4">
+                            <table class="table">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Dịch vụ</th>
+                                        <th class="text-center">Thời gian</th>
+                                        <th class="text-end">Giá</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for service in booking.dichvudatlich_set.all %}
+                                    <tr>
+                                        <td>
+                                            <i class="fas fa-cut text-warning me-2"></i>
+                                            {{ service.dich_vu.ten }}
+                                        </td>
+                                        <td class="text-center">{{ service.dich_vu.thoi_gian_thuc_hien }} phút</td>
+                                        <td class="text-end">{{ service.gia|floatformat:0 }}đ</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Note -->
+                        {% if booking.ghi_chu %}
+                        <div class="alert alert-info">
+                            <h6 class="alert-heading">
+                                <i class="fas fa-sticky-note me-2"></i> Ghi chú
+                            </h6>
+                            <p class="mb-0">{{ booking.ghi_chu }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Review Section (if completed) -->
+                {% if booking.trang_thai == 'hoan_thanh' %}
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold mb-3">Đánh giá dịch vụ</h5>
+                        
+                        {% if booking.danhgia_set.exists %}
+                        <!-- Show existing review -->
+                        {% with review=booking.danhgia_set.first %}
+                        <div class="review-display">
+                            <div class="mb-3">
+                                <div class="rating-stars mb-2">
+                                    {% for i in "12345" %}
+                                    <i class="fas fa-star {% if i <= review.so_sao %}text-warning{% else %}text-muted{% endif %}"></i>
+                                    {% endfor %}
+                                </div>
+                                <p class="mb-2">{{ review.noi_dung }}</p>
+                                <small class="text-muted">
+                                    Đã đánh giá vào {{ review.ngay_tao|date:'d/m/Y H:i' }}
+                                </small>
+                            </div>
+                            {% if review.phan_hoi %}
+                            <div class="alert alert-light border">
+                                <h6 class="fw-bold mb-2">
+                                    <i class="fas fa-reply me-2"></i> Phản hồi từ cửa hàng
+                                </h6>
+                                <p class="mb-0">{{ review.phan_hoi }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endwith %}
+                        {% else %}
+                        <!-- Review form -->
+                        <p class="text-muted mb-3">Chia sẻ trải nghiệm của bạn với chúng tôi</p>
+                        <a href="{% url 'core:customer_review' booking.id %}" class="btn btn-gold">
+                            <i class="fas fa-star me-2"></i> Viết đánh giá
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <!-- Payment Summary -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-warning text-dark py-3">
+                        <h6 class="mb-0 fw-bold">
+                            <i class="fas fa-receipt me-2"></i> Thanh toán
+                        </h6>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Tổng dịch vụ:</span>
+                            <strong>{{ subtotal|floatformat:0 }}đ</strong>
+                        </div>
+
+                        {% if booking.voucher %}
+                        <div class="d-flex justify-content-between mb-2 text-success">
+                            <span>Giảm giá:</span>
+                            <strong>-{{ booking.giam_gia|floatformat:0 }}đ</strong>
+                        </div>
+                        {% endif %}
+
+                        {% if booking.diem_su_dung > 0 %}
+                        <div class="d-flex justify-content-between mb-2 text-info">
+                            <span>Điểm thưởng:</span>
+                            <strong>-{{ points_discount|floatformat:0 }}đ</strong>
+                        </div>
+                        {% endif %}
+
+                        <hr>
+
+                        <div class="d-flex justify-content-between mb-3">
+                            <span class="fw-bold fs-5">Tổng cộng:</span>
+                            <strong class="text-success fs-4">{{ booking.tong_tien|floatformat:0 }}đ</strong>
+                        </div>
+
+                        <div class="alert alert-light mb-0">
+                            <small>
+                                <i class="fas fa-info-circle me-1"></i>
+                                Thanh toán tại cửa hàng sau khi hoàn thành dịch vụ
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- QR Code -->
+                <div class="card border-0 shadow-sm mb-4 text-center">
+                    <div class="card-body p-4">
+                        <h6 class="fw-bold mb-3">Mã QR đặt lịch</h6>
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ booking.ma_dat_lich }}" 
+                             alt="QR Code" class="img-fluid mb-3" style="max-width: 200px;">
+                        <p class="small text-muted mb-0">Quét mã khi đến cửa hàng</p>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <h6 class="fw-bold mb-3">Thao tác</h6>
+                        <div class="d-grid gap-2">
+                            {% if booking.trang_thai in 'cho_xac_nhan,da_xac_nhan' %}
+                            <button type="button" class="btn btn-outline-danger" id="cancelBooking">
+                                <i class="fas fa-times-circle me-2"></i> Hủy lịch hẹn
+                            </button>
+                            {% endif %}
+
+                            <button type="button" class="btn btn-outline-primary" id="downloadReceipt">
+                                <i class="fas fa-download me-2"></i> Tải biên nhận
+                            </button>
+
+                            <a href="https://calendar.google.com/calendar/render?action=TEMPLATE" 
+                               target="_blank" class="btn btn-outline-success">
+                                <i class="far fa-calendar-plus me-2"></i> Thêm vào lịch
+                            </a>
+
+                            <a href="tel:0901234567" class="btn btn-outline-warning">
+                                <i class="fas fa-phone me-2"></i> Gọi cửa hàng
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+.booking-timeline {
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+    padding: 20px 0;
+}
+
+.booking-timeline::before {
+    content: '';
+    position: absolute;
+    top: 35px;
+    left: 50px;
+    right: 50px;
+    height: 2px;
+    background: #e0e0e0;
+    z-index: 0;
+}
+
+.timeline-item {
+    position: relative;
+    flex: 1;
+    text-align: center;
+    z-index: 1;
+}
+
+.timeline-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: #e0e0e0;
+    color: #999;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+    font-size: 1.2rem;
+    transition: all 0.3s;
+}
+
+.timeline-item.completed .timeline-icon {
+    background: linear-gradient(135deg, #d4af37, #8b7355);
+    color: white;
+}
+
+.timeline-content h6 {
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+}
+
+.timeline-content small {
+    font-size: 0.75rem;
+}
+
+.detail-item {
+    display: flex;
+    align-items: start;
+    gap: 10px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 10px;
+}
+
+.detail-item i {
+    font-size: 1.5rem;
+    margin-top: 5px;
+}
+
+.rating-stars i {
+    font-size: 1.5rem;
+    margin-right: 5px;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Cancel booking
+    $('#cancelBooking').click(function() {
+        if (confirm('Bạn có chắc chắn muốn hủy lịch hẹn này?')) {
+            $.ajax({
+                url: '{% url "core:cancel_booking" booking.id %}',
+                method: 'POST',
+                data: {
+                    csrfmiddlewaretoken: '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        alert(response.message || 'Có lỗi xảy ra');
+                    }
+                }
+            });
+        }
+    });
+
+    // Download receipt
+    $('#downloadReceipt').click(function() {
+        window.location.href = '{% url "core:download_receipt" booking.id %}';
+    });
+});
+</script>
+{% endblock %}

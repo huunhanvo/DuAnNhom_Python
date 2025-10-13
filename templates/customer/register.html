@@ -1,0 +1,336 @@
+{% extends 'customer/base_customer.html' %}
+{% load static %}
+
+{% block title %}Đăng ký - Barbershop Hoàng Gia{% endblock %}
+
+{% block content %}
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-6 col-md-8">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-5">
+                        <!-- Header -->
+                        <div class="text-center mb-4">
+                            <i class="fas fa-user-plus fa-3x text-warning mb-3"></i>
+                            <h2 class="fw-bold">Đăng Ký Tài Khoản</h2>
+                            <p class="text-muted">Tạo tài khoản để nhận ưu đãi và tích điểm</p>
+                        </div>
+
+                        <!-- Alert Container -->
+                        <div id="alert-container"></div>
+
+                        <!-- Registration Form -->
+                        <form method="POST" action="{% url 'accounts:register' %}" class="needs-validation" novalidate>
+                            {% csrf_token %}
+                            
+                            <!-- Full Name -->
+                            <div class="mb-3">
+                                <label for="ho_ten" class="form-label">
+                                    <i class="fas fa-user me-1"></i> Họ và tên <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="ho_ten" name="ho_ten" 
+                                       placeholder="Nguyễn Văn A" required>
+                                <div class="invalid-feedback">Vui lòng nhập họ tên</div>
+                            </div>
+
+                            <!-- Phone Number -->
+                            <div class="mb-3">
+                                <label for="so_dien_thoai" class="form-label">
+                                    <i class="fas fa-phone me-1"></i> Số điện thoại <span class="text-danger">*</span>
+                                </label>
+                                <input type="tel" class="form-control" id="so_dien_thoai" name="so_dien_thoai" 
+                                       placeholder="0901234567" pattern="[0-9]{10}" required>
+                                <div class="invalid-feedback">Vui lòng nhập số điện thoại hợp lệ (10 chữ số)</div>
+                            </div>
+
+                            <!-- Email -->
+                            <div class="mb-3">
+                                <label for="email" class="form-label">
+                                    <i class="fas fa-envelope me-1"></i> Email <span class="text-danger">*</span>
+                                </label>
+                                <input type="email" class="form-control" id="email" name="email" 
+                                       placeholder="example@email.com" required>
+                                <div class="invalid-feedback">Vui lòng nhập email hợp lệ</div>
+                            </div>
+
+                            <!-- Password -->
+                            <div class="mb-3">
+                                <label for="mat_khau" class="form-label">
+                                    <i class="fas fa-lock me-1"></i> Mật khẩu <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="mat_khau" name="mat_khau" 
+                                           placeholder="Tối thiểu 6 ký tự" minlength="6" required>
+                                    <button class="btn btn-outline-secondary toggle-password" type="button">
+                                        <i class="far fa-eye"></i>
+                                    </button>
+                                </div>
+                                <div class="invalid-feedback">Mật khẩu phải có ít nhất 6 ký tự</div>
+                                <small class="text-muted">Mật khẩu nên chứa chữ hoa, chữ thường và số</small>
+                            </div>
+
+                            <!-- Confirm Password -->
+                            <div class="mb-3">
+                                <label for="xac_nhan_mat_khau" class="form-label">
+                                    <i class="fas fa-lock me-1"></i> Xác nhận mật khẩu <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="xac_nhan_mat_khau" name="xac_nhan_mat_khau" 
+                                           placeholder="Nhập lại mật khẩu" required>
+                                    <button class="btn btn-outline-secondary toggle-password" type="button">
+                                        <i class="far fa-eye"></i>
+                                    </button>
+                                </div>
+                                <div class="invalid-feedback">Mật khẩu xác nhận không khớp</div>
+                            </div>
+
+                            <hr class="my-4">
+
+                            <!-- Date of Birth -->
+                            <div class="mb-3">
+                                <label for="ngay_sinh" class="form-label">
+                                    <i class="fas fa-birthday-cake me-1"></i> Ngày sinh
+                                </label>
+                                <input type="date" class="form-control" id="ngay_sinh" name="ngay_sinh" 
+                                       max="{{ today|date:'Y-m-d' }}">
+                                <small class="text-muted">Nhận voucher sinh nhật mỗi năm!</small>
+                            </div>
+
+                            <!-- Gender -->
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-venus-mars me-1"></i> Giới tính
+                                </label>
+                                <div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="gioi_tinh" 
+                                               id="nam" value="nam" checked>
+                                        <label class="form-check-label" for="nam">Nam</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="gioi_tinh" 
+                                               id="nu" value="nu">
+                                        <label class="form-check-label" for="nu">Nữ</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="gioi_tinh" 
+                                               id="khac" value="khac">
+                                        <label class="form-check-label" for="khac">Khác</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Address -->
+                            <div class="mb-3">
+                                <label for="dia_chi" class="form-label">
+                                    <i class="fas fa-map-marker-alt me-1"></i> Địa chỉ
+                                </label>
+                                <textarea class="form-control" id="dia_chi" name="dia_chi" rows="2" 
+                                          placeholder="Số nhà, đường, quận/huyện, thành phố"></textarea>
+                            </div>
+
+                            <!-- Terms & Conditions -->
+                            <div class="mb-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="agree_terms" required>
+                                    <label class="form-check-label" for="agree_terms">
+                                        Tôi đồng ý với 
+                                        <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">Điều khoản sử dụng</a> 
+                                        và 
+                                        <a href="#" data-bs-toggle="modal" data-bs-target="#privacyModal">Chính sách bảo mật</a>
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="invalid-feedback">Bạn phải đồng ý với điều khoản</div>
+                                </div>
+                            </div>
+
+                            <!-- Submit Button -->
+                            <button type="submit" class="btn btn-gold w-100 btn-lg mb-3">
+                                <i class="fas fa-user-plus me-2"></i> Đăng ký
+                            </button>
+
+                            <!-- Login Link -->
+                            <div class="text-center">
+                                <p class="mb-0">
+                                    Đã có tài khoản? 
+                                    <a href="{% url 'accounts:customer_login' %}" class="text-decoration-none fw-bold">
+                                        Đăng nhập ngay
+                                    </a>
+                                </p>
+                            </div>
+                        </form>
+
+                        <!-- Benefits -->
+                        <div class="mt-4 p-3 bg-light rounded">
+                            <h6 class="fw-bold mb-2">
+                                <i class="fas fa-gift text-warning me-2"></i> Đặc quyền thành viên:
+                            </h6>
+                            <ul class="small text-muted mb-0">
+                                <li>Nhận 100 điểm thưởng khi đăng ký</li>
+                                <li>Tích điểm mỗi lần sử dụng dịch vụ</li>
+                                <li>Ưu đãi độc quyền cho thành viên</li>
+                                <li>Voucher sinh nhật hàng năm</li>
+                                <li>Quản lý lịch hẹn dễ dàng</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Terms Modal -->
+<div class="modal fade" id="termsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Điều Khoản Sử Dụng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6>1. Chấp nhận điều khoản</h6>
+                <p class="text-muted">Bằng việc đăng ký tài khoản, bạn đồng ý với các điều khoản và điều kiện sử dụng dịch vụ của Barbershop Hoàng Gia.</p>
+                
+                <h6>2. Tài khoản người dùng</h6>
+                <p class="text-muted">Bạn có trách nhiệm bảo mật thông tin tài khoản và mật khẩu của mình.</p>
+                
+                <h6>3. Sử dụng dịch vụ</h6>
+                <p class="text-muted">Bạn cam kết sử dụng dịch vụ đúng mục đích và tuân thủ các quy định.</p>
+                
+                <h6>4. Chính sách hủy</h6>
+                <p class="text-muted">Vui lòng hủy lịch hẹn ít nhất 2 giờ trước để tránh mất phí.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Privacy Modal -->
+<div class="modal fade" id="privacyModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Chính Sách Bảo Mật</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6>Thu thập thông tin</h6>
+                <p class="text-muted">Chúng tôi thu thập thông tin cá nhân cần thiết để cung cấp dịch vụ tốt nhất.</p>
+                
+                <h6>Sử dụng thông tin</h6>
+                <p class="text-muted">Thông tin của bạn chỉ được sử dụng cho mục đích cung cấp dịch vụ và liên lạc.</p>
+                
+                <h6>Bảo mật</h6>
+                <p class="text-muted">Chúng tôi cam kết bảo mật thông tin khách hàng theo tiêu chuẩn cao nhất.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Toggle password visibility
+    $('.toggle-password').click(function() {
+        const input = $(this).closest('.input-group').find('input');
+        const icon = $(this).find('i');
+        
+        if (input.attr('type') === 'password') {
+            input.attr('type', 'text');
+            icon.removeClass('fa-eye').addClass('fa-eye-slash');
+        } else {
+            input.attr('type', 'password');
+            icon.removeClass('fa-eye-slash').addClass('fa-eye');
+        }
+    });
+    
+    // Validate password match
+    $('#xac_nhan_mat_khau').on('input', function() {
+        const password = $('#mat_khau').val();
+        const confirmPassword = $(this).val();
+        
+        if (password !== confirmPassword) {
+            this.setCustomValidity('Mật khẩu không khớp');
+        } else {
+            this.setCustomValidity('');
+        }
+    });
+    
+    // Form submission via AJAX
+    $('form.needs-validation').on('submit', function(e) {
+        e.preventDefault();
+        
+        if (!this.checkValidity()) {
+            $(this).addClass('was-validated');
+            return;
+        }
+        
+        const form = $(this);
+        const submitBtn = form.find('button[type="submit"]');
+        const originalText = submitBtn.html();
+        
+        // Disable submit button
+        submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i> Đang xử lý...');
+        
+        // Submit via AJAX
+        $.ajax({
+            url: form.attr('action'),
+            method: 'POST',
+            data: form.serialize(),
+            success: function(response) {
+                if (response.success) {
+                    // Show success message
+                    $('#alert-container').html(`
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="fas fa-check-circle me-2"></i> ${response.message}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    `);
+                    
+                    // Redirect after 1 second
+                    setTimeout(function() {
+                        window.location.href = response.redirect || '/customer/dashboard/';
+                    }, 1000);
+                } else {
+                    // Show error message
+                    $('#alert-container').html(`
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-circle me-2"></i> ${response.message}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    `);
+                    
+                    // Re-enable submit button
+                    submitBtn.prop('disabled', false).html(originalText);
+                    
+                    // Scroll to alert
+                    $('html, body').animate({
+                        scrollTop: $('#alert-container').offset().top - 100
+                    }, 500);
+                }
+            },
+            error: function() {
+                // Show error message
+                $('#alert-container').html(`
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-circle me-2"></i> Có lỗi xảy ra. Vui lòng thử lại.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `);
+                
+                // Re-enable submit button
+                submitBtn.prop('disabled', false).html(originalText);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

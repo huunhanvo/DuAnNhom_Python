@@ -347,7 +347,7 @@
                                             <i class="fas fa-check-double"></i> Hoàn thành
                                         </button>
                                         {% elif booking.trang_thai == 'hoan_thanh' %}
-                                        <a href="{% url 'staff_pos' %}?booking_id={{ booking.id }}" 
+                                        <a href="{% url 'bookings:staff_pos' %}?booking_id={{ booking.id }}" 
                                            class="btn btn-sm btn-warning">
                                             <i class="fas fa-cash-register"></i> Thanh toán
                                         </a>

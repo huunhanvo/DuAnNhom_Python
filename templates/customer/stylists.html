@@ -1,0 +1,173 @@
+{% extends 'customer/base_customer.html' %}
+{% load static %}
+
+{% block title %}Đội ngũ Stylist - Barbershop Hoàng Gia{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<section class="py-5 bg-dark text-white">
+    <div class="container text-center">
+        <h1 class="display-4 fw-bold mb-3">Đội Ngũ Stylist Chuyên Nghiệp</h1>
+        <p class="lead">Gặp gỡ những nghệ nhân tạo kiểu tóc hàng đầu của chúng tôi</p>
+    </div>
+</section>
+
+<!-- Filters -->
+<section class="py-4 bg-light">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <form method="GET" class="d-flex gap-2">
+                    <input type="text" class="form-control" name="search" 
+                           placeholder="Tìm kiếm stylist..." value="{{ search }}">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </form>
+            </div>
+            <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                <select class="form-select d-inline-block w-auto" onchange="window.location.href='?sort=' + this.value">
+                    <option value="">Sắp xếp theo</option>
+                    <option value="rating" {% if sort == 'rating' %}selected{% endif %}>Đánh giá cao nhất</option>
+                    <option value="experience" {% if sort == 'experience' %}selected{% endif %}>Kinh nghiệm nhiều nhất</option>
+                    <option value="bookings" {% if sort == 'bookings' %}selected{% endif %}>Lượt phục vụ nhiều nhất</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Stylists Grid -->
+<section class="py-5">
+    <div class="container">
+        <div class="row g-4">
+            {% for stylist in stylists %}
+            <div class="col-md-6 col-lg-3">
+                <div class="stylist-card card h-100">
+                    {% if stylist.anh_dai_dien %}
+                    <img src="{{ stylist.anh_dai_dien.url }}" class="card-img-top" alt="{{ stylist.ho_ten }}">
+                    {% else %}
+                    <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 300px;">
+                        <i class="fas fa-user fa-5x text-white opacity-25"></i>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="card-body">
+                        <h5 class="card-title text-center">{{ stylist.ho_ten }}</h5>
+                        
+                        {% if stylist.thongtinnhanvien %}
+                        <div class="text-center mb-3">
+                            <div class="text-warning mb-2">
+                                {% with rating=stylist.thongtinnhanvien.danh_gia_trung_binh %}
+                                {% for i in "12345" %}
+                                    {% if forloop.counter <= rating %}
+                                    <i class="fas fa-star"></i>
+                                    {% elif forloop.counter|add:"-0.5" <= rating %}
+                                    <i class="fas fa-star-half-alt"></i>
+                                    {% else %}
+                                    <i class="far fa-star"></i>
+                                    {% endif %}
+                                {% endfor %}
+                                {% endwith %}
+                            </div>
+                            <p class="mb-1">
+                                <strong>{{ stylist.thongtinnhanvien.danh_gia_trung_binh|floatformat:1 }}</strong>
+                                <small class="text-muted">({{ stylist.thongtinnhanvien.tong_luot_phuc_vu }} lượt)</small>
+                            </p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <p class="text-muted small mb-2">
+                                <i class="fas fa-cut me-2"></i> Chuyên môn:
+                            </p>
+                            <p class="small">{{ stylist.thongtinnhanvien.chuyen_mon|truncatewords:8 }}</p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <span class="badge bg-primary">
+                                <i class="fas fa-briefcase me-1"></i> 
+                                {{ stylist.thongtinnhanvien.kinh_nghiem_nam }} năm
+                            </span>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'core:stylist_detail' stylist.id %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-info-circle me-1"></i> Xem chi tiết
+                            </a>
+                            <a href="{% url 'bookings:booking_step1' %}?stylist={{ stylist.id }}" class="btn btn-gold btn-sm">
+                                <i class="fas fa-calendar-plus me-1"></i> Đặt lịch
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="text-center py-5">
+                    <i class="fas fa-users fa-4x text-muted mb-3"></i>
+                    <h4 class="text-muted">Không tìm thấy stylist nào</h4>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if stylists.has_other_pages %}
+        <nav aria-label="Page navigation" class="mt-5">
+            <ul class="pagination justify-content-center">
+                {% if stylists.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ stylists.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+                        <i class="fas fa-angle-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+
+                {% for num in stylists.paginator.page_range %}
+                    {% if stylists.number == num %}
+                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if stylists.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ stylists.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+                        <i class="fas fa-angle-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</section>
+
+<!-- Why Choose Section -->
+<section class="py-5 bg-light">
+    <div class="container text-center">
+        <h3 class="mb-4">Tại Sao Chọn Stylist Của Chúng Tôi?</h3>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <i class="fas fa-graduation-cap fa-3x text-warning mb-3"></i>
+                <h5>Đào Tạo Chuyên Nghiệp</h5>
+                <p class="text-muted">Chứng chỉ từ các học viện hàng đầu</p>
+            </div>
+            <div class="col-md-4">
+                <i class="fas fa-medal fa-3x text-warning mb-3"></i>
+                <h5>Kinh Nghiệm Dày Dặn</h5>
+                <p class="text-muted">Trung bình 8+ năm kinh nghiệm</p>
+            </div>
+            <div class="col-md-4">
+                <i class="fas fa-heart fa-3x text-warning mb-3"></i>
+                <h5>Tận Tâm Phục Vụ</h5>
+                <p class="text-muted">Luôn lắng nghe và tư vấn nhiệt tình</p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
