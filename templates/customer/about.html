@@ -133,19 +133,23 @@
             <div class="col-md-3">
                 <div class="stylist-card card h-100">
                     {% if stylist.anh_dai_dien %}
-                    <img src="{{ stylist.anh_dai_dien.url }}" class="card-img-top" alt="{{ stylist.ho_ten }}">
+                        {% if stylist.anh_dai_dien|slice:":7" == "/media/" or stylist.anh_dai_dien|slice:":7" == "http://" or stylist.anh_dai_dien|slice:":8" == "https://" %}
+                            <img src="{{ stylist.anh_dai_dien }}" class="card-img-top" alt="{{ stylist.ho_ten }}" onerror="this.onerror=null; this.src='{% static 'img/avatar-placeholder.jpg' %}'">
+                        {% else %}
+                            <img src="/media/{{ stylist.anh_dai_dien }}" class="card-img-top" alt="{{ stylist.ho_ten }}" onerror="this.onerror=null; this.src='{% static 'img/avatar-placeholder.jpg' %}'">
+                        {% endif %}
                     {% else %}
                     <img src="{% static 'img/avatar-placeholder.jpg' %}" class="card-img-top" alt="{{ stylist.ho_ten }}">
                     {% endif %}
                     <div class="card-body text-center">
                         <h5 class="card-title">{{ stylist.ho_ten }}</h5>
-                        {% if stylist.thongtinnhanvien %}
-                        <p class="text-muted small mb-2">{{ stylist.thongtinnhanvien.chuyen_mon }}</p>
+                        {% if stylist.thong_tin_nhan_vien %}
+                        <p class="text-muted small mb-2">{{ stylist.thong_tin_nhan_vien.chuyen_mon }}</p>
                         <p class="text-warning small mb-2">
-                            <i class="fas fa-star"></i> {{ stylist.thongtinnhanvien.danh_gia_trung_binh|floatformat:1 }}
+                            <i class="fas fa-star"></i> {{ stylist.thong_tin_nhan_vien.danh_gia_trung_binh|floatformat:1 }}
                         </p>
                         <p class="text-muted small">
-                            <i class="fas fa-briefcase"></i> {{ stylist.thongtinnhanvien.kinh_nghiem_nam }} năm kinh nghiệm
+                            <i class="fas fa-briefcase"></i> {{ stylist.thong_tin_nhan_vien.kinh_nghiem_nam }} năm kinh nghiệm
                         </p>
                         {% endif %}
                         <a href="{% url 'core:stylist_detail' stylist.id %}" class="btn btn-outline-primary btn-sm w-100">

@@ -74,7 +74,7 @@
             <div class="col-md-4">
                 <div class="service-card card h-100">
                     {% if service.anh_minh_hoa %}
-                    <img src="{{ service.anh_minh_hoa.url }}" class="card-img-top" alt="{{ service.ten_dich_vu }}">
+                    <img src="{{ service.anh_minh_hoa }}" class="card-img-top" alt="{{ service.ten_dich_vu }}">
                     {% else %}
                     <img src="{% static 'img/service-placeholder.jpg' %}" class="card-img-top" alt="{{ service.ten_dich_vu }}">
                     {% endif %}
@@ -118,18 +118,22 @@
             <div class="col-md-3">
                 <div class="stylist-card card h-100">
                     {% if stylist.anh_dai_dien %}
-                    <img src="{{ stylist.anh_dai_dien.url }}" class="card-img-top" alt="{{ stylist.ho_ten }}">
+                        {% if stylist.anh_dai_dien|slice:":7" == "/media/" or stylist.anh_dai_dien|slice:":7" == "http://" or stylist.anh_dai_dien|slice:":8" == "https://" %}
+                            <img src="{{ stylist.anh_dai_dien }}" class="card-img-top" alt="{{ stylist.ho_ten }}" onerror="this.onerror=null; this.src='{% static 'img/avatar-placeholder.jpg' %}'">
+                        {% else %}
+                            <img src="/media/{{ stylist.anh_dai_dien }}" class="card-img-top" alt="{{ stylist.ho_ten }}" onerror="this.onerror=null; this.src='{% static 'img/avatar-placeholder.jpg' %}'">
+                        {% endif %}
                     {% else %}
                     <img src="{% static 'img/avatar-placeholder.jpg' %}" class="card-img-top" alt="{{ stylist.ho_ten }}">
                     {% endif %}
                     <div class="card-body text-center">
                         <h5 class="card-title">{{ stylist.ho_ten }}</h5>
-                        {% if stylist.thongtinnhanvien %}
-                        <p class="text-muted small">{{ stylist.thongtinnhanvien.chuyen_mon|truncatewords:5 }}</p>
+                        {% if stylist.thong_tin_nhan_vien %}
+                        <p class="text-muted small">{{ stylist.thong_tin_nhan_vien.chuyen_mon|truncatewords:5 }}</p>
                         <div class="mb-2">
                             <i class="fas fa-star text-warning"></i>
-                            <span class="fw-bold">{{ stylist.thongtinnhanvien.danh_gia_trung_binh|floatformat:1 }}</span>
-                            <small class="text-muted">({{ stylist.thongtinnhanvien.tong_luot_phuc_vu }} lượt)</small>
+                            <span class="fw-bold">{{ stylist.thong_tin_nhan_vien.danh_gia_trung_binh|floatformat:1 }}</span>
+                            <small class="text-muted">({{ stylist.thong_tin_nhan_vien.tong_luot_phuc_vu }} lượt)</small>
                         </div>
                         {% endif %}
                         <a href="{% url 'core:stylist_detail' stylist.id %}" class="btn btn-outline-primary btn-sm w-100">
@@ -163,7 +167,7 @@
                     <div class="card-body">
                         <div class="d-flex align-items-center mb-3">
                             {% if review.nguoi_dung.anh_dai_dien %}
-                            <img src="{{ review.nguoi_dung.anh_dai_dien.url }}" class="rounded-circle me-3" width="50" height="50" alt="{{ review.nguoi_dung.ho_ten }}">
+                            <img src="{{ review.nguoi_dung.anh_dai_dien }}" class="rounded-circle me-3" width="50" height="50" alt="{{ review.nguoi_dung.ho_ten }}">
                             {% else %}
                             <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
                                 {{ review.nguoi_dung.ho_ten|first }}

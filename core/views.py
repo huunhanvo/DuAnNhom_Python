@@ -1115,7 +1115,8 @@ def customer_profile(request):
     referral_code = f'REF{customer.id:05d}'
     
     context = {
-        'customer': customer,
+        'user': customer,  # Changed from 'customer' to 'user' to match template
+        'customer': customer,  # Keep both for compatibility
         'total_bookings': total_bookings,
         'completed_bookings': completed_bookings,
         'total_spent': total_spent,

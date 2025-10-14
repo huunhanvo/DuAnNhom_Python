@@ -31,7 +31,7 @@ def booking_step1(request):
     ).order_by('thu_tu')[:6]
     
     # Get all services grouped by category
-    all_services = DichVu.objects.filter(
+    services = DichVu.objects.filter(
         trang_thai=True,
         da_xoa=False
     ).select_related('danh_muc').order_by('danh_muc__thu_tu', 'thu_tu')
@@ -42,7 +42,7 @@ def booking_step1(request):
     context = {
         'categories': categories,
         'featured_services': featured_services,
-        'all_services': all_services,
+        'services': services,  # Changed from 'all_services' to 'services'
         'voucher_code': voucher_code,
     }
     return render(request, 'customer/booking_step1.html', context)

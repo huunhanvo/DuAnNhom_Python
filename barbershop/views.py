@@ -103,7 +103,7 @@ def login_view(request):
                 elif user.vai_tro == 'nhan_vien':
                     return redirect('core:staff_dashboard')
                 else:  # khach_hang
-                    return redirect('login')  # Customer portal not implemented yet
+                    return redirect('core:customer_dashboard')  # Redirect to customer dashboard
             else:
                 context = {'error': 'Sai mật khẩu!'}
                 return render(request, 'login.html', context)
@@ -117,7 +117,7 @@ def login_view(request):
 def logout_view(request):
     """Logout"""
     request.session.flush()
-    return redirect('login')
+    return redirect('staff_login')
 
 def page_not_found(request, exception=None):
     """404 Page"""

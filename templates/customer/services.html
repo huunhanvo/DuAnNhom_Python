@@ -63,7 +63,7 @@
             <div class="col-md-6 col-lg-4">
                 <div class="service-card card h-100">
                     {% if service.anh_minh_hoa %}
-                    <img src="{{ service.anh_minh_hoa.url }}" class="card-img-top" alt="{{ service.ten_dich_vu }}">
+                    <img src="{{ service.anh_minh_hoa }}" class="card-img-top" alt="{{ service.ten_dich_vu }}">
                     {% else %}
                     <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 250px;">
                         <i class="fas fa-cut fa-5x text-white opacity-25"></i>
@@ -180,7 +180,7 @@
                     </div>
                     
                     {% if combo.anh_minh_hoa %}
-                    <img src="{{ combo.anh_minh_hoa.url }}" class="card-img-top" alt="{{ combo.ten_combo }}">
+                    <img src="{{ combo.anh_minh_hoa }}" class="card-img-top" alt="{{ combo.ten_combo }}">
                     {% else %}
                     <div class="card-img-top bg-warning d-flex align-items-center justify-content-center" style="height: 200px;">
                         <i class="fas fa-gifts fa-5x text-white"></i>

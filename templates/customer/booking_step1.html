@@ -49,9 +49,9 @@
                             </li>
                             {% for category in categories %}
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="{{ category.slug }}-tab" data-bs-toggle="pill" 
-                                        data-bs-target="#{{ category.slug }}" type="button" role="tab">
-                                    {{ category.ten }}
+                                <button class="nav-link" id="cat{{ category.id }}-tab" data-bs-toggle="pill" 
+                                        data-bs-target="#cat{{ category.id }}" type="button" role="tab">
+                                    {{ category.ten_danh_muc }}
                                 </button>
                             </li>
                             {% endfor %}
@@ -68,11 +68,11 @@
                                                    value="{{ service.id }}" id="service{{ service.id }}"
                                                    data-price="{{ service.gia }}" 
                                                    data-duration="{{ service.thoi_gian_thuc_hien }}"
-                                                   data-name="{{ service.ten }}">
+                                                   data-name="{{ service.ten_dich_vu }}">
                                             <label class="form-check-label w-100" for="service{{ service.id }}">
                                                 <div class="d-flex align-items-center">
-                                                    {% if service.hinh_anh %}
-                                                    <img src="{{ service.hinh_anh.url }}" alt="{{ service.ten }}" 
+                                                    {% if service.anh_minh_hoa %}
+                                                    <img src="{{ service.anh_minh_hoa }}" alt="{{ service.ten_dich_vu }}" 
                                                          class="service-img me-3">
                                                     {% else %}
                                                     <div class="service-img-placeholder me-3">
@@ -80,8 +80,8 @@
                                                     </div>
                                                     {% endif %}
                                                     <div class="flex-grow-1">
-                                                        <h6 class="mb-1">{{ service.ten }}</h6>
-                                                        <p class="text-muted small mb-2">{{ service.mo_ta|truncatewords:15 }}</p>
+                                                        <h6 class="mb-1">{{ service.ten_dich_vu }}</h6>
+                                                        <p class="text-muted small mb-2">{{ service.mo_ta_ngan|truncatewords:15 }}</p>
                                                         <div class="d-flex align-items-center gap-3">
                                                             <span class="badge bg-success">
                                                                 <i class="fas fa-money-bill-wave me-1"></i>
@@ -107,12 +107,44 @@
                             </div>
 
                             {% for category in categories %}
-                            <div class="tab-pane fade" id="{{ category.slug }}" role="tabpanel">
+                            <div class="tab-pane fade" id="cat{{ category.id }}" role="tabpanel">
                                 <div class="services-list">
                                     {% for service in services %}
-                                    {% if service.danh_muc == category %}
+                                    {% if service.danh_muc.id == category.id %}
                                     <div class="service-item" data-service-id="{{ service.id }}">
-                                        <!-- Same as above -->
+                                        <div class="form-check">
+                                            <input class="form-check-input service-checkbox" type="checkbox" 
+                                                   value="{{ service.id }}" id="service{{ service.id }}_{{ category.id }}"
+                                                   data-price="{{ service.gia }}" 
+                                                   data-duration="{{ service.thoi_gian_thuc_hien }}"
+                                                   data-name="{{ service.ten_dich_vu }}">
+                                            <label class="form-check-label w-100" for="service{{ service.id }}_{{ category.id }}">
+                                                <div class="d-flex align-items-center">
+                                                    {% if service.anh_minh_hoa %}
+                                                    <img src="{{ service.anh_minh_hoa }}" alt="{{ service.ten_dich_vu }}" 
+                                                         class="service-img me-3">
+                                                    {% else %}
+                                                    <div class="service-img-placeholder me-3">
+                                                        <i class="fas fa-cut"></i>
+                                                    </div>
+                                                    {% endif %}
+                                                    <div class="flex-grow-1">
+                                                        <h6 class="mb-1">{{ service.ten_dich_vu }}</h6>
+                                                        <p class="text-muted small mb-2">{{ service.mo_ta_ngan|truncatewords:15 }}</p>
+                                                        <div class="d-flex align-items-center gap-3">
+                                                            <span class="badge bg-success">
+                                                                <i class="fas fa-money-bill-wave me-1"></i>
+                                                                {{ service.gia|floatformat:0 }}đ
+                                                            </span>
+                                                            <span class="badge bg-info">
+                                                                <i class="far fa-clock me-1"></i>
+                                                                {{ service.thoi_gian_thuc_hien }} phút
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </label>
+                                        </div>
                                     </div>
                                     {% endif %}
                                     {% endfor %}

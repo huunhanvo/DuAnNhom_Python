@@ -9,6 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from datetime import datetime, timedelta, date
 from decimal import Decimal
 import json
+import csv
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill
 
@@ -240,6 +241,44 @@ def admin_services(request):
         'combo_count': combo_count,
     }
     return render(request, 'admin/services.html', context)
+
+# - api_service_detail
+@require_role(['quan_ly'])
+def api_service_detail(request, service_id):
+    """API endpoint to get service details for editing"""
+    try:
+        service = get_object_or_404(DichVu, id=service_id, da_xoa=False)
+        
+        # Map category name to key for frontend
+        category_reverse_mapping = {
+            'Cắt tóc': 'haircut',
+            'Cạo râu': 'shave',
+            'Chăm sóc': 'treatment',
+            'Combo': 'combo'
+        }
+        
+        danh_muc_key = 'haircut'
+        if service.danh_muc:
+            danh_muc_key = category_reverse_mapping.get(service.danh_muc.ten_danh_muc, 'haircut')
+        
+        data = {
+            'id': service.id,
+            'ten_dich_vu': service.ten_dich_vu,
+            'danh_muc': danh_muc_key,
+            'gia': float(service.gia),
+            'thoi_luong': service.thoi_gian_thuc_hien,
+            'mo_ta': service.mo_ta_ngan or '',
+            'trang_thai': 'active' if service.trang_thai else 'inactive',
+            'thu_tu_hien_thi': service.thu_tu or 0,
+            'hinh_anh': service.anh_minh_hoa if service.anh_minh_hoa else '',
+            'noi_bat': False,  # Add this field if you have it in model
+        }
+        
+        return JsonResponse(data)
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=404)
+
 # - api_service_crud
 @require_role(['quan_ly'])
 def api_service_crud(request, service_id=None):

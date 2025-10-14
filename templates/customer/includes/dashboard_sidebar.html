@@ -6,7 +6,7 @@
     <div class="user-profile-section">
         <div class="text-center mb-3">
             {% if user.anh_dai_dien %}
-            <img src="{{ user.anh_dai_dien.url }}" alt="{{ user.ho_ten }}" class="user-avatar">
+            <img src="{{ user.anh_dai_dien }}" alt="{{ user.ho_ten }}" class="user-avatar">
             {% else %}
             <div class="user-avatar-placeholder">
                 {{ user.ho_ten|slice:":1"|upper }}
