@@ -113,8 +113,8 @@
                         </a>
                     </li>
                     
-                    {% if not request.session.user_id %}
-                        <!-- Not logged in - Show Login/Register buttons -->
+                    {% if not request.session.user_id or request.session.vai_tro != 'khach_hang' %}
+                        <!-- Not logged in as customer - Show Login/Register buttons -->
                         <li class="nav-item">
                             <a class="btn btn-outline-warning btn-sm me-2 px-3" href="{% url 'accounts:customer_login' %}" style="border-radius: 20px; line-height: 1.5;">
                                 <i class="fas fa-sign-in-alt me-1"></i> Đăng nhập
