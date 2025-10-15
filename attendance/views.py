@@ -9,6 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from datetime import datetime, timedelta, time
 from decimal import Decimal
 import json
+import csv
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
@@ -74,15 +75,38 @@ def admin_work_schedule(request):
                 repeat_until = request.POST.get('repeat_until')
                 ghi_chu = request.POST.get('ghi_chu', '')
                 
+                print(f"DEBUG Create Shift - staff_ids: {staff_ids}")
+                print(f"DEBUG Create Shift - ngay_lam: {ngay_lam}")
+                print(f"DEBUG Create Shift - ca_lam: {ca_lam}")
+                print(f"DEBUG Create Shift - POST data: {request.POST}")
+                
+                if not staff_ids or len(staff_ids) == 0:
+                    return JsonResponse({'success': False, 'message': 'Chưa chọn nhân viên'})
+                
+                if not ngay_lam:
+                    return JsonResponse({'success': False, 'message': 'Chưa chọn ngày'})
+                
+                if not ca_lam:
+                    return JsonResponse({'success': False, 'message': 'Chưa chọn ca làm'})
+                
+                # Map English shift names to Vietnamese
+                shift_map = {
+                    'morning': 'sang',
+                    'afternoon': 'chieu',
+                    'evening': 'toi',
+                    'fullday': 'ca_ngay'
+                }
+                ca_lam_vi = shift_map.get(ca_lam, ca_lam)
+                
                 # Set times based on shift type
                 shift_times = {
-                    'morning': ('08:00', '12:00'),
-                    'afternoon': ('13:00', '17:00'),
-                    'evening': ('17:00', '21:00'),
-                    'fullday': ('08:00', '21:00')
+                    'sang': ('08:00', '12:00'),
+                    'chieu': ('13:00', '17:00'),
+                    'toi': ('17:00', '21:00'),
+                    'ca_ngay': ('08:00', '21:00')
                 }
                 
-                gio_bat_dau, gio_ket_thuc = shift_times.get(ca_lam, ('08:00', '17:00'))
+                gio_bat_dau, gio_ket_thuc = shift_times.get(ca_lam_vi, ('08:00', '17:00'))
                 
                 created_count = 0
                 start_date = datetime.strptime(ngay_lam, '%Y-%m-%d').date()
@@ -116,7 +140,7 @@ def admin_work_schedule(request):
                         existing = LichLamViec.objects.filter(
                             nhan_vien_id=staff_id,
                             ngay_lam=shift_date,
-                            ca_lam=ca_lam,
+                            ca_lam=ca_lam_vi,
                             da_xoa=False
                         ).exists()
                         
@@ -124,7 +148,7 @@ def admin_work_schedule(request):
                             LichLamViec.objects.create(
                                 nhan_vien_id=staff_id,
                                 ngay_lam=shift_date,
-                                ca_lam=ca_lam,
+                                ca_lam=ca_lam_vi,
                                 gio_bat_dau=gio_bat_dau,
                                 gio_ket_thuc=gio_ket_thuc,
                                 trang_thai='da_duyet',
@@ -332,9 +356,28 @@ def admin_work_schedule(request):
                 for shift in schedule_dict[staff_member.id][day_str]:
                     # Estimate hours based on shift type
                     hours = 4 if shift.ca_lam in ['sang', 'chieu', 'toi'] else 8
+                    
+                    # Map Vietnamese to English for CSS class
+                    shift_type_map = {
+                        'sang': 'morning',
+                        'chieu': 'afternoon',
+                        'toi': 'evening',
+                        'ca_ngay': 'fullday'
+                    }
+                    shift_type = shift_type_map.get(shift.ca_lam, 'morning')
+                    
+                    # Map Vietnamese to display label
+                    shift_label_map = {
+                        'sang': 'Sáng',
+                        'chieu': 'Chiều',
+                        'toi': 'Tối',
+                        'ca_ngay': 'Cả ngày'
+                    }
+                    shift_label = shift_label_map.get(shift.ca_lam, shift.ca_lam.title())
+                    
                     shift_info = {
-                        'type': shift.ca_lam.lower(),
-                        'label': shift.ca_lam.title(),
+                        'type': shift_type,
+                        'label': shift_label,
                         'hours': hours
                     }
                     day_shifts.append(shift_info)

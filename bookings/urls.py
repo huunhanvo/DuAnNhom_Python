@@ -62,4 +62,9 @@ urlpatterns = [
     # AJAX endpoints
     path('bookings/api/time-slots/', get_time_slots, name='get_time_slots'),
     path('bookings/api/validate-voucher/', validate_voucher, name='validate_voucher'),
+    
+    # Debug endpoint (development only)
+    path('bookings/debug-session/', lambda request: __import__('bookings.debug_views', fromlist=['debug_booking_session']).debug_booking_session(request), name='debug_booking_session'),
+    path('bookings/test/', lambda request: __import__('django.shortcuts', fromlist=['render']).render(request, 'test_booking.html'), name='test_booking'),
+    path('bookings/debug/', lambda request: __import__('django.shortcuts', fromlist=['render']).render(request, 'debug_booking.html'), name='debug_booking'),
 ]

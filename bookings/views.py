@@ -268,7 +268,7 @@ def admin_booking_detail(request, booking_id):
             
             # TODO: Send notification to customer
             
-        return redirect('admin_booking_detail', booking_id=booking_id)
+        return redirect('bookings:admin_booking_detail', booking_id=booking_id)
     
     # GET request - show booking details
     services = booking.dich_vu_dat_lich.all().select_related('dich_vu')
@@ -965,10 +965,10 @@ def staff_pos(request):
                     DichVuDatLich.objects.create(
                         dat_lich=booking,
                         dich_vu_id=item['id'],
+                        ten_dich_vu=item.get('name', 'Dịch vụ'),
+                        gia=item['price'],
                         so_luong=item['quantity'],
-                        gia_tai_thoi_diem=item['price'],
-                        thanh_tien=int(item['price']) * int(item['quantity']),
-                        da_xoa=False
+                        thanh_tien=int(item['price']) * int(item['quantity'])
                     )
             
             # Create invoice
@@ -1137,11 +1137,11 @@ def api_load_booking(request):
         
         # Get services
         services = []
-        for s in booking.dich_vu_dat_lich.filter(da_xoa=False).select_related('dich_vu'):
+        for s in booking.dich_vu_dat_lich.select_related('dich_vu'):
             services.append({
                 'id': s.dich_vu.id,
                 'ten_dich_vu': s.dich_vu.ten_dich_vu,
-                'gia': int(s.gia_tai_thoi_diem or s.dich_vu.gia),
+                'gia': int(s.gia or s.dich_vu.gia),
                 'so_luong': s.so_luong or 1
             })
         
@@ -1303,7 +1303,7 @@ def api_booking_detail(request, booking_id):
                 services.append({
                     'ten_dich_vu': dv_dat_lich.dich_vu.ten_dich_vu,
                     'thoi_luong': dv_dat_lich.dich_vu.thoi_gian_thuc_hien,
-                    'gia': float(dv_dat_lich.gia_tai_thoi_diem)
+                    'gia': float(dv_dat_lich.gia)
                 })
             
             data = {

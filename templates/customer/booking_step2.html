@@ -14,15 +14,11 @@
             </div>
             <div class="wizard-step active">
                 <div class="step-number">2</div>
-                <div class="step-title">Chọn thợ & thời gian</div>
+                <div class="step-title">Chọn stylist & thời gian</div>
             </div>
             <div class="wizard-step">
                 <div class="step-number">3</div>
-                <div class="step-title">Thông tin</div>
-            </div>
-            <div class="wizard-step">
-                <div class="step-number">4</div>
-                <div class="step-title">Xác nhận</div>
+                <div class="step-title">Xác nhận & Hoàn tất</div>
             </div>
         </div>
 
@@ -272,11 +268,11 @@ $(document).ready(function() {
 
         $.ajax({
             url: "{% url 'bookings:get_time_slots' %}",
-            method: 'GET',
+            method: 'POST',
             data: {
                 stylist_id: selectedStylist,
                 date: selectedDate,
-                duration: selectedServices.reduce((sum, s) => sum + s.duration, 0)
+                csrfmiddlewaretoken: '{{ csrf_token }}'
             },
             success: function(response) {
                 if (response.success) {
@@ -347,17 +343,27 @@ $(document).ready(function() {
             return;
         }
 
-        // Save to session storage
-        const bookingData = {
-            services: selectedServices,
-            stylist_id: selectedStylist,
-            date: selectedDate,
-            time: selectedTimeSlot
-        };
-        sessionStorage.setItem('bookingData', JSON.stringify(bookingData));
+        // Create form and submit
+        const form = $('<form>', {
+            method: 'POST',
+            action: "{% url 'bookings:booking_step3' %}"
+        });
         
-        // Redirect to step 3
-        window.location.href = "{% url 'bookings:booking_step3' %}";
+        // Add CSRF token
+        form.append($('<input>', {
+            type: 'hidden',
+            name: 'csrfmiddlewaretoken',
+            value: '{{ csrf_token }}'
+        }));
+        
+        // Add data
+        form.append($('<input>', {type: 'hidden', name: 'stylist_id', value: selectedStylist}));
+        form.append($('<input>', {type: 'hidden', name: 'ngay_hen', value: selectedDate}));
+        form.append($('<input>', {type: 'hidden', name: 'gio_hen', value: selectedTimeSlot}));
+        
+        // Submit form
+        $('body').append(form);
+        form.submit();
     });
 
     // Format money

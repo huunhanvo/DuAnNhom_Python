@@ -14,15 +14,11 @@
             </div>
             <div class="wizard-step">
                 <div class="step-number">2</div>
-                <div class="step-title">Chọn thợ & thời gian</div>
+                <div class="step-title">Chọn stylist & thời gian</div>
             </div>
             <div class="wizard-step">
                 <div class="step-number">3</div>
-                <div class="step-title">Thông tin</div>
-            </div>
-            <div class="wizard-step">
-                <div class="step-number">4</div>
-                <div class="step-title">Xác nhận</div>
+                <div class="step-title">Xác nhận & Hoàn tất</div>
             </div>
         </div>
 
@@ -340,18 +336,39 @@ $(document).ready(function() {
         $(`#service${serviceId}`).prop('checked', false).trigger('change');
     };
 
-    // Next button
+    // Next button - Submit form to step 2
     $('#nextBtn').click(function() {
         if (selectedServices.length === 0) {
             showAlert('Vui lòng chọn ít nhất 1 dịch vụ', 'warning');
             return;
         }
 
-        // Save to session storage
+        // Save to session storage for backup
         sessionStorage.setItem('selectedServices', JSON.stringify(selectedServices));
         
-        // Redirect to step 2
-        window.location.href = "{% url 'bookings:booking_step2' %}";
+        // Create form and submit to step 2
+        const form = $('<form>', {
+            'method': 'POST',
+            'action': "{% url 'bookings:booking_step2' %}"
+        });
+        
+        // Add CSRF token
+        form.append($('<input>', {
+            'type': 'hidden',
+            'name': 'csrfmiddlewaretoken',
+            'value': '{{ csrf_token }}'
+        }));
+        
+        // Add services as JSON
+        form.append($('<input>', {
+            'type': 'hidden',
+            'name': 'services',
+            'value': JSON.stringify(selectedServices)
+        }));
+        
+        // Append form to body and submit
+        $('body').append(form);
+        form.submit();
     });
 
     // Format money
