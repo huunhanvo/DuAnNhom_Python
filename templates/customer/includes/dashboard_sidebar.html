@@ -1,0 +1,225 @@
+{% load static %}
+
+<!-- Dashboard Sidebar -->
+<div class="dashboard-sidebar">
+    <!-- User Profile Section -->
+    <div class="user-profile-section">
+        <div class="text-center mb-3">
+            {% if user.anh_dai_dien %}
+            <img src="{{ user.anh_dai_dien }}" alt="{{ user.ho_ten }}" class="user-avatar">
+            {% else %}
+            <div class="user-avatar-placeholder">
+                {{ user.ho_ten|slice:":1"|upper }}
+            </div>
+            {% endif %}
+        </div>
+        <h6 class="user-name">{{ user.ho_ten }}</h6>
+        <p class="user-contact">
+            <i class="fas fa-phone-alt me-1"></i> {{ user.so_dien_thoai }}
+        </p>
+        <div class="user-points">
+            <i class="fas fa-star text-warning me-1"></i>
+            <strong>{{ user.diem_tich_luy|default:0 }}</strong> điểm
+        </div>
+    </div>
+
+    <!-- Navigation Menu -->
+    <nav class="dashboard-menu">
+        <a href="{% url 'core:customer_dashboard' %}" class="menu-item {% if active == 'dashboard' %}active{% endif %}">
+            <i class="fas fa-th-large"></i>
+            <span>Tổng quan</span>
+        </a>
+        
+        <a href="{% url 'core:customer_bookings' %}" class="menu-item {% if active == 'bookings' %}active{% endif %}">
+            <i class="fas fa-calendar-check"></i>
+            <span>Lịch đặt</span>
+            {% if upcoming_count %}
+            <span class="badge bg-primary ms-auto">{{ upcoming_count }}</span>
+            {% endif %}
+        </a>
+        
+        <a href="{% url 'core:customer_history' %}" class="menu-item {% if active == 'history' %}active{% endif %}">
+            <i class="fas fa-history"></i>
+            <span>Lịch sử</span>
+        </a>
+        
+        <a href="{% url 'core:customer_rewards' %}" class="menu-item {% if active == 'rewards' %}active{% endif %}">
+            <i class="fas fa-gift"></i>
+            <span>Ưu đãi & Điểm</span>
+        </a>
+        
+        <a href="{% url 'core:customer_favorite_stylists' %}" class="menu-item {% if active == 'favorite_stylists' %}active{% endif %}">
+            <i class="fas fa-heart"></i>
+            <span>Thợ yêu thích</span>
+            {% if favorite_count %}
+            <span class="badge bg-danger ms-auto">{{ favorite_count }}</span>
+            {% endif %}
+        </a>
+        
+        <a href="{% url 'core:customer_profile' %}" class="menu-item {% if active == 'profile' %}active{% endif %}">
+            <i class="fas fa-user-circle"></i>
+            <span>Tài khoản</span>
+        </a>
+        
+        <hr class="my-2">
+        
+        <a href="{% url 'bookings:booking_step1' %}" class="menu-item menu-item-primary">
+            <i class="fas fa-calendar-plus"></i>
+            <span>Đặt lịch mới</span>
+        </a>
+        
+        <a href="{% url 'accounts:customer_logout' %}" class="menu-item menu-item-danger">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Đăng xuất</span>
+        </a>
+    </nav>
+</div>
+
+<style>
+.dashboard-sidebar {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    position: sticky;
+    top: 20px;
+}
+
+/* User Profile Section */
+.user-profile-section {
+    padding: 30px 20px;
+    background: linear-gradient(135deg, #d4af37 0%, #8b7355 100%);
+    color: white;
+    text-align: center;
+}
+
+.user-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.user-avatar-placeholder {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: white;
+    color: #d4af37;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    font-weight: bold;
+    border: 3px solid white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.user-name {
+    margin: 15px 0 5px;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.user-contact {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    margin-bottom: 10px;
+}
+
+.user-points {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 8px 15px;
+    border-radius: 20px;
+    display: inline-block;
+    font-size: 0.95rem;
+}
+
+/* Navigation Menu */
+.dashboard-menu {
+    padding: 15px;
+}
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 15px;
+    color: #666;
+    text-decoration: none;
+    border-radius: 8px;
+    margin-bottom: 5px;
+    transition: all 0.3s;
+    font-weight: 500;
+}
+
+.menu-item i {
+    width: 20px;
+    text-align: center;
+    font-size: 1.1rem;
+}
+
+.menu-item:hover {
+    background: #f8f9fa;
+    color: #2c2c2c;
+    transform: translateX(5px);
+}
+
+.menu-item.active {
+    background: linear-gradient(135deg, #d4af37 0%, #8b7355 100%);
+    color: white;
+}
+
+.menu-item.active:hover {
+    transform: none;
+}
+
+.menu-item-primary {
+    background: #007bff;
+    color: white;
+}
+
+.menu-item-primary:hover {
+    background: #0056b3;
+    color: white;
+}
+
+.menu-item-danger {
+    color: #dc3545;
+}
+
+.menu-item-danger:hover {
+    background: #fff5f5;
+    color: #dc3545;
+}
+
+.menu-item .badge {
+    font-size: 0.75rem;
+    padding: 3px 8px;
+}
+
+/* Responsive */
+@media (max-width: 991px) {
+    .dashboard-sidebar {
+        position: static;
+        margin-bottom: 30px;
+    }
+    
+    .user-profile-section {
+        padding: 20px;
+    }
+    
+    .user-avatar,
+    .user-avatar-placeholder {
+        width: 60px;
+        height: 60px;
+        font-size: 1.5rem;
+    }
+    
+    .user-name {
+        font-size: 1rem;
+    }
+}
+</style>

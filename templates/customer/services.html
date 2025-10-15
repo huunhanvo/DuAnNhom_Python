@@ -1,0 +1,251 @@
+{% extends 'customer/base_customer.html' %}
+{% load static %}
+
+{% block title %}Dịch vụ - Barbershop Hoàng Gia{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<section class="py-5 bg-dark text-white">
+    <div class="container text-center">
+        <h1 class="display-4 fw-bold mb-3">Dịch Vụ Của Chúng Tôi</h1>
+        <p class="lead">Trải nghiệm đẳng cấp với đa dạng dịch vụ chuyên nghiệp</p>
+    </div>
+</section>
+
+<!-- Filters -->
+<section class="py-4 bg-light">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-primary {% if not category %}active{% endif %}" 
+                            onclick="window.location.href='{% url 'core:services' %}'">
+                        Tất cả
+                    </button>
+                    {% for cat in categories %}
+                    <button type="button" class="btn btn-outline-primary {% if category.id == cat.id %}active{% endif %}"
+                            onclick="window.location.href='?category={{ cat.id }}'">
+                        {{ cat.ten_danh_muc }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                <select class="form-select d-inline-block w-auto" onchange="window.location.href='?sort=' + this.value">
+                    <option value="">Sắp xếp theo</option>
+                    <option value="price_asc" {% if sort == 'price_asc' %}selected{% endif %}>Giá tăng dần</option>
+                    <option value="price_desc" {% if sort == 'price_desc' %}selected{% endif %}>Giá giảm dần</option>
+                    <option value="duration_asc" {% if sort == 'duration_asc' %}selected{% endif %}>Thời gian tăng dần</option>
+                    <option value="duration_desc" {% if sort == 'duration_desc' %}selected{% endif %}>Thời gian giảm dần</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Services List -->
+<section class="py-5">
+    <div class="container">
+        {% if category %}
+        <h3 class="mb-4">
+            <i class="fas fa-tag text-warning me-2"></i> {{ category.ten_danh_muc }}
+            <span class="badge bg-primary">{{ services.count }} dịch vụ</span>
+        </h3>
+        {% else %}
+        <h3 class="mb-4">
+            Tất cả dịch vụ
+            <span class="badge bg-primary">{{ services.count }} dịch vụ</span>
+        </h3>
+        {% endif %}
+
+        <div class="row g-4">
+            {% for service in services %}
+            <div class="col-md-6 col-lg-4">
+                <div class="service-card card h-100">
+                    {% if service.anh_minh_hoa %}
+                    <img src="{{ service.anh_minh_hoa }}" class="card-img-top" alt="{{ service.ten_dich_vu }}">
+                    {% else %}
+                    <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 250px;">
+                        <i class="fas fa-cut fa-5x text-white opacity-25"></i>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title mb-0">{{ service.ten_dich_vu }}</h5>
+                            {% if service.danh_muc %}
+                            <span class="badge bg-light text-dark small">{{ service.danh_muc.ten_danh_muc }}</span>
+                            {% endif %}
+                        </div>
+                        
+                        <p class="card-text text-muted mb-3">{{ service.mo_ta_ngan|truncatewords:20 }}</p>
+                        
+                        <div class="mb-3">
+                            <p class="text-muted small mb-1">
+                                <i class="fas fa-info-circle me-1"></i> Mô tả chi tiết:
+                            </p>
+                            <p class="text-muted small">{{ service.mo_ta_chi_tiet|truncatewords:30 }}</p>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="price-tag">{{ service.gia|floatformat:0 }}đ</div>
+                                <small class="duration-tag">
+                                    <i class="far fa-clock me-1"></i> {{ service.thoi_gian_thuc_hien }} phút
+                                </small>
+                            </div>
+                            <a href="{% url 'bookings:booking_step1' %}?service={{ service.id }}" 
+                               class="btn btn-gold">
+                                <i class="fas fa-calendar-plus me-1"></i> Đặt lịch
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="text-center py-5">
+                    <i class="fas fa-search fa-4x text-muted mb-3"></i>
+                    <h4 class="text-muted">Không tìm thấy dịch vụ nào</h4>
+                    <a href="{% url 'core:services' %}" class="btn btn-primary mt-3">
+                        Xem tất cả dịch vụ
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if services.has_other_pages %}
+        <nav aria-label="Page navigation" class="mt-5">
+            <ul class="pagination justify-content-center">
+                {% if services.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if category %}&category={{ category.id }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+                        <i class="fas fa-angle-double-left"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ services.previous_page_number }}{% if category %}&category={{ category.id }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+                        <i class="fas fa-angle-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+
+                {% for num in services.paginator.page_range %}
+                    {% if services.number == num %}
+                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% elif num > services.number|add:'-3' and num < services.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if category %}&category={{ category.id }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+                            {{ num }}
+                        </a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if services.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ services.next_page_number }}{% if category %}&category={{ category.id }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+                        <i class="fas fa-angle-right"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ services.paginator.num_pages }}{% if category %}&category={{ category.id }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+                        <i class="fas fa-angle-double-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</section>
+
+<!-- Combos Section -->
+{% if combos %}
+<section class="py-5 bg-light">
+    <div class="container">
+        <h2 class="section-title text-center mb-5">
+            <i class="fas fa-gift text-warning me-2"></i> Combo Tiết Kiệm
+        </h2>
+        <div class="row g-4">
+            {% for combo in combos %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 border-warning border-2 position-relative">
+                    <div class="position-absolute top-0 end-0 m-3">
+                        <span class="badge bg-danger">
+                            Tiết kiệm {{ combo.gia_goc|floatformat:0|add:"-"|add:combo.gia_combo|floatformat:0 }}đ
+                        </span>
+                    </div>
+                    
+                    {% if combo.anh_minh_hoa %}
+                    <img src="{{ combo.anh_minh_hoa }}" class="card-img-top" alt="{{ combo.ten_combo }}">
+                    {% else %}
+                    <div class="card-img-top bg-warning d-flex align-items-center justify-content-center" style="height: 200px;">
+                        <i class="fas fa-gifts fa-5x text-white"></i>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="card-body">
+                        <h5 class="card-title text-warning">
+                            <i class="fas fa-gift me-2"></i> {{ combo.ten_combo }}
+                        </h5>
+                        <p class="text-muted">{{ combo.mo_ta }}</p>
+                        
+                        <div class="mb-3">
+                            <small class="text-muted d-block mb-1">Bao gồm:</small>
+                            <ul class="small text-muted">
+                                {% for service in combo.services %}
+                                <li>{{ service.ten_dich_vu }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <small class="text-decoration-line-through text-muted d-block">{{ combo.gia_goc|floatformat:0 }}đ</small>
+                                <span class="h4 text-warning mb-0">{{ combo.gia_combo|floatformat:0 }}đ</span>
+                            </div>
+                            <a href="{% url 'bookings:booking_step1' %}?combo={{ combo.id }}" class="btn btn-warning">
+                                Đặt ngay
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Why Choose Section -->
+<section class="py-5">
+    <div class="container">
+        <h3 class="text-center mb-5">Tại Sao Chọn Dịch Vụ Của Chúng Tôi?</h3>
+        <div class="row g-4">
+            <div class="col-md-3 text-center">
+                <i class="fas fa-certificate fa-3x text-warning mb-3"></i>
+                <h6>Stylist Chứng Chỉ</h6>
+                <p class="text-muted small">Đào tạo chuyên nghiệp</p>
+            </div>
+            <div class="col-md-3 text-center">
+                <i class="fas fa-sparkles fa-3x text-warning mb-3"></i>
+                <h6>Sản Phẩm Cao Cấp</h6>
+                <p class="text-muted small">Nhập khẩu từ Hàn Quốc, Nhật Bản</p>
+            </div>
+            <div class="col-md-3 text-center">
+                <i class="fas fa-shield-alt fa-3x text-warning mb-3"></i>
+                <h6>Đảm Bảo An Toàn</h6>
+                <p class="text-muted small">Tuân thủ quy trình vệ sinh</p>
+            </div>
+            <div class="col-md-3 text-center">
+                <i class="fas fa-redo fa-3x text-warning mb-3"></i>
+                <h6>Cam Kết Hài Lòng</h6>
+                <p class="text-muted small">Hoàn tiền nếu không hài lòng</p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,249 @@
+{% extends 'customer/base_customer.html' %}
+{% load static %}
+
+{% block title %}Giới thiệu - Barbershop Hoàng Gia{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<section class="py-5 bg-dark text-white">
+    <div class="container text-center">
+        <h1 class="display-4 fw-bold mb-3">Về Chúng Tôi</h1>
+        <p class="lead">Câu chuyện về Barbershop Hoàng Gia</p>
+    </div>
+</section>
+
+<!-- Story Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6 mb-4 mb-lg-0">
+                <img src="{% static 'img/about-story.jpg' %}" class="img-fluid rounded shadow" alt="Câu chuyện">
+            </div>
+            <div class="col-lg-6">
+                <h2 class="section-title text-start mb-4">Lịch Sử Hình Thành</h2>
+                <p class="text-muted">
+                    Barbershop Hoàng Gia được thành lập vào năm 2015 với mục tiêu mang đến dịch vụ cắt tóc nam chuyên nghiệp và đẳng cấp tại Việt Nam.
+                </p>
+                <p class="text-muted">
+                    Xuất phát từ niềm đam mê với nghệ thuật tạo kiểu tóc và mong muốn tạo ra một không gian thư giãn, sang trọng cho phái mạnh, chúng tôi đã không ngừng nỗ lực để trở thành địa chỉ tin cậy của hàng ngàn khách hàng.
+                </p>
+                <p class="text-muted">
+                    Sau 10 năm hoạt động, Barbershop Hoàng Gia tự hào là một trong những chuỗi tiệm cắt tóc nam hàng đầu tại TP.HCM với đội ngũ stylist chuyên nghiệp và dịch vụ cao cấp.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Mission & Vision -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body p-5">
+                        <div class="text-warning mb-3">
+                            <i class="fas fa-bullseye fa-3x"></i>
+                        </div>
+                        <h3 class="mb-3">Sứ Mệnh</h3>
+                        <p class="text-muted">
+                            Mang đến cho quý khách hàng những trải nghiệm dịch vụ cắt tóc tốt nhất với đội ngũ stylist chuyên nghiệp, không gian sang trọng và sản phẩm cao cấp. Chúng tôi cam kết tạo nên phong cách riêng biệt, giúp mỗi khách hàng tự tin và nổi bật.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body p-5">
+                        <div class="text-warning mb-3">
+                            <i class="fas fa-eye fa-3x"></i>
+                        </div>
+                        <h3 class="mb-3">Tầm Nhìn</h3>
+                        <p class="text-muted">
+                            Trở thành chuỗi barbershop hàng đầu Việt Nam, được khách hàng tin tưởng và lựa chọn. Chúng tôi hướng đến việc mở rộng quy mô, nâng cao chất lượng dịch vụ và đào tạo đội ngũ stylist tài năng, góp phần nâng tầm ngành làm đẹp nam giới tại Việt Nam.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Core Values -->
+<section class="py-5">
+    <div class="container">
+        <h2 class="section-title text-center mb-5">Giá Trị Cốt Lõi</h2>
+        <div class="row g-4">
+            <div class="col-md-4 text-center">
+                <div class="mb-3">
+                    <i class="fas fa-award fa-4x text-warning"></i>
+                </div>
+                <h5>Chuyên Nghiệp</h5>
+                <p class="text-muted">Luôn cập nhật xu hướng mới nhất, đào tạo kỹ năng chuyên môn cao</p>
+            </div>
+            <div class="col-md-4 text-center">
+                <div class="mb-3">
+                    <i class="fas fa-heart fa-4x text-warning"></i>
+                </div>
+                <h5>Tận Tâm</h5>
+                <p class="text-muted">Luôn lắng nghe và thấu hiểu nhu cầu của khách hàng</p>
+            </div>
+            <div class="col-md-4 text-center">
+                <div class="mb-3">
+                    <i class="fas fa-gem fa-4x text-warning"></i>
+                </div>
+                <h5>Chất Lượng</h5>
+                <p class="text-muted">Cam kết sử dụng sản phẩm cao cấp, đảm bảo an toàn</p>
+            </div>
+            <div class="col-md-4 text-center">
+                <div class="mb-3">
+                    <i class="fas fa-handshake fa-4x text-warning"></i>
+                </div>
+                <h5>Uy Tín</h5>
+                <p class="text-muted">Xây dựng niềm tin với khách hàng qua từng dịch vụ</p>
+            </div>
+            <div class="col-md-4 text-center">
+                <div class="mb-3">
+                    <i class="fas fa-lightbulb fa-4x text-warning"></i>
+                </div>
+                <h5>Sáng Tạo</h5>
+                <p class="text-muted">Không ngừng đổi mới, tạo ra phong cách độc đáo</p>
+            </div>
+            <div class="col-md-4 text-center">
+                <div class="mb-3">
+                    <i class="fas fa-smile fa-4x text-warning"></i>
+                </div>
+                <h5>Hài Lòng</h5>
+                <p class="text-muted">Sự hài lòng của khách hàng là thành công của chúng tôi</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Team Section -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <h2 class="section-title text-center mb-5">Đội Ngũ Stylist</h2>
+        <p class="text-center text-muted mb-5">
+            Đội ngũ stylist của chúng tôi được đào tạo bài bản, có chứng chỉ quốc tế<br>
+            và nhiều năm kinh nghiệm trong nghề
+        </p>
+        <div class="row g-4">
+            {% for stylist in stylists %}
+            <div class="col-md-3">
+                <div class="stylist-card card h-100">
+                    {% if stylist.anh_dai_dien %}
+                        {% if stylist.anh_dai_dien|slice:":7" == "/media/" or stylist.anh_dai_dien|slice:":7" == "http://" or stylist.anh_dai_dien|slice:":8" == "https://" %}
+                            <img src="{{ stylist.anh_dai_dien }}" class="card-img-top" alt="{{ stylist.ho_ten }}" onerror="this.onerror=null; this.src='{% static 'img/avatar-placeholder.jpg' %}'">
+                        {% else %}
+                            <img src="/media/{{ stylist.anh_dai_dien }}" class="card-img-top" alt="{{ stylist.ho_ten }}" onerror="this.onerror=null; this.src='{% static 'img/avatar-placeholder.jpg' %}'">
+                        {% endif %}
+                    {% else %}
+                    <img src="{% static 'img/avatar-placeholder.jpg' %}" class="card-img-top" alt="{{ stylist.ho_ten }}">
+                    {% endif %}
+                    <div class="card-body text-center">
+                        <h5 class="card-title">{{ stylist.ho_ten }}</h5>
+                        {% if stylist.thong_tin_nhan_vien %}
+                        <p class="text-muted small mb-2">{{ stylist.thong_tin_nhan_vien.chuyen_mon }}</p>
+                        <p class="text-warning small mb-2">
+                            <i class="fas fa-star"></i> {{ stylist.thong_tin_nhan_vien.danh_gia_trung_binh|floatformat:1 }}
+                        </p>
+                        <p class="text-muted small">
+                            <i class="fas fa-briefcase"></i> {{ stylist.thong_tin_nhan_vien.kinh_nghiem_nam }} năm kinh nghiệm
+                        </p>
+                        {% endif %}
+                        <a href="{% url 'core:stylist_detail' stylist.id %}" class="btn btn-outline-primary btn-sm w-100">
+                            Xem chi tiết
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- Gallery Section -->
+<section class="py-5">
+    <div class="container">
+        <h2 class="section-title text-center mb-5">Không Gian Tiệm</h2>
+        <div class="row g-3">
+            {% for i in "123456" %}
+            <div class="col-md-4">
+                <div class="position-relative overflow-hidden rounded shadow">
+                    <img src="{% static 'img/gallery-'|add:i|add:'.jpg' %}" class="img-fluid w-100" alt="Gallery" style="height: 250px; object-fit: cover;">
+                    <div class="position-absolute top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-flex align-items-center justify-content-center opacity-0 hover-opacity-100 transition">
+                        <i class="fas fa-search-plus text-white fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- Stats Section -->
+<section class="py-5 bg-dark text-white">
+    <div class="container">
+        <div class="row text-center g-4">
+            <div class="col-md-3">
+                <div class="mb-3">
+                    <i class="fas fa-users fa-3x text-warning"></i>
+                </div>
+                <h2 class="display-4 fw-bold">10,000+</h2>
+                <p class="text-muted">Khách hàng</p>
+            </div>
+            <div class="col-md-3">
+                <div class="mb-3">
+                    <i class="fas fa-cut fa-3x text-warning"></i>
+                </div>
+                <h2 class="display-4 fw-bold">50,000+</h2>
+                <p class="text-muted">Lượt cắt tóc</p>
+            </div>
+            <div class="col-md-3">
+                <div class="mb-3">
+                    <i class="fas fa-star fa-3x text-warning"></i>
+                </div>
+                <h2 class="display-4 fw-bold">4.8</h2>
+                <p class="text-muted">Đánh giá trung bình</p>
+            </div>
+            <div class="col-md-3">
+                <div class="mb-3">
+                    <i class="fas fa-calendar fa-3x text-warning"></i>
+                </div>
+                <h2 class="display-4 fw-bold">10</h2>
+                <p class="text-muted">Năm kinh nghiệm</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Contact Info -->
+<section class="py-5">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-md-4 text-center">
+                <div class="mb-3">
+                    <i class="fas fa-map-marker-alt fa-3x text-warning"></i>
+                </div>
+                <h5>Địa Chỉ</h5>
+                <p class="text-muted">123 Đường Lê Lợi, Quận 1, TP.HCM</p>
+            </div>
+            <div class="col-md-4 text-center">
+                <div class="mb-3">
+                    <i class="fas fa-phone fa-3x text-warning"></i>
+                </div>
+                <h5>Điện Thoại</h5>
+                <p class="text-muted">0901234567</p>
+            </div>
+            <div class="col-md-4 text-center">
+                <div class="mb-3">
+                    <i class="fas fa-clock fa-3x text-warning"></i>
+                </div>
+                <h5>Giờ Làm Việc</h5>
+                <p class="text-muted">08:00 - 21:00<br>(Hàng ngày)</p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

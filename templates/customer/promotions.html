@@ -1,0 +1,358 @@
+{% extends 'customer/base_customer.html' %}
+{% load static %}
+
+{% block title %}Khuyến mãi - Barbershop Hoàng Gia{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<section class="py-5 bg-dark text-white">
+    <div class="container text-center">
+        <h1 class="display-4 fw-bold mb-3">
+            <i class="fas fa-gift me-3"></i> Khuyến Mãi Hấp Dẫn
+        </h1>
+        <p class="lead">Nhận ngay ưu đãi đặc biệt dành cho bạn!</p>
+    </div>
+</section>
+
+<!-- Active Vouchers -->
+<section class="py-5">
+    <div class="container">
+        <h2 class="section-title text-start mb-4">
+            <i class="fas fa-ticket-alt text-warning me-2"></i> Mã Giảm Giá Đang Áp Dụng
+        </h2>
+        
+        {% if vouchers %}
+        <div class="row g-4">
+            {% for voucher in vouchers %}
+            <div class="col-md-6 col-lg-4">
+                <div class="voucher-card {% if not voucher.hien_thi_cong_khai %}border-primary{% endif %}">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div>
+                                {% if voucher.loai_giam == 'phan_tram' %}
+                                <div class="h2 text-warning mb-0">{{ voucher.gia_tri_giam }}%</div>
+                                <small class="text-muted">Giảm giá</small>
+                                {% else %}
+                                <div class="h2 text-warning mb-0">{{ voucher.gia_tri_giam|floatformat:0 }}đ</div>
+                                <small class="text-muted">Giảm trực tiếp</small>
+                                {% endif %}
+                            </div>
+                            {% if not voucher.hien_thi_cong_khai %}
+                            <span class="badge bg-primary">VIP</span>
+                            {% endif %}
+                        </div>
+                        
+                        <h5 class="card-title">{{ voucher.ten_voucher }}</h5>
+                        <p class="text-muted small mb-3">{{ voucher.mo_ta|truncatewords:15 }}</p>
+                        
+                        <div class="voucher-code mb-3">{{ voucher.ma_voucher }}</div>
+                        
+                        <div class="mb-3">
+                            <small class="text-muted d-block">
+                                <i class="fas fa-shopping-cart me-1"></i> 
+                                Đơn tối thiểu: <strong>{{ voucher.gia_tri_don_toi_thieu|floatformat:0 }}đ</strong>
+                            </small>
+                            {% if voucher.giam_toi_da %}
+                            <small class="text-muted d-block">
+                                <i class="fas fa-dollar-sign me-1"></i> 
+                                Giảm tối đa: <strong>{{ voucher.giam_toi_da|floatformat:0 }}đ</strong>
+                            </small>
+                            {% endif %}
+                            <small class="text-muted d-block">
+                                <i class="far fa-calendar me-1"></i> 
+                                HSD: <strong>{{ voucher.ngay_ket_thuc|date:"d/m/Y" }}</strong>
+                            </small>
+                            {% if voucher.so_luong_tong %}
+                            <small class="text-muted d-block">
+                                <i class="fas fa-users me-1"></i> 
+                                Còn: <strong>{{ voucher.so_luong_tong|add:"-"|add:voucher.so_luong_da_dung }}</strong> lượt
+                            </small>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-primary btn-sm copy-voucher-btn" data-code="{{ voucher.ma_voucher }}">
+                                <i class="far fa-copy me-1"></i> Sao chép mã
+                            </button>
+                            <a href="{% url 'bookings:booking_step1' %}?voucher={{ voucher.ma_voucher }}" class="btn btn-gold btn-sm">
+                                <i class="fas fa-shopping-cart me-1"></i> Dùng ngay
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-ticket-alt fa-4x text-muted mb-3"></i>
+            <h4 class="text-muted">Hiện tại chưa có chương trình khuyến mãi nào</h4>
+            <p class="text-muted">Hãy quay lại sau để không bỏ lỡ ưu đãi!</p>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<!-- Points Rewards -->
+{% if request.session.user_id %}
+<section class="py-5 bg-light">
+    <div class="container">
+        <h2 class="section-title text-start mb-4">
+            <i class="fas fa-star text-warning me-2"></i> Đổi Điểm Lấy Voucher
+        </h2>
+        
+        <div class="alert alert-info mb-4">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-info-circle fa-2x me-3"></i>
+                <div>
+                    <strong>Điểm hiện có của bạn:</strong> 
+                    <span class="h4 text-primary ms-2">{{ user_points|default:0 }}</span> điểm
+                </div>
+            </div>
+        </div>
+        
+        {% if rewards %}
+        <div class="row g-4">
+            {% for reward in rewards %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card border-warning h-100">
+                    <div class="card-body">
+                        <div class="text-center mb-3">
+                            <i class="fas fa-gift fa-3x text-warning"></i>
+                        </div>
+                        
+                        <h5 class="card-title text-center">{{ reward.ten_thuong }}</h5>
+                        <p class="text-muted small text-center mb-3">{{ reward.mo_ta }}</p>
+                        
+                        <div class="text-center mb-3">
+                            <div class="h3 text-warning mb-0">
+                                {% if reward.loai_giam == 'phan_tram' %}
+                                {{ reward.gia_tri_giam }}% OFF
+                                {% else %}
+                                {{ reward.gia_tri_giam|floatformat:0 }}đ
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <small class="text-muted d-block">
+                                <i class="fas fa-coins me-1"></i> 
+                                Cần <strong class="text-warning">{{ reward.diem_yeu_cau }}</strong> điểm
+                            </small>
+                            <small class="text-muted d-block">
+                                <i class="far fa-calendar me-1"></i> 
+                                Hạn dùng: <strong>{{ reward.thoi_han_su_dung }} ngày</strong>
+                            </small>
+                        </div>
+                        
+                        {% if user_points >= reward.diem_yeu_cau %}
+                        <button class="btn btn-warning w-100 redeem-btn" 
+                                data-reward-id="{{ reward.id }}" 
+                                data-points-required="{{ reward.diem_yeu_cau }}">
+                            <i class="fas fa-exchange-alt me-1"></i> Đổi ngay
+                        </button>
+                        {% else %}
+                        <button class="btn btn-secondary w-100" disabled>
+                            <i class="fas fa-lock me-1"></i> Chưa đủ điểm
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <p class="text-muted">Chưa có phần thưởng nào</p>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endif %}
+
+<!-- Special Offers -->
+<section class="py-5">
+    <div class="container">
+        <h2 class="section-title text-center mb-5">Ưu Đãi Đặc Biệt</h2>
+        
+        <div class="row g-4">
+            <!-- New Customer Offer -->
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body text-center p-4">
+                        <div class="mb-3">
+                            <i class="fas fa-user-plus fa-4x text-primary"></i>
+                        </div>
+                        <h4>Khách Hàng Mới</h4>
+                        <p class="text-muted mb-3">Giảm 20% cho lần đầu sử dụng dịch vụ</p>
+                        <div class="h3 text-primary mb-3">20% OFF</div>
+                        <a href="{% url 'accounts:register' %}" class="btn btn-primary">
+                            Đăng ký ngay
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Birthday Offer -->
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body text-center p-4">
+                        <div class="mb-3">
+                            <i class="fas fa-birthday-cake fa-4x text-warning"></i>
+                        </div>
+                        <h4>Sinh Nhật</h4>
+                        <p class="text-muted mb-3">Tặng voucher 50K trong tháng sinh nhật</p>
+                        <div class="h3 text-warning mb-3">50,000đ</div>
+                        <a href="{% url 'bookings:booking_step1' %}" class="btn btn-warning">
+                            Đặt lịch ngay
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Referral Offer -->
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body text-center p-4">
+                        <div class="mb-3">
+                            <i class="fas fa-users fa-4x text-success"></i>
+                        </div>
+                        <h4>Giới Thiệu Bạn Bè</h4>
+                        <p class="text-muted mb-3">Tặng 100 điểm cho bạn và người được giới thiệu</p>
+                        <div class="h3 text-success mb-3">100 điểm</div>
+                        {% if request.session.user_id %}
+                        <a href="{% url 'core:customer_profile' %}" class="btn btn-success">
+                            Xem mã giới thiệu
+                        </a>
+                        {% else %}
+                        <a href="{% url 'accounts:register' %}" class="btn btn-success">
+                            Đăng ký ngay
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- How to Use -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <h2 class="section-title text-center mb-5">Cách Sử Dụng Voucher</h2>
+        
+        <div class="row g-4">
+            <div class="col-md-3 text-center">
+                <div class="mb-3">
+                    <div class="bg-warning text-white rounded-circle mx-auto d-flex align-items-center justify-content-center" 
+                         style="width: 80px; height: 80px;">
+                        <span class="h2 mb-0">1</span>
+                    </div>
+                </div>
+                <h5>Chọn Voucher</h5>
+                <p class="text-muted">Sao chép mã voucher phù hợp</p>
+            </div>
+            
+            <div class="col-md-3 text-center">
+                <div class="mb-3">
+                    <div class="bg-warning text-white rounded-circle mx-auto d-flex align-items-center justify-content-center" 
+                         style="width: 80px; height: 80px;">
+                        <span class="h2 mb-0">2</span>
+                    </div>
+                </div>
+                <h5>Đặt Lịch</h5>
+                <p class="text-muted">Chọn dịch vụ và thời gian</p>
+            </div>
+            
+            <div class="col-md-3 text-center">
+                <div class="mb-3">
+                    <div class="bg-warning text-white rounded-circle mx-auto d-flex align-items-center justify-content-center" 
+                         style="width: 80px; height: 80px;">
+                        <span class="h2 mb-0">3</span>
+                    </div>
+                </div>
+                <h5>Nhập Mã</h5>
+                <p class="text-muted">Dán mã voucher khi thanh toán</p>
+            </div>
+            
+            <div class="col-md-3 text-center">
+                <div class="mb-3">
+                    <div class="bg-warning text-white rounded-circle mx-auto d-flex align-items-center justify-content-center" 
+                         style="width: 80px; height: 80px;">
+                        <span class="h2 mb-0">4</span>
+                    </div>
+                </div>
+                <h5>Nhận Ưu Đãi</h5>
+                <p class="text-muted">Giảm giá được áp dụng ngay</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Terms & Conditions -->
+<section class="py-5">
+    <div class="container">
+        <h2 class="section-title text-center mb-4">Điều Khoản & Điều Kiện</h2>
+        
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <ul class="mb-0">
+                    <li class="mb-2">Mỗi voucher chỉ sử dụng được 1 lần cho mỗi đơn hàng</li>
+                    <li class="mb-2">Voucher không được quy đổi thành tiền mặt</li>
+                    <li class="mb-2">Voucher phải được sử dụng trong thời hạn quy định</li>
+                    <li class="mb-2">Một số voucher có giá trị đơn hàng tối thiểu</li>
+                    <li class="mb-2">Giảm giá tối đa được quy định cho từng voucher</li>
+                    <li class="mb-2">Voucher dành cho khách hàng mới chỉ áp dụng cho lần đầu sử dụng dịch vụ</li>
+                    <li class="mb-2">Barbershop Hoàng Gia có quyền thay đổi hoặc hủy chương trình khuyến mãi mà không cần báo trước</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Alert Container for Copy Notification -->
+<div id="alert-container" class="position-fixed top-0 start-50 translate-middle-x mt-3" style="z-index: 9999;"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Copy voucher code
+    $('.copy-voucher-btn').click(function() {
+        const code = $(this).data('code');
+        
+        // Create temporary input
+        const tempInput = $('<input>');
+        $('body').append(tempInput);
+        tempInput.val(code).select();
+        document.execCommand('copy');
+        tempInput.remove();
+        
+        // Show success message
+        showAlert(`Đã sao chép mã: ${code}`, 'success');
+        
+        // Change button text temporarily
+        const btn = $(this);
+        const originalText = btn.html();
+        btn.html('<i class="fas fa-check me-1"></i> Đã sao chép');
+        setTimeout(() => {
+            btn.html(originalText);
+        }, 2000);
+    });
+});
+
+function showAlert(message, type = 'success') {
+    const alertHtml = `
+        <div class="alert alert-${type} alert-dismissible fade show shadow" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    $('#alert-container').html(alertHtml);
+    
+    setTimeout(() => {
+        $('.alert').fadeOut();
+    }, 3000);
+}
+</script>
+{% endblock %}

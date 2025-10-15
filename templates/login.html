@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đăng nhập - Hot Tóc Nam</title>
+    <title>Đăng nhập - Barbershop Hoàng Gia</title>
     
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -11,20 +11,24 @@
     <!-- Font Awesome 6 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
     <style>
         body {
-            background: linear-gradient(135deg, #8b4513 0%, #d2691e 100%);
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
-            justify-content: center;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px 0;
         }
         
         .login-container {
             max-width: 450px;
             width: 100%;
-            padding: 20px;
+            margin: 0 auto;
+            padding: 0 15px;
         }
         
         .login-card {
@@ -35,242 +39,233 @@
         }
         
         .login-header {
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            background: linear-gradient(135deg, #d4af37, #8b7355);
             color: white;
             padding: 40px 30px;
             text-align: center;
         }
         
-        .login-header i {
-            font-size: 4rem;
-            margin-bottom: 20px;
-            color: #d2691e;
-        }
-        
         .login-header h2 {
+            font-family: 'Playfair Display', serif;
             margin-bottom: 10px;
-            font-weight: 700;
         }
         
         .login-body {
             padding: 40px 30px;
         }
         
-        .form-floating {
-            margin-bottom: 20px;
-        }
-        
         .form-control {
-            border-radius: 10px;
-            border: 2px solid #e9ecef;
             padding: 12px 15px;
-            height: 55px;
+            border-radius: 10px;
+            border: 2px solid #e0e0e0;
         }
         
         .form-control:focus {
-            border-color: #8b4513;
-            box-shadow: 0 0 0 0.2rem rgba(139, 69, 19, 0.25);
-        }
-        
-        .form-floating label {
-            padding-left: 15px;
+            border-color: #d4af37;
+            box-shadow: 0 0 0 0.2rem rgba(212, 175, 55, 0.25);
         }
         
         .btn-login {
-            width: 100%;
-            padding: 15px;
-            border-radius: 10px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            background: linear-gradient(135deg, #8b4513 0%, #d2691e 100%);
+            background: linear-gradient(135deg, #d4af37, #8b7355);
             border: none;
-            color: white;
-            transition: all 0.3s ease;
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s;
         }
         
         .btn-login:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(139, 69, 19, 0.4);
+            box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4);
+        }
+        
+        .divider {
+            text-align: center;
+            margin: 20px 0;
+            position: relative;
+        }
+        
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #e0e0e0;
+            z-index: 0;
+        }
+        
+        .divider span {
+            background: white;
+            padding: 0 15px;
+            position: relative;
+            z-index: 1;
+            color: #999;
+        }
+        
+        .input-group-text {
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-right: none;
+        }
+        
+        .input-group .form-control {
+            border-left: none;
         }
         
         .role-selector {
             display: flex;
-            gap: 15px;
+            gap: 10px;
             margin-bottom: 25px;
         }
         
         .role-option {
             flex: 1;
-            padding: 15px;
-            border: 2px solid #dee2e6;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
             border-radius: 10px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.3s;
         }
         
         .role-option:hover {
-            border-color: #8b4513;
+            border-color: #d4af37;
             background: #f8f9fa;
         }
         
         .role-option.active {
-            border-color: #8b4513;
-            background: linear-gradient(135deg, #8b4513 0%, #d2691e 100%);
+            border-color: #d4af37;
+            background: linear-gradient(135deg, #d4af37, #8b7355);
             color: white;
         }
         
         .role-option i {
-            font-size: 2rem;
-            margin-bottom: 10px;
+            font-size: 1.5rem;
+            margin-bottom: 5px;
             display: block;
         }
         
-        .remember-forgot {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
+        .role-option strong {
             font-size: 0.9rem;
-        }
-        
-        .forgot-link {
-            color: #8b4513;
-            text-decoration: none;
-            font-weight: 600;
-        }
-        
-        .forgot-link:hover {
-            color: #d2691e;
-        }
-        
-        .login-footer {
-            text-align: center;
-            padding: 20px 30px;
-            background: #f8f9fa;
-            border-top: 1px solid #dee2e6;
-        }
-        
-        .demo-info {
-            background: #fff3cd;
-            border: 1px solid #ffc107;
-            border-radius: 10px;
-            padding: 15px;
-            margin-top: 20px;
-        }
-        
-        .demo-info h6 {
-            color: #856404;
-            margin-bottom: 10px;
-        }
-        
-        .demo-credentials {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            font-size: 0.85rem;
-        }
-        
-        .demo-item {
-            background: white;
-            padding: 10px;
-            border-radius: 5px;
-        }
-        
-        .demo-item strong {
-            color: #8b4513;
         }
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <div class="login-card">
-            <div class="login-header">
-                <i class="fas fa-cut"></i>
-                <h2>HOT TÓC NAM</h2>
-                <p class="mb-0">Hệ thống quản lý Barbershop</p>
-            </div>
-            
-            <div class="login-body">
-                <!-- Error Message -->
-                {% if error %}
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    <i class="fas fa-exclamation-triangle"></i> {{ error }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <div class="container">
+        <div class="login-container">
+            <div class="login-card">
+                <div class="login-header">
+                    <i class="fas fa-cut fa-3x mb-3"></i>
+                    <h2>Barbershop Hoàng Gia</h2>
+                    <p class="mb-0" id="loginSubtitle">Đăng nhập Nhân viên / Quản lý</p>
                 </div>
-                {% endif %}
                 
-                <form id="loginForm" method="POST" action="{% url 'login' %}">
-                    {% csrf_token %}
-                    
-                    <!-- Role Selection -->
-                    <div class="role-selector">
-                        <div class="role-option active" data-role="admin">
-                            <i class="fas fa-user-shield"></i>
-                            <strong>Chủ tiệm</strong>
+                <div class="login-body">
+                    <!-- Alert Container -->
+                    {% if messages %}
+                    <div class="mb-3">
+                        {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         </div>
-                        <div class="role-option" data-role="staff">
-                            <i class="fas fa-user-tie"></i>
-                            <strong>Nhân viên</strong>
-                        </div>
+                        {% endfor %}
                     </div>
-                    <input type="hidden" name="role" id="roleInput" value="admin">
+                    {% endif %}
                     
-                    <!-- Username -->
-                    <div class="form-floating">
-                        <input type="text" class="form-control" id="username" name="username" 
-                               placeholder="Tên đăng nhập" required autofocus>
-                        <label for="username">
-                            <i class="fas fa-user"></i> Tên đăng nhập
-                        </label>
-                    </div>
-                    
-                    <!-- Password -->
-                    <div class="form-floating">
-                        <input type="password" class="form-control" id="password" name="password" 
-                               placeholder="Mật khẩu" required>
-                        <label for="password">
-                            <i class="fas fa-lock"></i> Mật khẩu
-                        </label>
-                    </div>
-                    
-                    <!-- Remember & Forgot -->
-                    <div class="remember-forgot">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="remember" name="remember">
-                            <label class="form-check-label" for="remember">
-                                Ghi nhớ đăng nhập
-                            </label>
-                        </div>
-                        <a href="#" class="forgot-link">Quên mật khẩu?</a>
-                    </div>
-                    
-                    <!-- Submit Button -->
-                    <button type="submit" class="btn btn-login">
-                        <i class="fas fa-sign-in-alt"></i> Đăng nhập
-                    </button>
-                    
-                    <!-- Demo Info -->
-                    <div class="demo-info">
-                        <h6><i class="fas fa-info-circle"></i> Tài khoản demo:</h6>
-                        <div class="demo-credentials">
-                            <div class="demo-item">
-                                <strong>Quản lý:</strong><br>
-                                0901111111 / 123456
+                    <!-- Login Form -->
+                    <form method="POST" action="{% url 'staff_login' %}">
+                        {% csrf_token %}
+                        
+                        <!-- Role Selection -->
+                        <div class="role-selector">
+                            <div class="role-option active" data-role="nhan_vien">
+                                <i class="fas fa-user-tie"></i>
+                                <strong>Nhân viên</strong>
                             </div>
-                            <div class="demo-item">
-                                <strong>Nhân viên:</strong><br>
-                                0902222222 / 123456
+                            <div class="role-option" data-role="quan_ly">
+                                <i class="fas fa-user-shield"></i>
+                                <strong>Quản lý</strong>
                             </div>
                         </div>
+                        <input type="hidden" name="role" id="roleInput" value="nhan_vien">
+                        
+                        <!-- Phone/Email -->
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Số điện thoại hoặc Email</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-user"></i>
+                                </span>
+                                <input type="text" class="form-control" id="username" name="username" 
+                                       placeholder="0901234567 hoặc email@example.com" required autofocus>
+                            </div>
+                        </div>
+                        
+                        <!-- Password -->
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Mật khẩu</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-lock"></i>
+                                </span>
+                                <input type="password" class="form-control" id="password" name="password" 
+                                       placeholder="Nhập mật khẩu" required>
+                                <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                    <i class="far fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Remember Me & Forgot Password -->
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="remember" name="remember">
+                                <label class="form-check-label" for="remember">
+                                    Ghi nhớ đăng nhập
+                                </label>
+                            </div>
+                            <a href="{% url 'accounts:forgot_password' %}" class="text-decoration-none small">
+                                Quên mật khẩu?
+                            </a>
+                        </div>
+                        
+                        <!-- Submit Button -->
+                        <button type="submit" class="btn btn-login btn-primary w-100 mb-3">
+                            <i class="fas fa-sign-in-alt me-2"></i> Đăng nhập
+                        </button>
+                    </form>
+                    
+                    <!-- Divider -->
+                    <div class="divider">
+                        <span>hoặc</span>
                     </div>
-                </form>
+                    
+                    <!-- Customer Login Link -->
+                    <div class="text-center mb-3">
+                        <p class="mb-2 text-muted">Bạn là khách hàng?</p>
+                        <a href="{% url 'accounts:customer_login' %}" class="btn btn-outline-warning w-100">
+                            <i class="fas fa-user me-2"></i> Đăng nhập khách hàng
+                        </a>
+                    </div>
+                    
+                    <!-- Back to Home -->
+                    <div class="text-center mt-3">
+                        <a href="{% url 'core:home' %}" class="text-decoration-none text-muted small">
+                            <i class="fas fa-arrow-left me-1"></i> Về trang chủ
+                        </a>
+                    </div>
+                </div>
             </div>
             
-            <div class="login-footer">
-                <small class="text-muted">
-                    © 2025 Hot Tóc Nam. All rights reserved.
-                </small>
+            <!-- Quick Booking Link -->
+            <div class="text-center mt-3">
+                <p class="text-white mb-2">Khách vãng lai?</p>
+                <a href="{% url 'bookings:booking_step1' %}" class="btn btn-light">
+                    <i class="fas fa-calendar-plus me-2"></i> Đặt lịch nhanh
+                </a>
             </div>
         </div>
     </div>
@@ -279,7 +274,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     
     <script>
         $(document).ready(function() {
@@ -287,13 +282,30 @@
             $('.role-option').click(function() {
                 $('.role-option').removeClass('active');
                 $(this).addClass('active');
-                $('#roleInput').val($(this).data('role'));
+                const role = $(this).data('role');
+                $('#roleInput').val(role);
+                
+                // Update subtitle
+                if (role === 'quan_ly') {
+                    $('#loginSubtitle').text('Đăng nhập Quản lý');
+                } else {
+                    $('#loginSubtitle').text('Đăng nhập Nhân viên');
+                }
             });
             
-            // Auto-fill với số điện thoại thật từ database
-            // Có thể xóa phần này nếu không muốn auto-fill
-            $('#username').val('0901111111');
-            $('#password').val('123456');
+            // Toggle password visibility
+            $('#togglePassword').click(function() {
+                const password = $('#password');
+                const icon = $(this).find('i');
+                
+                if (password.attr('type') === 'password') {
+                    password.attr('type', 'text');
+                    icon.removeClass('fa-eye').addClass('fa-eye-slash');
+                } else {
+                    password.attr('type', 'password');
+                    icon.removeClass('fa-eye-slash').addClass('fa-eye');
+                }
+            });
         });
     </script>
 </body>

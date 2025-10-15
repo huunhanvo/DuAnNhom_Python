@@ -1,0 +1,232 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Barbershop Hoàng Gia{% endblock %}</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'css/customer.css' %}">
+    
+    <!-- Inline CSS for Navigation -->
+    <style>
+        /* Navigation styling */
+        .navbar-nav .nav-item {
+            margin: 0 3px;
+        }
+        
+        /* Login/Register buttons */
+        .navbar-nav .btn {
+            white-space: nowrap;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin: 5px 3px;
+        }
+        
+        .navbar-nav .btn-outline-warning:hover {
+            background-color: #ffc107;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3);
+        }
+        
+        .navbar-nav .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+        }
+        
+        /* Mobile responsive */
+        @media (max-width: 991px) {
+            .navbar-nav .nav-item {
+                margin: 5px 0;
+            }
+            .navbar-nav .btn {
+                display: block;
+                width: 100%;
+                margin: 5px 0;
+            }
+        }
+        
+        /* Ensure visibility */
+        .navbar-nav .nav-link,
+        .navbar-nav .btn {
+            display: inline-block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Header/Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'core:home' %}">
+                <i class="fas fa-cut me-2"></i>
+                <span class="brand-text">Barbershop Hoàng Gia</span>
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-lg-center">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}" 
+                           href="{% url 'core:home' %}">
+                            <i class="fas fa-home me-1"></i> Trang chủ
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'about' %}active{% endif %}" 
+                           href="{% url 'core:about' %}">
+                            <i class="fas fa-info-circle me-1"></i> Giới thiệu
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'services' %}active{% endif %}" 
+                           href="{% url 'core:services' %}">
+                            <i class="fas fa-concierge-bell me-1"></i> Dịch vụ
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'stylists' %}active{% endif %}" 
+                           href="{% url 'core:stylists' %}">
+                            <i class="fas fa-users me-1"></i> Stylist
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'promotions' %}active{% endif %}" 
+                           href="{% url 'core:promotions' %}">
+                            <i class="fas fa-gift me-1"></i> Khuyến mãi
+                        </a>
+                    </li>
+                    
+                    {% if not request.session.user_id or request.session.vai_tro != 'khach_hang' %}
+                        <!-- Not logged in as customer - Show Login/Register buttons -->
+                        <li class="nav-item">
+                            <a class="btn btn-outline-warning btn-sm me-2 px-3" href="{% url 'accounts:customer_login' %}" style="border-radius: 20px; line-height: 1.5;">
+                                <i class="fas fa-sign-in-alt me-1"></i> Đăng nhập
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="btn btn-success btn-sm px-3" href="{% url 'accounts:register' %}" style="border-radius: 20px; line-height: 1.5;">
+                                <i class="fas fa-user-plus me-1"></i> Đăng ký
+                            </a>
+                        </li>
+                    {% else %}
+                        <!-- Logged in user - Show dropdown menu -->
+                        {% if request.session.vai_tro == 'khach_hang' %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-user-circle me-1"></i> {{ request.session.ho_ten }}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="{% url 'core:customer_dashboard' %}">
+                                    <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'core:customer_bookings' %}">
+                                    <i class="fas fa-calendar-check me-2"></i> Lịch hẹn
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'core:customer_rewards' %}">
+                                    <i class="fas fa-star me-2"></i> Điểm & Voucher
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'core:customer_profile' %}">
+                                    <i class="fas fa-user-cog me-2"></i> Thông tin cá nhân
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="{% url 'accounts:customer_logout' %}">
+                                    <i class="fas fa-sign-out-alt me-2"></i> Đăng xuất
+                                </a></li>
+                            </ul>
+                        </li>
+                        {% endif %}
+                    {% endif %}
+                    
+                    <li class="nav-item ms-lg-2">
+                        <a class="btn btn-warning btn-sm booking-btn" href="{% url 'bookings:booking_step1' %}">
+                            <i class="fas fa-calendar-plus me-1"></i> Đặt lịch ngay
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white pt-5 pb-3 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-4 mb-4">
+                    <h5 class="text-warning mb-3">
+                        <i class="fas fa-cut me-2"></i> Barbershop Hoàng Gia
+                    </h5>
+                    <p class="text-light">Phong cách nam tính - Đẳng cấp hoàng gia. Chúng tôi cam kết mang đến trải nghiệm cắt tóc tốt nhất cho quý khách.</p>
+                    <div class="social-links mt-3">
+                        <a href="#" class="text-white me-3"><i class="fab fa-facebook fa-lg"></i></a>
+                        <a href="#" class="text-white me-3"><i class="fab fa-instagram fa-lg"></i></a>
+                        <a href="#" class="text-white me-3"><i class="fab fa-tiktok fa-lg"></i></a>
+                        <a href="#" class="text-white"><i class="fab fa-youtube fa-lg"></i></a>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4 mb-4">
+                    <h5 class="text-warning mb-3">Liên hệ</h5>
+                    <ul class="list-unstyled text-light">
+                        <li class="mb-2"><i class="fas fa-map-marker-alt me-2 text-warning"></i> 123 Đường Lê Lợi, Quận 1, TP.HCM</li>
+                        <li class="mb-2"><i class="fas fa-phone me-2 text-warning"></i> 0901234567</li>
+                        <li class="mb-2"><i class="fas fa-envelope me-2 text-warning"></i> contact@barbershop.vn</li>
+                        <li class="mb-2"><i class="fas fa-clock me-2 text-warning"></i> 08:00 - 21:00 (Hàng ngày)</li>
+                    </ul>
+                </div>
+                
+                <div class="col-lg-4 mb-4">
+                    <h5 class="text-warning mb-3">Liên kết nhanh</h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="{% url 'core:home' %}" class="text-light text-decoration-none"><i class="fas fa-chevron-right me-2"></i> Trang chủ</a></li>
+                        <li class="mb-2"><a href="{% url 'core:services' %}" class="text-light text-decoration-none"><i class="fas fa-chevron-right me-2"></i> Dịch vụ</a></li>
+                        <li class="mb-2"><a href="{% url 'core:stylists' %}" class="text-light text-decoration-none"><i class="fas fa-chevron-right me-2"></i> Stylist</a></li>
+                        <li class="mb-2"><a href="{% url 'bookings:booking_step1' %}" class="text-light text-decoration-none"><i class="fas fa-chevron-right me-2"></i> Đặt lịch</a></li>
+                        <li class="mb-2"><a href="{% url 'core:promotions' %}" class="text-light text-decoration-none"><i class="fas fa-chevron-right me-2"></i> Khuyến mãi</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <hr class="border-secondary">
+            
+            <div class="row">
+                <div class="col-12 text-center text-light">
+                    <p class="mb-0">&copy; 2025 Barbershop Hoàng Gia. All rights reserved.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS & Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- Custom JS -->
+    <script src="{% static 'js/customer.js' %}"></script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

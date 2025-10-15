@@ -1,0 +1,516 @@
+{% extends 'customer/base_customer.html' %}
+{% load static %}
+
+{% block title %}Điểm tích lũy & Voucher - Barbershop Hoàng Gia{% endblock %}
+
+{% block content %}
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-lg-3 mb-4">
+                {% include 'customer/includes/dashboard_sidebar.html' with active='rewards' %}
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-lg-9">
+                <!-- Points Summary Card -->
+                <div class="card border-0 shadow-lg mb-4 bg-gradient-gold">
+                    <div class="card-body p-4">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h5 class="text-white mb-2">Điểm tích lũy của bạn</h5>
+                                <h1 class="text-white fw-bold mb-3">
+                                    <i class="fas fa-star me-2"></i> {{ user.diem_tich_luy|default:0 }} điểm
+                                </h1>
+                                <p class="text-white-50 mb-0">
+                                    Tương đương: <strong class="text-white">{{ equivalent_money|floatformat:0 }}đ</strong>
+                                    <small class="ms-2">(100 điểm = 10,000đ)</small>
+                                </p>
+                            </div>
+                            <div class="col-md-4 text-md-end">
+                                <div class="points-icon">
+                                    <i class="fas fa-coins fa-4x text-white opacity-25"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <ul class="nav nav-pills mb-4" id="rewardsTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="points-tab" data-bs-toggle="pill" 
+                                data-bs-target="#points" type="button" role="tab">
+                            <i class="fas fa-star me-2"></i> Điểm tích lũy
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="vouchers-tab" data-bs-toggle="pill" 
+                                data-bs-target="#vouchers" type="button" role="tab">
+                            <i class="fas fa-gift me-2"></i> Voucher của tôi
+                            <span class="badge bg-danger ms-1">{{ available_vouchers_count }}</span>
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="rewards-shop-tab" data-bs-toggle="pill" 
+                                data-bs-target="#rewards-shop" type="button" role="tab">
+                            <i class="fas fa-shopping-bag me-2"></i> Đổi quà
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Tab Content -->
+                <div class="tab-content" id="rewardsTabsContent">
+                    <!-- Points Tab -->
+                    <div class="tab-pane fade show active" id="points" role="tabpanel">
+                        <!-- Points Progress -->
+                        <div class="card border-0 shadow-sm mb-4">
+                            <div class="card-body p-4">
+                                <h5 class="fw-bold mb-3">Hạng thành viên</h5>
+                                <div class="membership-tier mb-4">
+                                    <div class="tier-info mb-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span class="tier-name">{{ current_tier.name }}</span>
+                                            <span class="tier-next">{{ next_tier.name }}</span>
+                                        </div>
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar bg-warning" role="progressbar" 
+                                                 style="width: {{ tier_progress }}%">
+                                                {{ tier_progress }}%
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p class="text-muted small mb-0">
+                                        Còn <strong>{{ points_to_next_tier }}</strong> điểm nữa để lên hạng {{ next_tier.name }}
+                                    </p>
+                                </div>
+
+                                <!-- Tier Benefits -->
+                                <h6 class="fw-bold mb-3">Quyền lợi hạng {{ current_tier.name }}:</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="benefit-item">
+                                            <i class="fas fa-check-circle text-success me-2"></i>
+                                            Tích điểm {{ current_tier.point_rate }}% mỗi lần sử dụng
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="benefit-item">
+                                            <i class="fas fa-check-circle text-success me-2"></i>
+                                            Giảm {{ current_tier.discount }}% tất cả dịch vụ
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="benefit-item">
+                                            <i class="fas fa-check-circle text-success me-2"></i>
+                                            Ưu tiên đặt lịch
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="benefit-item">
+                                            <i class="fas fa-check-circle text-success me-2"></i>
+                                            Voucher sinh nhật đặc biệt
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Points History -->
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-white py-3">
+                                <h5 class="mb-0 fw-bold">Lịch sử điểm tích lũy</h5>
+                            </div>
+                            <div class="card-body p-4">
+                                {% if points_history %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Ngày</th>
+                                                <th>Nội dung</th>
+                                                <th class="text-end">Điểm</th>
+                                                <th class="text-end">Số dư</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for transaction in points_history %}
+                                            <tr>
+                                                <td>{{ transaction.ngay_tao|date:'d/m/Y H:i' }}</td>
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <i class="fas fa-{{ transaction.icon }} text-{{ transaction.color }} me-2"></i>
+                                                        {{ transaction.mo_ta }}
+                                                    </div>
+                                                </td>
+                                                <td class="text-end">
+                                                    <span class="badge bg-{{ transaction.color }}">
+                                                        {% if transaction.loai == 'cong' %}+{% else %}-{% endif %}{{ transaction.so_diem }}
+                                                    </span>
+                                                </td>
+                                                <td class="text-end fw-bold">{{ transaction.so_du }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% else %}
+                                <div class="text-center text-muted py-4">
+                                    <i class="fas fa-inbox fa-3x mb-3"></i>
+                                    <p>Chưa có giao dịch nào</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Vouchers Tab -->
+                    <div class="tab-pane fade" id="vouchers" role="tabpanel">
+                        <!-- Available Vouchers -->
+                        <div class="card border-0 shadow-sm mb-4">
+                            <div class="card-header bg-white py-3">
+                                <h5 class="mb-0 fw-bold">
+                                    <i class="fas fa-ticket-alt text-warning me-2"></i>
+                                    Voucher khả dụng ({{ available_vouchers_count }})
+                                </h5>
+                            </div>
+                            <div class="card-body p-4">
+                                {% if available_vouchers %}
+                                <div class="row g-3">
+                                    {% for voucher in available_vouchers %}
+                                    <div class="col-md-6">
+                                        <div class="voucher-card available">
+                                            <div class="voucher-left">
+                                                <div class="voucher-discount">
+                                                    {% if voucher.loai == 'phan_tram' %}
+                                                        {{ voucher.gia_tri }}%
+                                                    {% else %}
+                                                        {{ voucher.gia_tri|floatformat:0 }}đ
+                                                    {% endif %}
+                                                </div>
+                                                <div class="voucher-type">OFF</div>
+                                            </div>
+                                            <div class="voucher-right">
+                                                <h6 class="voucher-name">{{ voucher.ten }}</h6>
+                                                <p class="voucher-desc">{{ voucher.mo_ta|truncatewords:10 }}</p>
+                                                <div class="voucher-code mb-2">
+                                                    <span class="code">{{ voucher.ma }}</span>
+                                                    <button type="button" class="btn-copy" data-code="{{ voucher.ma }}">
+                                                        <i class="far fa-copy"></i>
+                                                    </button>
+                                                </div>
+                                                <div class="voucher-expiry">
+                                                    <i class="far fa-clock me-1"></i>
+                                                    HSD: {{ voucher.ngay_het_han|date:'d/m/Y' }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                <div class="text-center text-muted py-4">
+                                    <i class="far fa-frown fa-3x mb-3"></i>
+                                    <p>Bạn chưa có voucher nào</p>
+                                    <a href="#rewards-shop" class="btn btn-gold" data-bs-toggle="pill">
+                                        Đổi voucher ngay
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Used/Expired Vouchers -->
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-white py-3">
+                                <h5 class="mb-0 fw-bold">
+                                    <i class="fas fa-history text-muted me-2"></i>
+                                    Voucher đã sử dụng/hết hạn
+                                </h5>
+                            </div>
+                            <div class="card-body p-4">
+                                {% if used_vouchers %}
+                                <div class="row g-3">
+                                    {% for voucher in used_vouchers %}
+                                    <div class="col-md-6">
+                                        <div class="voucher-card expired">
+                                            <div class="voucher-left">
+                                                <div class="voucher-discount">
+                                                    {% if voucher.loai == 'phan_tram' %}
+                                                        {{ voucher.gia_tri }}%
+                                                    {% else %}
+                                                        {{ voucher.gia_tri|floatformat:0 }}đ
+                                                    {% endif %}
+                                                </div>
+                                                <div class="voucher-type">OFF</div>
+                                            </div>
+                                            <div class="voucher-right">
+                                                <h6 class="voucher-name">{{ voucher.ten }}</h6>
+                                                <p class="voucher-desc">{{ voucher.mo_ta|truncatewords:10 }}</p>
+                                                <span class="badge bg-secondary">Đã sử dụng</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                <div class="text-center text-muted py-4">
+                                    <p>Chưa có voucher đã sử dụng</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Rewards Shop Tab -->
+                    <div class="tab-pane fade" id="rewards-shop" role="tabpanel">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-white py-3">
+                                <h5 class="mb-0 fw-bold">
+                                    <i class="fas fa-gifts text-primary me-2"></i>
+                                    Đổi điểm lấy quà
+                                </h5>
+                            </div>
+                            <div class="card-body p-4">
+                                <div class="row g-4">
+                                    {% for reward in rewards_catalog %}
+                                    <div class="col-md-6">
+                                        <div class="reward-item">
+                                            {% if reward.hinh_anh %}
+                                            <img src="{{ reward.hinh_anh }}" alt="{{ reward.ten }}" class="reward-image">
+                                            {% else %}
+                                            <div class="reward-image-placeholder">
+                                                <i class="fas fa-gift fa-3x text-muted"></i>
+                                            </div>
+                                            {% endif %}
+                                            <div class="reward-content">
+                                                <h6 class="fw-bold mb-2">{{ reward.ten }}</h6>
+                                                <p class="text-muted small mb-2">{{ reward.mo_ta }}</p>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <div class="reward-points">
+                                                        <i class="fas fa-star text-warning me-1"></i>
+                                                        <strong>{{ reward.diem_can_thiet }}</strong> điểm
+                                                    </div>
+                                                    {% if user.diem_tich_luy >= reward.diem_can_thiet %}
+                                                    <button type="button" class="btn btn-sm btn-gold redeem-reward" 
+                                                            data-reward-id="{{ reward.id }}">
+                                                        <i class="fas fa-exchange-alt me-1"></i> Đổi ngay
+                                                    </button>
+                                                    {% else %}
+                                                    <button type="button" class="btn btn-sm btn-secondary" disabled>
+                                                        Không đủ điểm
+                                                    </button>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% empty %}
+                                    <div class="col-12 text-center text-muted py-4">
+                                        <i class="fas fa-inbox fa-3x mb-3"></i>
+                                        <p>Chưa có quà tặng nào</p>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+.bg-gradient-gold {
+    background: linear-gradient(135deg, #d4af37, #8b7355);
+}
+
+.nav-pills .nav-link {
+    border-radius: 10px;
+    padding: 12px 20px;
+    color: #666;
+}
+
+.nav-pills .nav-link.active {
+    background: linear-gradient(135deg, #d4af37, #8b7355);
+}
+
+.membership-tier {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 12px;
+}
+
+.tier-name, .tier-next {
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.benefit-item {
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.voucher-card {
+    display: flex;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    transition: all 0.3s;
+}
+
+.voucher-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+}
+
+.voucher-card.available {
+    background: linear-gradient(135deg, #d4af37, #8b7355);
+    color: white;
+}
+
+.voucher-card.expired {
+    background: #e9ecef;
+    color: #6c757d;
+    opacity: 0.7;
+}
+
+.voucher-left {
+    padding: 20px;
+    text-align: center;
+    min-width: 100px;
+    background: rgba(0,0,0,0.1);
+}
+
+.voucher-discount {
+    font-size: 2rem;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.voucher-type {
+    font-size: 0.8rem;
+    margin-top: 5px;
+}
+
+.voucher-right {
+    flex: 1;
+    padding: 20px;
+}
+
+.voucher-name {
+    font-size: 1.1rem;
+    margin-bottom: 5px;
+}
+
+.voucher-desc {
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+    opacity: 0.9;
+}
+
+.voucher-code {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.voucher-code .code {
+    background: rgba(0,0,0,0.2);
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-family: monospace;
+    font-weight: bold;
+}
+
+.btn-copy {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 5px;
+}
+
+.voucher-expiry {
+    font-size: 0.85rem;
+    opacity: 0.9;
+}
+
+.reward-item {
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s;
+}
+
+.reward-item:hover {
+    border-color: #d4af37;
+}
+
+.reward-image, .reward-image-placeholder {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+    background: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.reward-content {
+    padding: 15px;
+}
+
+.reward-points {
+    color: #666;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Copy voucher code
+    $('.btn-copy').click(function() {
+        const code = $(this).data('code');
+        navigator.clipboard.writeText(code).then(() => {
+            $(this).html('<i class="fas fa-check"></i>');
+            setTimeout(() => {
+                $(this).html('<i class="far fa-copy"></i>');
+            }, 2000);
+        });
+    });
+
+    // Redeem reward
+    $('.redeem-reward').click(function() {
+        const rewardId = $(this).data('reward-id');
+        
+        if (confirm('Bạn có chắc chắn muốn đổi quà này?')) {
+            $.ajax({
+                url: '/customer/rewards/' + rewardId + '/redeem/',
+                method: 'POST',
+                data: {
+                    reward_id: rewardId,
+                    csrfmiddlewaretoken: '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        alert('Đổi quà thành công! Vui lòng kiểm tra voucher của bạn.');
+                        location.reload();
+                    } else {
+                        alert(response.message || 'Có lỗi xảy ra');
+                    }
+                },
+                error: function() {
+                    alert('Có lỗi xảy ra. Vui lòng thử lại!');
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

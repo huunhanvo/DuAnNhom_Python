@@ -1,0 +1,245 @@
+{% extends 'customer/base_customer.html' %}
+{% load static %}
+
+{% block title %}Đăng nhập - Barbershop Hoàng Gia{% endblock %}
+
+{% block content %}
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-5 col-md-7">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-5">
+                        <!-- Header -->
+                        <div class="text-center mb-4">
+                            <i class="fas fa-sign-in-alt fa-3x text-warning mb-3"></i>
+                            <h2 class="fw-bold">Đăng Nhập</h2>
+                            <p class="text-muted">Đăng nhập để đặt lịch và tích điểm</p>
+                        </div>
+
+                        <!-- Alert Container -->
+                        <div id="alert-container"></div>
+
+                        <!-- Login Form -->
+                        <form id="loginForm" method="POST" action="{% url 'accounts:customer_login' %}" class="needs-validation" novalidate>
+                            {% csrf_token %}
+                            
+                            <!-- Phone Number -->
+                            <div class="mb-3">
+                                <label for="so_dien_thoai" class="form-label">
+                                    <i class="fas fa-phone me-1"></i> Số điện thoại <span class="text-danger">*</span>
+                                </label>
+                                <input type="tel" class="form-control form-control-lg" id="so_dien_thoai" name="so_dien_thoai" 
+                                       placeholder="0901234567" required autofocus>
+                                <div class="invalid-feedback">Vui lòng nhập số điện thoại</div>
+                            </div>
+
+                            <!-- Password -->
+                            <div class="mb-3">
+                                <label for="mat_khau" class="form-label">
+                                    <i class="fas fa-lock me-1"></i> Mật khẩu <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control form-control-lg" id="mat_khau" name="mat_khau" 
+                                           placeholder="Nhập mật khẩu" required>
+                                    <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                        <i class="fas fa-eye" id="toggleIcon"></i>
+                                    </button>
+                                </div>
+                                <div class="invalid-feedback">Vui lòng nhập mật khẩu</div>
+                            </div>
+
+                            <!-- Remember Me & Forgot Password -->
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="remember_me" name="remember_me">
+                                    <label class="form-check-label" for="remember_me">
+                                        Ghi nhớ đăng nhập
+                                    </label>
+                                </div>
+                                <a href="{% url 'accounts:forgot_password' %}" class="text-decoration-none">
+                                    <small>Quên mật khẩu?</small>
+                                </a>
+                            </div>
+
+                            <!-- Submit Button -->
+                            <button type="submit" class="btn btn-warning btn-lg w-100 mb-3" id="submitBtn">
+                                <i class="fas fa-sign-in-alt me-2"></i> Đăng Nhập
+                            </button>
+
+                            <!-- Divider -->
+                            <div class="text-center my-3">
+                                <span class="text-muted">hoặc</span>
+                            </div>
+
+                            <!-- Register Link -->
+                            <div class="text-center">
+                                <p class="mb-0">
+                                    Chưa có tài khoản? 
+                                    <a href="{% url 'accounts:register' %}" class="text-warning fw-bold text-decoration-none">
+                                        Đăng ký ngay
+                                    </a>
+                                </p>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Benefits Info -->
+                <div class="card border-0 shadow-sm mt-4 bg-warning bg-opacity-10">
+                    <div class="card-body">
+                        <h6 class="fw-bold mb-3">
+                            <i class="fas fa-gift text-warning me-2"></i> Ưu đãi dành cho thành viên:
+                        </h6>
+                        <ul class="list-unstyled mb-0">
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i> 
+                                Tích điểm mỗi lần sử dụng dịch vụ
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i> 
+                                Nhận voucher giảm giá độc quyền
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i> 
+                                Đặt lịch online nhanh chóng
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i> 
+                                Ưu tiên chọn stylist yêu thích
+                            </li>
+                            <li class="mb-0">
+                                <i class="fas fa-check-circle text-success me-2"></i> 
+                                Theo dõi lịch sử cắt tóc
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+    .form-control-lg {
+        border-radius: 8px;
+    }
+    
+    .btn-lg {
+        border-radius: 8px;
+        font-weight: 600;
+    }
+    
+    .card {
+        border-radius: 15px;
+    }
+    
+    .form-control:focus {
+        border-color: #ffc107;
+        box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const loginForm = document.getElementById('loginForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const alertContainer = document.getElementById('alert-container');
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordInput = document.getElementById('mat_khau');
+    const toggleIcon = document.getElementById('toggleIcon');
+
+    // Toggle password visibility
+    if (togglePassword) {
+        togglePassword.addEventListener('click', function() {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            
+            // Toggle icon
+            if (type === 'text') {
+                toggleIcon.classList.remove('fa-eye');
+                toggleIcon.classList.add('fa-eye-slash');
+            } else {
+                toggleIcon.classList.remove('fa-eye-slash');
+                toggleIcon.classList.add('fa-eye');
+            }
+        });
+    }
+
+    // Form validation
+    loginForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        // Clear previous alerts
+        alertContainer.innerHTML = '';
+
+        // Validate form
+        if (!loginForm.checkValidity()) {
+            loginForm.classList.add('was-validated');
+            return;
+        }
+
+        // Get form data
+        const formData = new FormData(loginForm);
+        
+        // Disable submit button
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Đang xử lý...';
+
+        // Submit form
+        fetch(loginForm.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show success message
+                alertContainer.innerHTML = `
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="fas fa-check-circle me-2"></i> ${data.message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `;
+
+                // Redirect after 1 second
+                setTimeout(() => {
+                    window.location.href = data.redirect || '/';
+                }, 1000);
+            } else {
+                // Show error message
+                alertContainer.innerHTML = `
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-circle me-2"></i> ${data.message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `;
+
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i> Đăng Nhập';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alertContainer.innerHTML = `
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-circle me-2"></i> Có lỗi xảy ra. Vui lòng thử lại sau.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+
+            // Re-enable submit button
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i> Đăng Nhập';
+        });
+    });
+
+    // Auto-focus on phone input
+    document.getElementById('so_dien_thoai').focus();
+});
+</script>
+{% endblock %}

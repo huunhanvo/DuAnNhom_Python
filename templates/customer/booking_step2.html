@@ -1,0 +1,394 @@
+{% extends 'customer/base_customer.html' %}
+{% load static %}
+
+{% block title %}Đặt lịch - Bước 2: Chọn thợ & thời gian{% endblock %}
+
+{% block content %}
+<section class="py-5 bg-light">
+    <div class="container">
+        <!-- Booking Wizard -->
+        <div class="booking-wizard mb-5">
+            <div class="wizard-step completed">
+                <div class="step-number"><i class="fas fa-check"></i></div>
+                <div class="step-title">Chọn dịch vụ</div>
+            </div>
+            <div class="wizard-step active">
+                <div class="step-number">2</div>
+                <div class="step-title">Chọn stylist & thời gian</div>
+            </div>
+            <div class="wizard-step">
+                <div class="step-number">3</div>
+                <div class="step-title">Xác nhận & Hoàn tất</div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Stylist & Time Selection -->
+            <div class="col-lg-8">
+                <!-- Stylist Selection -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white py-3">
+                        <h4 class="mb-0">
+                            <i class="fas fa-user-tie me-2 text-warning"></i> Chọn thợ cắt tóc
+                        </h4>
+                    </div>
+                    <div class="card-body p-4">
+                        <!-- Any Stylist Option -->
+                        <div class="form-check mb-3 p-3 border rounded stylist-option">
+                            <input class="form-check-input" type="radio" name="stylist" 
+                                   id="anyStylist" value="any" checked>
+                            <label class="form-check-label w-100" for="anyStylist">
+                                <div class="d-flex align-items-center">
+                                    <div class="stylist-avatar bg-secondary text-white me-3">
+                                        <i class="fas fa-random"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-1">Thợ bất kỳ</h6>
+                                        <p class="text-muted small mb-0">
+                                            Hệ thống sẽ tự động chọn thợ phù hợp
+                                        </p>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Stylist List -->
+                        <div class="row g-3">
+                            {% for stylist in stylists %}
+                            <div class="col-md-6">
+                                <div class="form-check p-3 border rounded stylist-option">
+                                    <input class="form-check-input" type="radio" name="stylist" 
+                                           id="stylist{{ stylist.id }}" value="{{ stylist.id }}">
+                                    <label class="form-check-label w-100" for="stylist{{ stylist.id }}">
+                                        <div class="d-flex align-items-center">
+                                            {% if stylist.anh_dai_dien %}
+                                            <img src="{{ stylist.anh_dai_dien }}" alt="{{ stylist.ho_ten }}" 
+                                                 class="stylist-avatar me-3">
+                                            {% else %}
+                                            <div class="stylist-avatar bg-primary text-white me-3">
+                                                {{ stylist.ho_ten|slice:":1"|upper }}
+                                            </div>
+                                            {% endif %}
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-1">{{ stylist.ho_ten }}</h6>
+                                                <div class="mb-1">
+                                                    <span class="text-warning">
+                                                        {% for i in "12345" %}
+                                                        {% if forloop.counter <= stylist.danh_gia_trung_binh %}
+                                                        <i class="fas fa-star"></i>
+                                                        {% else %}
+                                                        <i class="far fa-star"></i>
+                                                        {% endif %}
+                                                        {% endfor %}
+                                                    </span>
+                                                    <span class="text-muted small">
+                                                        ({{ stylist.danh_gia_trung_binh }})
+                                                    </span>
+                                                </div>
+                                                <p class="text-muted small mb-0">
+                                                    {{ stylist.chuyen_mon }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Date Selection -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white py-3">
+                        <h4 class="mb-0">
+                            <i class="fas fa-calendar me-2 text-warning"></i> Chọn ngày
+                        </h4>
+                    </div>
+                    <div class="card-body p-4">
+                        <input type="date" class="form-control form-control-lg" id="bookingDate" 
+                               min="{{ today|date:'Y-m-d' }}" value="{{ today|date:'Y-m-d' }}">
+                    </div>
+                </div>
+
+                <!-- Time Slots -->
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white py-3">
+                        <h4 class="mb-0">
+                            <i class="fas fa-clock me-2 text-warning"></i> Chọn giờ
+                        </h4>
+                    </div>
+                    <div class="card-body p-4">
+                        <div id="timeSlotsContainer">
+                            <div class="text-center text-muted py-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Đang tải...</span>
+                                </div>
+                                <p class="mt-2">Đang tải khung giờ...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary Sidebar -->
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm sticky-top" style="top: 100px;">
+                    <div class="card-header bg-warning text-dark py-3">
+                        <h5 class="mb-0">
+                            <i class="fas fa-clipboard-list me-2"></i> Chi tiết đặt lịch
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Selected Services -->
+                        <h6 class="fw-bold mb-3">Dịch vụ đã chọn:</h6>
+                        <div id="servicesSummary" class="mb-3">
+                            <!-- Populated by JavaScript -->
+                        </div>
+
+                        <hr>
+
+                        <!-- Selected Info -->
+                        <div class="mb-3">
+                            <small class="text-muted d-block mb-1">Thợ cắt:</small>
+                            <strong id="selectedStylistName">Thợ bất kỳ</strong>
+                        </div>
+
+                        <div class="mb-3">
+                            <small class="text-muted d-block mb-1">Ngày:</small>
+                            <strong id="selectedDate">{{ today|date:'d/m/Y' }}</strong>
+                        </div>
+
+                        <div class="mb-3">
+                            <small class="text-muted d-block mb-1">Giờ:</small>
+                            <strong id="selectedTime" class="text-danger">Chưa chọn</strong>
+                        </div>
+
+                        <hr>
+
+                        <!-- Price Summary -->
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Tổng tiền:</span>
+                            <strong class="text-success" id="totalPrice">0đ</strong>
+                        </div>
+
+                        <div class="d-flex justify-content-between mb-3">
+                            <span>Thời gian:</span>
+                            <strong id="totalDuration">0 phút</strong>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-outline-secondary" onclick="history.back()">
+                                <i class="fas fa-arrow-left me-2"></i> Quay lại
+                            </button>
+                            <button type="button" class="btn btn-gold" id="nextBtn" disabled>
+                                Tiếp tục <i class="fas fa-arrow-right ms-2"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    let selectedServices = [];
+    let selectedStylist = 'any';
+    let selectedDate = $('#bookingDate').val();
+    let selectedTimeSlot = null;
+
+    // Load selected services from session storage
+    const servicesData = sessionStorage.getItem('selectedServices');
+    if (servicesData) {
+        selectedServices = JSON.parse(servicesData);
+        displayServicesSummary();
+    } else {
+        window.location.href = "{% url 'bookings:booking_step1' %}";
+    }
+
+    // Display services summary
+    function displayServicesSummary() {
+        let html = '';
+        let totalPrice = 0;
+        let totalDuration = 0;
+
+        selectedServices.forEach(service => {
+            html += `
+                <div class="mb-2">
+                    <div class="small">${service.name}</div>
+                    <div class="text-success small">${formatMoney(service.price)}</div>
+                </div>
+            `;
+            totalPrice += service.price;
+            totalDuration += service.duration;
+        });
+
+        $('#servicesSummary').html(html);
+        $('#totalPrice').text(formatMoney(totalPrice));
+        $('#totalDuration').text(totalDuration + ' phút');
+    }
+
+    // Stylist selection change
+    $('input[name="stylist"]').change(function() {
+        selectedStylist = $(this).val();
+        
+        if (selectedStylist === 'any') {
+            $('#selectedStylistName').text('Thợ bất kỳ');
+        } else {
+            const stylistName = $(this).next('label').find('h6').text();
+            $('#selectedStylistName').text(stylistName);
+        }
+        
+        loadTimeSlots();
+    });
+
+    // Date change
+    $('#bookingDate').change(function() {
+        selectedDate = $(this).val();
+        const date = new Date(selectedDate);
+        $('#selectedDate').text(date.toLocaleDateString('vi-VN'));
+        loadTimeSlots();
+    });
+
+    // Load time slots via AJAX
+    function loadTimeSlots() {
+        $('#timeSlotsContainer').html(`
+            <div class="text-center text-muted py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Đang tải...</span>
+                </div>
+                <p class="mt-2">Đang tải khung giờ...</p>
+            </div>
+        `);
+
+        $.ajax({
+            url: "{% url 'bookings:get_time_slots' %}",
+            method: 'POST',
+            data: {
+                stylist_id: selectedStylist,
+                date: selectedDate,
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if (response.success) {
+                    displayTimeSlots(response.time_slots);
+                } else {
+                    $('#timeSlotsContainer').html(`
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            ${response.message || 'Không có khung giờ nào khả dụng'}
+                        </div>
+                    `);
+                }
+            },
+            error: function() {
+                $('#timeSlotsContainer').html(`
+                    <div class="alert alert-danger">
+                        <i class="fas fa-times-circle me-2"></i>
+                        Có lỗi xảy ra khi tải khung giờ
+                    </div>
+                `);
+            }
+        });
+    }
+
+    // Display time slots
+    function displayTimeSlots(timeSlots) {
+        if (!timeSlots || timeSlots.length === 0) {
+            $('#timeSlotsContainer').html(`
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Không có khung giờ nào khả dụng
+                </div>
+            `);
+            return;
+        }
+
+        let html = '<div class="time-slots-grid">';
+        
+        timeSlots.forEach(slot => {
+            const disabled = !slot.available ? 'disabled' : '';
+            const className = !slot.available ? 'disabled' : '';
+            
+            html += `
+                <div class="time-slot ${className}" data-time="${slot.time}" ${disabled}>
+                    <i class="far fa-clock me-1"></i>
+                    ${slot.time}
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        $('#timeSlotsContainer').html(html);
+
+        // Time slot click event
+        $('.time-slot:not(.disabled)').click(function() {
+            $('.time-slot').removeClass('selected');
+            $(this).addClass('selected');
+            selectedTimeSlot = $(this).data('time');
+            $('#selectedTime').text(selectedTimeSlot).removeClass('text-danger').addClass('text-success');
+            $('#nextBtn').prop('disabled', false);
+        });
+    }
+
+    // Next button
+    $('#nextBtn').click(function() {
+        if (!selectedTimeSlot) {
+            showAlert('Vui lòng chọn giờ', 'warning');
+            return;
+        }
+
+        // Create form and submit
+        const form = $('<form>', {
+            method: 'POST',
+            action: "{% url 'bookings:booking_step3' %}"
+        });
+        
+        // Add CSRF token
+        form.append($('<input>', {
+            type: 'hidden',
+            name: 'csrfmiddlewaretoken',
+            value: '{{ csrf_token }}'
+        }));
+        
+        // Add data
+        form.append($('<input>', {type: 'hidden', name: 'stylist_id', value: selectedStylist}));
+        form.append($('<input>', {type: 'hidden', name: 'ngay_hen', value: selectedDate}));
+        form.append($('<input>', {type: 'hidden', name: 'gio_hen', value: selectedTimeSlot}));
+        
+        // Submit form
+        $('body').append(form);
+        form.submit();
+    });
+
+    // Format money
+    function formatMoney(amount) {
+        return new Intl.NumberFormat('vi-VN', {
+            style: 'currency',
+            currency: 'VND'
+        }).format(amount);
+    }
+
+    // Show alert
+    function showAlert(message, type) {
+        const alert = `
+            <div class="alert alert-${type} alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3" 
+                 style="z-index: 9999;" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+        $('body').append(alert);
+        setTimeout(() => $('.alert').alert('close'), 3000);
+    }
+
+    // Load initial time slots
+    loadTimeSlots();
+});
+</script>
+{% endblock %}

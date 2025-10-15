@@ -10,14 +10,14 @@
             <h2><i class="fas fa-calendar-check me-2"></i>Chi tiết đặt lịch</h2>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'admin_bookings' %}">Đặt lịch</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'core:admin_dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'bookings:admin_bookings' %}">Đặt lịch</a></li>
                     <li class="breadcrumb-item active">{{ booking.ma_dat_lich }}</li>
                 </ol>
             </nav>
         </div>
         <div>
-            <a href="{% url 'admin_bookings' %}" class="btn btn-secondary">
+            <a href="{% url 'bookings:admin_bookings' %}" class="btn btn-secondary">
                 <i class="fas fa-arrow-left me-1"></i>Quay lại
             </a>
         </div>

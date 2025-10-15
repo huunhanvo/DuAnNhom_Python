@@ -26,7 +26,15 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'barbershop',  # App của chúng ta
+    'barbershop',  # App chính (models, context_processors)
+    # 7 modular apps
+    'core',        # Dashboard, Settings, Decorators
+    'accounts',    # Staff, Customers, Profile
+    'services',    # Services, Promotions, Vouchers
+    'bookings',    # Bookings, Invoices, POS
+    'attendance',  # Work Schedule, Leave Requests, Check-in/out, Salary
+    'reports',     # Analytics, Exports (Excel/PDF)
+    'reviews',     # Reviews, Loyalty program
 ]
 
 MIDDLEWARE = [
@@ -125,3 +133,27 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Session Configuration
+# https://docs.djangoproject.com/en/4.2/topics/http/sessions/
+
+# Session không hết hạn khi đóng browser
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+
+# Session tồn tại 30 ngày (hoặc có thể để lâu hơn)
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 30  # 30 days in seconds
+
+# Lưu session vào database (default)
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+
+# Session cookie sẽ được gửi qua HTTP và HTTPS
+SESSION_COOKIE_SECURE = False  # Set True nếu dùng HTTPS
+
+# Cookie chỉ accessible qua HTTP (không qua JavaScript - bảo mật)
+SESSION_COOKIE_HTTPONLY = True
+
+# Tên session cookie
+SESSION_COOKIE_NAME = 'barbershop_sessionid'
+
+# Mỗi request sẽ refresh session expiry (tự động kéo dài)
+SESSION_SAVE_EVERY_REQUEST = True

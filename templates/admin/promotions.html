@@ -13,7 +13,7 @@
         </div>
         <div class="col-auto">
             <div class="btn-group">
-                <a href="{% url 'admin_promotions_export' %}" class="btn btn-success">
+                <a href="{% url 'services:admin_promotions_export' %}" class="btn btn-success">
                     <i class="fas fa-file-excel"></i> Xuất danh sách
                 </a>
                 <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#promotionModal" 
@@ -291,7 +291,7 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="promotionForm" method="POST" action="{% url 'admin_promotions' %}">
+            <form id="promotionForm" method="POST" action="{% url 'services:admin_promotions' %}">
                 {% csrf_token %}
                 <input type="hidden" id="promotionId" name="voucher_id" value="">
                 <div class="modal-body">

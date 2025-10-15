@@ -1,0 +1,372 @@
+{% extends 'customer/base_customer.html' %}
+{% load static %}
+
+{% block title %}Đặt lịch - Bước 4: Xác nhận{% endblock %}
+
+{% block content %}
+<section class="py-5 bg-light">
+    <div class="container">
+        <!-- Booking Wizard -->
+        <div class="booking-wizard mb-5">
+            <div class="wizard-step completed">
+                <div class="step-number"><i class="fas fa-check"></i></div>
+                <div class="step-title">Chọn dịch vụ</div>
+            </div>
+            <div class="wizard-step completed">
+                <div class="step-number"><i class="fas fa-check"></i></div>
+                <div class="step-title">Chọn thợ & thời gian</div>
+            </div>
+            <div class="wizard-step completed">
+                <div class="step-number"><i class="fas fa-check"></i></div>
+                <div class="step-title">Thông tin</div>
+            </div>
+            <div class="wizard-step active">
+                <div class="step-number">4</div>
+                <div class="step-title">Xác nhận</div>
+            </div>
+        </div>
+
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-lg">
+                    <div class="card-header bg-warning text-dark text-center py-4">
+                        <i class="fas fa-clipboard-check fa-3x mb-3"></i>
+                        <h3 class="mb-0">Xác Nhận Đặt Lịch</h3>
+                        <p class="mb-0">Vui lòng kiểm tra kỹ thông tin trước khi xác nhận</p>
+                    </div>
+                    
+                    <div class="card-body p-5">
+                        <!-- Customer Information -->
+                        <div class="mb-4">
+                            <h5 class="fw-bold mb-3 border-bottom pb-2">
+                                <i class="fas fa-user text-primary me-2"></i> Thông tin khách hàng
+                            </h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <small class="text-muted d-block mb-1">Họ và tên:</small>
+                                    <strong id="customerName"></strong>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <small class="text-muted d-block mb-1">Số điện thoại:</small>
+                                    <strong id="customerPhone"></strong>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <small class="text-muted d-block mb-1">Email:</small>
+                                    <strong id="customerEmail" class="text-break"></strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Booking Details -->
+                        <div class="mb-4">
+                            <h5 class="fw-bold mb-3 border-bottom pb-2">
+                                <i class="fas fa-calendar-alt text-success me-2"></i> Chi tiết đặt lịch
+                            </h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <small class="text-muted d-block mb-1">Thợ cắt tóc:</small>
+                                    <strong id="stylistName"></strong>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <small class="text-muted d-block mb-1">Ngày:</small>
+                                    <strong id="bookingDate"></strong>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <small class="text-muted d-block mb-1">Giờ:</small>
+                                    <strong id="bookingTime"></strong>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <small class="text-muted d-block mb-1">Thời gian dự kiến:</small>
+                                    <strong id="duration"></strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Services -->
+                        <div class="mb-4">
+                            <h5 class="fw-bold mb-3 border-bottom pb-2">
+                                <i class="fas fa-cut text-warning me-2"></i> Dịch vụ đã chọn
+                            </h5>
+                            <div class="table-responsive">
+                                <table class="table table-borderless">
+                                    <thead class="bg-light">
+                                        <tr>
+                                            <th>Dịch vụ</th>
+                                            <th class="text-center">Thời gian</th>
+                                            <th class="text-end">Giá</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="servicesTable"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Price Summary -->
+                        <div class="mb-4 p-4 bg-light rounded">
+                            <h5 class="fw-bold mb-3">
+                                <i class="fas fa-money-bill-wave text-success me-2"></i> Thanh toán
+                            </h5>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Tổng tiền dịch vụ:</span>
+                                <strong id="subtotalDisplay">0đ</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2 text-success" id="discountDisplay" style="display: none !important;">
+                                <span>Giảm giá (Voucher):</span>
+                                <strong id="discountAmount">-0đ</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2 text-info" id="pointsDisplay" style="display: none !important;">
+                                <span>Điểm thưởng:</span>
+                                <strong id="pointsAmount">-0đ</strong>
+                            </div>
+                            <hr>
+                            <div class="d-flex justify-content-between">
+                                <strong class="fs-5">Tổng thanh toán:</strong>
+                                <strong class="fs-4 text-success" id="totalDisplay">0đ</strong>
+                            </div>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="mb-4" id="notesSection" style="display: none;">
+                            <h6 class="fw-bold mb-2">
+                                <i class="fas fa-sticky-note text-warning me-2"></i> Ghi chú:
+                            </h6>
+                            <p class="text-muted mb-0" id="customerNotes"></p>
+                        </div>
+
+                        <!-- Terms & Conditions -->
+                        <div class="mb-4 p-3 bg-warning bg-opacity-10 border border-warning rounded">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="agreeTerms" required>
+                                <label class="form-check-label" for="agreeTerms">
+                                    Tôi đồng ý với 
+                                    <a href="#" data-bs-toggle="modal" data-bs-target="#policyModal">
+                                        Chính sách hủy lịch
+                                    </a> 
+                                    và 
+                                    <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">
+                                        Điều khoản sử dụng
+                                    </a>
+                                    <span class="text-danger">*</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Important Notes -->
+                        <div class="alert alert-info mb-4">
+                            <h6 class="alert-heading">
+                                <i class="fas fa-info-circle me-2"></i> Lưu ý quan trọng:
+                            </h6>
+                            <ul class="mb-0 small">
+                                <li>Vui lòng đến đúng giờ. Muộn quá 15 phút có thể bị hủy lịch.</li>
+                                <li>Hủy lịch miễn phí trước 2 giờ. Sau đó sẽ bị tính phí 50% tổng đơn.</li>
+                                <li>Thanh toán tại cửa hàng sau khi sử dụng dịch vụ.</li>
+                                <li>Mọi thắc mắc vui lòng liên hệ: <strong>0901234567</strong></li>
+                            </ul>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-gold btn-lg" id="confirmBtn">
+                                <i class="fas fa-check-circle me-2"></i> Xác nhận đặt lịch
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="history.back()">
+                                <i class="fas fa-arrow-left me-2"></i> Quay lại chỉnh sửa
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Policy Modal -->
+<div class="modal fade" id="policyModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Chính Sách Hủy Lịch</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6>1. Hủy lịch miễn phí</h6>
+                <p class="text-muted">Quý khách có thể hủy lịch miễn phí nếu thông báo trước ít nhất 2 giờ.</p>
+                
+                <h6>2. Hủy lịch muộn</h6>
+                <p class="text-muted">Hủy lịch trong vòng 2 giờ trước giờ hẹn sẽ bị tính phí 50% tổng giá trị đơn hàng.</p>
+                
+                <h6>3. Không đến</h6>
+                <p class="text-muted">Không đến theo lịch hẹn mà không báo trước sẽ bị tính 100% phí.</p>
+                
+                <h6>4. Đến muộn</h6>
+                <p class="text-muted">Quý khách đến muộn quá 15 phút có thể bị hủy lịch và tính phí theo quy định.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Terms Modal -->
+<div class="modal fade" id="termsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Điều Khoản Sử Dụng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6>1. Chấp nhận điều khoản</h6>
+                <p class="text-muted">Khi đặt lịch, bạn đồng ý tuân thủ các điều khoản và điều kiện.</p>
+                
+                <h6>2. Thay đổi lịch hẹn</h6>
+                <p class="text-muted">Bạn có thể thay đổi lịch hẹn trước 2 giờ mà không mất phí.</p>
+                
+                <h6>3. Thanh toán</h6>
+                <p class="text-muted">Thanh toán được thực hiện tại cửa hàng sau khi hoàn thành dịch vụ.</p>
+                
+                <h6>4. Trách nhiệm</h6>
+                <p class="text-muted">Chúng tôi không chịu trách nhiệm về các vấn đề ngoài phạm vi dịch vụ đã thỏa thuận.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-body text-center py-5">
+                <div class="spinner-border text-warning mb-3" style="width: 3rem; height: 3rem;" role="status">
+                    <span class="visually-hidden">Đang xử lý...</span>
+                </div>
+                <h5 class="mb-2">Đang xử lý đặt lịch</h5>
+                <p class="text-muted mb-0">Vui lòng đợi trong giây lát...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    let bookingData = {};
+
+    // Load booking data
+    const savedData = sessionStorage.getItem('finalBooking');
+    if (savedData) {
+        bookingData = JSON.parse(savedData);
+        displayBookingConfirmation();
+    } else {
+        window.location.href = "{% url 'bookings:booking_step1' %}";
+    }
+
+    // Display booking confirmation
+    function displayBookingConfirmation() {
+        // Customer info
+        $('#customerName').text(bookingData.customer.ho_ten);
+        $('#customerPhone').text(bookingData.customer.so_dien_thoai);
+        $('#customerEmail').text(bookingData.customer.email || 'Không có');
+
+        // Booking details
+        $('#stylistName').text(bookingData.stylist_id === 'any' ? 'Thợ bất kỳ' : 'Thợ đã chọn');
+        
+        const date = new Date(bookingData.date);
+        $('#bookingDate').text(date.toLocaleDateString('vi-VN'));
+        $('#bookingTime').text(bookingData.time);
+        
+        const totalDuration = bookingData.services.reduce((sum, s) => sum + s.duration, 0);
+        $('#duration').text(totalDuration + ' phút');
+
+        // Services table
+        let servicesHtml = '';
+        bookingData.services.forEach(service => {
+            servicesHtml += `
+                <tr>
+                    <td>${service.name}</td>
+                    <td class="text-center">${service.duration} phút</td>
+                    <td class="text-end">${formatMoney(service.price)}</td>
+                </tr>
+            `;
+        });
+        $('#servicesTable').html(servicesHtml);
+
+        // Price summary
+        $('#subtotalDisplay').text(formatMoney(bookingData.subtotal));
+        
+        if (bookingData.discount > 0) {
+            $('#discountDisplay').show();
+            $('#discountAmount').text('-' + formatMoney(bookingData.discount));
+        }
+        
+        if (bookingData.points_discount > 0) {
+            $('#pointsDisplay').show();
+            $('#pointsAmount').text('-' + formatMoney(bookingData.points_discount));
+        }
+        
+        $('#totalDisplay').text(formatMoney(bookingData.total));
+
+        // Notes
+        if (bookingData.customer.ghi_chu) {
+            $('#notesSection').show();
+            $('#customerNotes').text(bookingData.customer.ghi_chu);
+        }
+    }
+
+    // Confirm button
+    $('#confirmBtn').click(function() {
+        // Check terms agreement
+        if (!$('#agreeTerms').is(':checked')) {
+            alert('Vui lòng đồng ý với điều khoản và chính sách');
+            return;
+        }
+
+        // Show loading
+        const loadingModal = new bootstrap.Modal('#loadingModal');
+        loadingModal.show();
+
+        // Submit booking
+        $.ajax({
+            url: "{% url 'bookings:create_booking' %}",
+            method: 'POST',
+            data: {
+                booking_data: JSON.stringify(bookingData),
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            success: function(response) {
+                loadingModal.hide();
+                
+                if (response.success) {
+                    // Clear session storage
+                    sessionStorage.removeItem('selectedServices');
+                    sessionStorage.removeItem('bookingData');
+                    sessionStorage.removeItem('finalBooking');
+                    
+                    // Redirect to success page
+                    window.location.href = "{% url 'bookings:booking_success' %}?booking_id=" + response.booking_id;
+                } else {
+                    alert(response.message || 'Có lỗi xảy ra khi đặt lịch');
+                }
+            },
+            error: function() {
+                loadingModal.hide();
+                alert('Có lỗi xảy ra. Vui lòng thử lại!');
+            }
+        });
+    });
+
+    // Format money
+    function formatMoney(amount) {
+        return new Intl.NumberFormat('vi-VN', {
+            style: 'currency',
+            currency: 'VND'
+        }).format(amount);
+    }
+});
+</script>
+{% endblock %}
